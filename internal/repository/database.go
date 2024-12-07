@@ -1,10 +1,12 @@
-package database
+package repository
 
 import (
 	"fmt"
 	"log"
 	"os"
 	"strconv"
+
+	"TaskManager/internal/models"
 
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -30,10 +32,10 @@ func Connect() {
 
 	// Автоматическая миграция схемы
 	err = db.AutoMigrate(
-		&Task{},
-		&Group{},
-		&Day{},
-		&User{},
+		&models.Task{},
+		&models.Group{},
+		&models.Day{},
+		&models.User{},
 	)
 
 	if err != nil {

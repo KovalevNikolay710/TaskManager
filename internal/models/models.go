@@ -1,20 +1,6 @@
-package database
+package models
 
 import "time"
-
-type Task struct {
-	TaskId              int64 `gorm:"primaryKey;autoIncrement"`
-	UserId              int64 `gorm:"index;not null"`
-	GroupId             int64 `gorm:"index"` // Index for better query performance
-	DeadLine            time.Time
-	TimeForExecution    int64 `gorm:"not null"` // Duration in milliseconds
-	Priority            float64
-	PercentOfCompleting int
-	Status              string `gorm:"type:enum('Pending', 'In Progress', 'Completed');default:'Pending'"`
-	Description         string
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
-}
 
 type Group struct {
 	GroupId     int64   `gorm:"primaryKey;autoIncrement"`
