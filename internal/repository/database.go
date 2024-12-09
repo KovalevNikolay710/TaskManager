@@ -5,6 +5,7 @@ import (
 	"log"
 	"os"
 	"strconv"
+	"time"
 
 	"TaskManager/internal/models"
 
@@ -25,20 +26,32 @@ func Connect() {
 		DBHost, DBUser, DBPassword, DBName, DBPort)
 
 	var err error
-	db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	for i := 0; i < 5; i++ { // Повторяем до 5 раз
+		db, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+		if err == nil {
+			break
+		}
+		log.Printf("Не удалось подключиться к базе данных. Попытка %d: %v\n", i+1, err)
+		time.Sleep(5 * time.Second) // Ждём 5 секунд перед новой попыткой
+	}
+
 	if err != nil {
 		log.Fatalf("Не удалось подключиться к базе данных: %v", err)
 	}
 
 	// Автоматическая миграция схемы
 	err = db.AutoMigrate(
-		&models.Task{},
-		&models.Group{},
-		&models.Day{},
 		&models.User{},
+		&models.Group{},
+		&models.Task{},
+		&models.Day{},
 	)
 
 	if err != nil {
 		log.Fatalf("Ошибка миграции схемы: %v", err)
 	}
+}
+
+func GetDB() *gorm.DB {
+	return db
 }
