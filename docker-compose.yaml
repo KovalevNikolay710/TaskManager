@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: task_manager_app
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_USER=postgres
+      - DB_PASSWORD=12345678
+      - DB_NAME=task_manager_db
+      - DB_PORT=5432
+      - TZ=Europe/Moscow
+    restart: always
+    networks:
+      - manager_network
+    ports:
+      - "8080:8080" 
+
+  db:
+    image: postgres:13-alpine
+    container_name: manager_db
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=12345678
+      - POSTGRES_DB=task_manager_db
+      - TZ=Europe/Moscow
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: always
+    networks:
+      - manager_network
+    command: ["postgres", "-c", "timezone=Europe/Moscow"]
+
+networks:
+  manager_network:
+
+volumes:
+  db_data:
