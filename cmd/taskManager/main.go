@@ -2,6 +2,7 @@ package main
 
 import (
 	"TaskManager/internal/api"
+	"TaskManager/internal/lib/logger/slog"
 	"TaskManager/internal/repository"
 	"TaskManager/internal/services"
 	"log"
@@ -18,15 +19,17 @@ func main() {
 	taskRepository := repository.NewTaskRepository(db)
 	dayRepository := repository.NewDayRepository(db)
 
+	logger := slog.InitLogger()
+
 	// Инициализация сервиса
-	taskService := services.NewTaskService(*taskRepository)
+	taskService := services.NewTaskService(taskRepository, logger)
 	dayService := services.NewDayService(dayRepository, taskRepository)
 
 	// Создание роутера
 	router := gin.Default()
 
 	// Регистрация маршрутов
-	api.RegisterTaskRoutes(router, taskService, *dayService)
+	api.RegisterTaskRoutes(router, *taskService, *dayService)
 
 	// Запуск сервера
 	log.Println("Сервер запущен на порту :8080")

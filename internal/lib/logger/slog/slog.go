@@ -1,8 +1,16 @@
 package slog
 
 import (
-	"golang.org/x/exp/slog"
+	"os"
+
+	"log/slog"
 )
+
+func InitLogger() *slog.Logger {
+	return slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		Level: slog.LevelInfo,
+	}))
+}
 
 func Err(err error) slog.Attr {
 	return slog.Attr{

@@ -29,7 +29,6 @@ func (h *DayHandler) CreateDayHandler(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
 	c.JSON(http.StatusCreated, createdDay)
 }
 

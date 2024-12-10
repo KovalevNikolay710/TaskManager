@@ -28,7 +28,7 @@ type TaskServiceImpl interface {
 func (handler *TaskHandler) CreateTask(context *gin.Context) {
 	var taskRequest models.TaskCreateRequest
 	if err := context.ShouldBindJSON(&taskRequest); err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request data"})
+		context.JSON(http.StatusBadRequest, gin.H{"error": err})
 		return
 	}
 

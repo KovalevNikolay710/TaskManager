@@ -20,7 +20,7 @@ type Day struct {
 }
 
 type DayCreateRequest struct {
-	Date          string  `json:"date" binding:"required"`             // Дата в формате YYYY-MM-DD
+	Date          string  `json:"date" binding:"required"`             // Дата в формате YYYY-MM-DD, RFC3339
 	UserId        int64   `json:"userId" binding:"required"`           // ID пользователя
 	TimeForTasks  int     `json:"timeForTasks" binding:"required"`     // Время на выполнение задач (в минутах)
 	AmountOfTasks int     `json:"amountOfTasks" binding:"required"`    // Количество задач для дня

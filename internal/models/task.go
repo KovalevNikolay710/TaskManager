@@ -8,31 +8,33 @@ const (
 )
 
 type Task struct {
-	TaskId              int64 `gorm:"primaryKey;autoIncrement"`
-	UserId              int64 `gorm:"index;not null"`
-	GroupId             int64 `gorm:"index"`
-	DeadLine            time.Time
-	TimeForExecution    int `gorm:"not null"`
-	Priority            float64
-	PercentOfCompleting int
-	Status              int64 `gorm:"not null"`
-	Description         string
-	CreatedAt           time.Time
-	UpdatedAt           time.Time
+	TaskId               int64 `gorm:"primaryKey;autoIncrement"`
+	UserId               int64 `gorm:"index;not null"`
+	GroupId              int64 `gorm:"index"`
+	DeadLine             time.Time
+	TimeForExecution     int `gorm:"not null"`
+	Priority             float64
+	NumberOfHoursUntilDL int
+	PercentOfCompleting  int
+	Status               int64 `gorm:"not null"`
+	Description          string
+	CreatedAt            time.Time
+	UpdatedAt            time.Time
 }
 
 type TaskCreateRequest struct {
 	UserID              int64     `json:"userId" binding:"required"`
 	GroupID             int64     `json:"groupId"`
 	Description         string    `json:"description" binding:"required"`
-	DeadLine            time.Time `json:"deadline" binding:"required"`
-	TimeForExecution    int       `json:"timeForExecution" binding:"required"` // ms
+	DeadLine            time.Time `json:"deadline" binding:"required"` // RFC3339
+	TimeForExecution    int       `json:"timeForExecution" binding:"required"`
 	PercentOfCompleting int       `json:"percentOfCompleting" binding:"required"`
 	Status              int64     `json:"status" binding:"required"`
 }
 
 type TaskUpdateRequest struct {
 	Status              int64         `json:"status"`
+	DeadLine            time.Time     `json:"deadline" binding:"required"` // RFC3339
 	TimeForExecution    time.Duration `json:"timeForExecution"`
 	PercentOfCompleting int           `json:"percentOfCompleting"`
 }
