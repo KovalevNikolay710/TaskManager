@@ -4,16 +4,17 @@ import (
 	"TaskManager/internal/models"
 	rep "TaskManager/internal/repository"
 	"fmt"
+	"log/slog"
 	"time"
 )
 
 type TaskServiceImpl struct {
-	TaskRepo rep.TaskRepositoryImpl
+	TaskRepo *rep.TaskRepositoryImpl
+	Logger   *slog.Logger
 }
 
-// NewTaskService создает новый экземпляр TaskService
-func NewTaskService(taskRepo rep.TaskRepositoryImpl) TaskServiceImpl {
-	return TaskServiceImpl{TaskRepo: taskRepo}
+func NewTaskService(taskRepo *rep.TaskRepositoryImpl, logger *slog.Logger) *TaskServiceImpl {
+	return &TaskServiceImpl{TaskRepo: taskRepo, Logger: logger}
 }
 
 type TaskRepositoryImpl interface {
@@ -25,33 +26,56 @@ type TaskRepositoryImpl interface {
 }
 
 func (serv TaskServiceImpl) CreateTask(input models.TaskCreateRequest) (task *models.Task, err error) {
-	task = &models.Task{
-		UserId:              input.UserID,
-		GroupId:             input.GroupID,
-		Description:         input.Description,
-		DeadLine:            input.DeadLine,
-		TimeForExecution:    input.TimeForExecution,
-		PercentOfCompleting: input.PercentOfCompleting,
-		Status:              input.Status,
+
+	if input.PercentOfCompleting == 100 {
+		return nil, fmt.Errorf("новая задача не может быть выполненна на 100%")
 	}
-	priority, err := serv.calculateTaskPriortye(task)
+
+	dl, err := serv.countWorkHoursForDeadLine(input.DeadLine)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка при расчёте приоритета задачи: %s", err)
+		serv.Logger.Error("Ошибка в countWorkHoursForDeadLine", slog.String("error", err.Error()))
+		return nil, fmt.Errorf("ошибка расчёта дедлайна: %w", err)
 	}
-	task.Priority = priority
+
+	if dl <= 0 {
+		serv.Logger.Warn("Неверный дедлайн", slog.Int("workHours", dl))
+		return nil, fmt.Errorf("неверный дедлайн")
+	}
+
+	task = &models.Task{
+		UserId:               input.UserID,
+		GroupId:              input.GroupID,
+		Description:          input.Description,
+		DeadLine:             input.DeadLine,
+		TimeForExecution:     input.TimeForExecution,
+		PercentOfCompleting:  input.PercentOfCompleting,
+		Status:               input.Status,
+		NumberOfHoursUntilDL: dl,
+	}
+
+	err = serv.calculateTaskPriorty(task)
+	if err != nil {
+		serv.Logger.Error("Ошибка при расчёте приоритета задачи", slog.String("error", err.Error()))
+		return nil, fmt.Errorf("ошибка при расчёте приоритета задачи: %w", err)
+	}
+
 	task, err = serv.TaskRepo.Create(task)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка при записи задачи: %s", err)
+		serv.Logger.Error("Ошибка при записи задачи в БД", slog.String("error", err.Error()))
+		return nil, fmt.Errorf("ошибка при записи задачи: %w", err)
 	}
-	return task, err
+
+	serv.Logger.Info("Задача успешно сохранена в БД", slog.Group("task",
+		slog.Int64("taskId", task.TaskId),
+		slog.String("createdAt", task.CreatedAt.Format(time.RFC3339)),
+	))
+
+	return task, nil
 }
 
-func (serv TaskServiceImpl) calculateTaskPriortye(task *models.Task) (float64, error) {
-	dl, err := serv.countWorkHoursForDeadLine(task.DeadLine)
-	if err != nil {
-		return 0, fmt.Errorf("ошибка при расчёте чаосв на выполнение: %s", err)
-	}
-	return float64(task.GroupId) * float64((task.TimeForExecution)/dl) * float64(100-task.PercentOfCompleting) / float64(100), nil
+func (serv TaskServiceImpl) calculateTaskPriorty(task *models.Task) error {
+	task.Priority = float64(task.GroupId) * float64(task.TimeForExecution) / float64(task.NumberOfHoursUntilDL) * float64(100-task.PercentOfCompleting) / float64(100)
+	return nil
 }
 
 func (serv TaskServiceImpl) countWorkHoursForDeadLine(deadline time.Time) (hours int, err error) {
@@ -72,8 +96,16 @@ func (serv TaskServiceImpl) UpdateTask(taskID int64, input models.TaskUpdateRequ
 	if input.Status != 0 {
 		task.Status = input.Status
 	}
+	if input.PercentOfCompleting == 100 {
+		task.PercentOfCompleting = input.PercentOfCompleting
+		task.Status = models.StatusCompleted
+	}
 	if input.PercentOfCompleting > 0 {
 		task.PercentOfCompleting = input.PercentOfCompleting
+	}
+	err = serv.calculateTaskPriorty(task)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка при расчёте приоритета задачи: %s", err)
 	}
 	task.UpdatedAt = time.Now()
 
