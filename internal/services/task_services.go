@@ -42,6 +42,8 @@ func (serv TaskServiceImpl) CreateTask(input models.TaskCreateRequest) (task *mo
 		return nil, fmt.Errorf("неверный дедлайн")
 	}
 
+	//TODO: write get group priorty by GroupId
+
 	task = &models.Task{
 		UserId:               input.UserID,
 		GroupId:              input.GroupID,
@@ -49,7 +51,6 @@ func (serv TaskServiceImpl) CreateTask(input models.TaskCreateRequest) (task *mo
 		DeadLine:             input.DeadLine,
 		TimeForExecution:     input.TimeForExecution,
 		PercentOfCompleting:  input.PercentOfCompleting,
-		Status:               input.Status,
 		NumberOfHoursUntilDL: dl,
 	}
 
@@ -92,9 +93,6 @@ func (serv TaskServiceImpl) UpdateTask(taskID int64, input models.TaskUpdateRequ
 	task, err := serv.TaskRepo.FindByID(taskID)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при поиске задачи: %s", err)
-	}
-	if input.Status != 0 {
-		task.Status = input.Status
 	}
 	if input.PercentOfCompleting == 100 {
 		task.PercentOfCompleting = input.PercentOfCompleting
