@@ -3,20 +3,22 @@ package models
 import "time"
 
 const (
-	StatusActive    = 1
-	StatusCompleted = 2
+	StatusActive = iota
+	StatusCompleted
 )
 
 type Task struct {
-	TaskId               int64 `gorm:"primaryKey;autoIncrement"`
-	UserId               int64 `gorm:"index;not null"`
-	GroupId              int64 `gorm:"index"`
+	TaskId               int64  `gorm:"primaryKey;autoIncrement"`
+	UserId               int64  `gorm:"index;not null"`
+	GroupId              int64  `gorm:"index"`
+	GroupPriorty         uint16 `gorm:"default:1"`
 	DeadLine             time.Time
 	TimeForExecution     int `gorm:"not null"`
 	Priority             float64
 	NumberOfHoursUntilDL int
 	PercentOfCompleting  int
-	Status               int64 `gorm:"not null"`
+	Status               uint16 `gorm:"not null"`
+	Name                 string
 	Description          string
 	CreatedAt            time.Time
 	UpdatedAt            time.Time
@@ -25,27 +27,21 @@ type Task struct {
 type TaskCreateRequest struct {
 	UserID              int64     `json:"userId" binding:"required"`
 	GroupID             int64     `json:"groupId"`
-	Description         string    `json:"description" binding:"required"`
+	Name                string    `json:"name" binding:"required"`
+	Description         string    `json:"description"`
 	DeadLine            time.Time `json:"deadline" binding:"required"` // RFC3339
 	TimeForExecution    int       `json:"timeForExecution" binding:"required"`
 	PercentOfCompleting int       `json:"percentOfCompleting" binding:"required"`
-	Status              int64     `json:"status" binding:"required"`
 }
 
 type TaskUpdateRequest struct {
-	Status              int64         `json:"status"`
-	DeadLine            time.Time     `json:"deadline" binding:"required"` // RFC3339
-	TimeForExecution    time.Duration `json:"timeForExecution"`
-	PercentOfCompleting int           `json:"percentOfCompleting"`
+	// Status              uint16        `json:"status"` пока не нужен, так как пока что не придумал как избегать просроченных дедлайнов
+	DeadLine            time.Time `json:"deadline"` // RFC3339
+	TimeForExecution    int       `json:"timeForExecution"`
+	PercentOfCompleting int       `json:"percentOfCompleting"`
 }
 
 type TaskFilter struct {
-	Status   int64
+	Status   uint64
 	Priority float64
 }
-
-// type ByPriorty []*Task
-
-// func (a ByPriorty) Len() int           { return len(a) }
-// func (a ByPriorty) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-// func (a ByPriorty) Less(i, j int) bool { return a[i].Priority < a[j].Priority }
