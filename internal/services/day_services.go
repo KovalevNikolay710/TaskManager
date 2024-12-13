@@ -19,6 +19,7 @@ type DayRepositoryImpl interface {
 type DayServiceImpl struct {
 	DayRepository  *repository.DayRepositoryImpl
 	TaskRepository *repository.TaskRepositoryImpl
+	GenericService *GenericService[models.Day]
 }
 
 func NewDayService(dayRepo *repository.DayRepositoryImpl, taskRepo *repository.TaskRepositoryImpl) *DayServiceImpl {
@@ -28,12 +29,16 @@ func NewDayService(dayRepo *repository.DayRepositoryImpl, taskRepo *repository.T
 	}
 }
 
-func (serv *DayServiceImpl) CreateDay(day *models.Day) (*models.Day, error) {
-	if day.UserId == 0 {
-		return nil, fmt.Errorf("userId обязателен")
+func (serv *DayServiceImpl) CreateDay(input *models.DayCreateRequest) (createdDay *models.Day, err error) {
+
+	day := &models.Day{
+		UserId:        input.UserId,
+		Date:          input.Date,
+		TimeForTasks:  input.TimeForTasks,
+		AmountOfTasks: input.AmountOfTasks,
 	}
 
-	createdDay, err := serv.DayRepository.Create(day)
+	createdDay, err = serv.DayRepository.Create(day)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось создать день: %w", err)
 	}
@@ -46,36 +51,35 @@ func (serv *DayServiceImpl) CreateDay(day *models.Day) (*models.Day, error) {
 	return createdDay, nil
 }
 
-func (serv *DayServiceImpl) GetDayByID(dayID int64) (*models.Day, error) {
-	day, err := serv.DayRepository.FindByID(dayID)
+func (serv *DayServiceImpl) UpdateDay(dayId int64, input *models.DayUpdateRequest) (updatedDay *models.Day, err error) {
+	day, err := serv.DayRepository.FindByID(dayId)
 	if err != nil {
-		return nil, fmt.Errorf("не удалось найти день: %w", err)
+		return nil, fmt.Errorf("ошибка при поиске дня: %s", err)
 	}
-	if day == nil {
-		return nil, fmt.Errorf("день с таким ID не найден")
-	}
-	return day, nil
-}
 
-func (serv *DayServiceImpl) UpdateDay(day *models.Day) (*models.Day, error) {
-	updatedDay, err := serv.DayRepository.Update(day)
+	dayChanged := false
+	if *input.AmountOfTasks != 0 && *input.AmountOfTasks != day.AmountOfTasks && *input.AmountOfTasks > 0 {
+		day.AmountOfTasks = *input.AmountOfTasks
+		dayChanged = true
+	}
+	if *input.TimeForTasks != 0 && *input.TimeForTasks != day.AmountOfTasks && *input.TimeForTasks > 0 {
+		day.AmountOfTasks = *input.AmountOfTasks
+		dayChanged = true
+	}
+
+	if dayChanged {
+		updatedDay, err = serv.fillDayTaskListAndCalculatePriorty(updatedDay)
+		if err != nil {
+			return nil, fmt.Errorf("не удалось заполнить список задач: %w", err)
+		}
+	}
+
+	updatedDay, err = serv.DayRepository.Update(day)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось обновить данные дня: %w", err)
 	}
 
-	updatedDay, err = serv.fillDayTaskListAndCalculatePriorty(updatedDay)
-	if err != nil {
-		return nil, fmt.Errorf("не удалось заполнить список задач: %w", err)
-	}
-
 	return updatedDay, nil
-}
-
-func (serv *DayServiceImpl) DeleteDay(dayID int64) error {
-	if err := serv.DayRepository.Delete(dayID); err != nil {
-		return fmt.Errorf("не удалось удалить день: %w", err)
-	}
-	return nil
 }
 
 func (serv *DayServiceImpl) GetDaysByUserID(userID int64) ([]*models.Day, error) {
@@ -87,14 +91,14 @@ func (serv *DayServiceImpl) GetDaysByUserID(userID int64) ([]*models.Day, error)
 }
 
 func (serv *DayServiceImpl) fillDayTaskListAndCalculatePriorty(day *models.Day) (*models.Day, error) {
-	tasks, err := serv.TaskRepository.FindByUserID(day.UserId, models.TaskFilter{Status: models.StatusActive})
-	fmt.Println(tasks)
+	tasks, err := serv.TaskRepository.FindByUserID(day.UserId, models.TaskFilter{Status: models.StatusActive, Date: day.Date})
+
 	if err != nil {
 		return nil, fmt.Errorf("не удалось получить задачи пользователя: %w", err)
 	}
 
 	sort.Slice(tasks, func(i, j int) bool {
-		return tasks[i].Priority > tasks[j].Priority // Задачи с высшим приоритетом идут первыми
+		return tasks[i].Priority > tasks[j].Priority
 	})
 
 	if len(tasks) > day.AmountOfTasks {

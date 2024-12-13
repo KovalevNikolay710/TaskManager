@@ -18,18 +18,20 @@ func main() {
 	// Инициализация репозитория
 	taskRepository := repository.NewTaskRepository(db)
 	dayRepository := repository.NewDayRepository(db)
+	groupRepository := repository.NewGroupRepository(db)
 
 	logger := slog.InitLogger()
 
 	// Инициализация сервиса
 	taskService := services.NewTaskService(taskRepository, logger)
 	dayService := services.NewDayService(dayRepository, taskRepository)
+	groupServices := services.NewGroupService(groupRepository, taskRepository)
 
 	// Создание роутера
 	router := gin.Default()
 
 	// Регистрация маршрутов
-	api.RegisterTaskRoutes(router, *taskService, *dayService)
+	api.RegisterTaskRoutes(router, *taskService, *dayService, *groupServices, logger, db)
 
 	// Запуск сервера
 	log.Println("Сервер запущен на порту :8080")

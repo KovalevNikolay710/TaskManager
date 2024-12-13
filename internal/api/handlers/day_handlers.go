@@ -10,21 +10,22 @@ import (
 )
 
 type DayHandler struct {
-	dayService services.DayServiceImpl
+	dayService     services.DayServiceImpl
+	GenericService services.GenericService[models.Day]
 }
 
-func NewDayHandler(dayService services.DayServiceImpl) *DayHandler {
-	return &DayHandler{dayService: dayService}
+func NewDayHandler(dayService services.DayServiceImpl, genServ services.GenericService[models.Day]) *DayHandler {
+	return &DayHandler{dayService: dayService, GenericService: genServ}
 }
 
-func (h *DayHandler) CreateDayHandler(c *gin.Context) {
-	var day models.Day
+func (handler *DayHandler) CreateDayHandler(c *gin.Context) {
+	var day models.DayCreateRequest
 	if err := c.ShouldBindJSON(&day); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	createdDay, err := h.dayService.CreateDay(&day)
+	createdDay, err := handler.dayService.CreateDay(&day)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -32,53 +33,45 @@ func (h *DayHandler) CreateDayHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, createdDay)
 }
 
-func (h *DayHandler) GetDayByIDHandler(c *gin.Context) {
-	dayIDStr := c.Param("id")
-	dayID, err := strconv.ParseInt(dayIDStr, 10, 64)
+func (handler *DayHandler) GetDayByIDHandler(context *gin.Context) {
+	dayId := handler.parseIdFromContext(context)
+
+	day, err := handler.dayService.GenericService.GetByID(dayId)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid day ID"})
+		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	day, err := h.dayService.GetDayByID(dayID)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, day)
+	context.JSON(http.StatusOK, day)
 }
 
-func (h *DayHandler) UpdateDayHandler(c *gin.Context) {
-	var day models.Day
-	if err := c.ShouldBindJSON(&day); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+func (handler *DayHandler) UpdateDayHandler(context *gin.Context) {
+	dayId := handler.parseIdFromContext(context)
+
+	var input models.DayUpdateRequest
+	if err := context.ShouldBindJSON(&input); err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	updatedDay, err := h.dayService.UpdateDay(&day)
+	updatedDay, err := handler.dayService.UpdateDay(dayId, &input)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusOK, updatedDay)
+	context.JSON(http.StatusOK, updatedDay)
 }
 
-func (h *DayHandler) DeleteDayHandler(c *gin.Context) {
-	dayIDStr := c.Param("id")
-	dayID, err := strconv.ParseInt(dayIDStr, 10, 64)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid day ID"})
+func (handler *DayHandler) DeleteDayHandler(context *gin.Context) {
+	dayId := handler.parseIdFromContext(context)
+
+	if err := handler.dayService.GenericService.Delete(dayId); err != nil {
+		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := h.dayService.DeleteDay(dayID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusNoContent, nil)
+	context.JSON(http.StatusNoContent, nil)
 }
 
 func (h *DayHandler) GetDaysByUserIDHandler(c *gin.Context) {
@@ -96,4 +89,14 @@ func (h *DayHandler) GetDaysByUserIDHandler(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, days)
+}
+
+func (handler *DayHandler) parseIdFromContext(context *gin.Context) (dayId int64) {
+	dayIDStr := context.Query("userId")
+	dayId, err := strconv.ParseInt(dayIDStr, 10, 64)
+	if err != nil {
+		context.JSON(http.StatusBadRequest, gin.H{"error": "invalid user ID"})
+		return
+	}
+	return dayId
 }
