@@ -21,7 +21,7 @@ type GroupCreateRequest struct {
 }
 
 type GroupUpdateRequest struct {
-	GroupPriority uint64 `json:"groupPriority,omitempty"`
-	Name          string `json:"name,omitempty"`
-	Description   string `json:"description,omitempty"`
+	Priority    uint64 `json:"groupPriority,omitempty"`
+	Name        string `json:"name,omitempty"`
+	Description string `json:"description,omitempty"`
 }
