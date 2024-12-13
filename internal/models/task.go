@@ -42,6 +42,6 @@ type TaskUpdateRequest struct {
 }
 
 type TaskFilter struct {
-	Status   uint64
-	Priority float64
+	Status uint64
+	Date   time.Time
 }
