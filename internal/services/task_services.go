@@ -9,8 +9,9 @@ import (
 )
 
 type TaskServiceImpl struct {
-	TaskRepo *rep.TaskRepositoryImpl
-	Logger   *slog.Logger
+	TaskRepo       *rep.TaskRepositoryImpl
+	GenericService *GenericService[models.Task]
+	Logger         *slog.Logger
 }
 
 func NewTaskService(taskRepo *rep.TaskRepositoryImpl, logger *slog.Logger) *TaskServiceImpl {
@@ -28,7 +29,7 @@ type TaskRepositoryImpl interface {
 func (serv TaskServiceImpl) CreateTask(input models.TaskCreateRequest) (task *models.Task, err error) {
 
 	if input.PercentOfCompleting == 100 {
-		return nil, fmt.Errorf("новая задача не может быть выполненна на 100%")
+		return nil, fmt.Errorf("новая задача не может быть выполненна на 100%%")
 	}
 
 	dl, err := serv.countWorkHoursForDeadLine(input.DeadLine)
@@ -110,21 +111,6 @@ func (serv TaskServiceImpl) UpdateTask(taskID int64, input models.TaskUpdateRequ
 	task, err = serv.TaskRepo.Update(task)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при обновлении задачи: %s", err)
-	}
-	return task, nil
-}
-
-func (serv TaskServiceImpl) DeleteTask(taskId int64) error {
-	if err := serv.TaskRepo.Delete(taskId); err != nil {
-		return fmt.Errorf("ошибка при удалении задачи: %s", err)
-	}
-	return nil
-}
-
-func (serv TaskServiceImpl) GetTaskByID(taskId int64) (*models.Task, error) {
-	task, err := serv.TaskRepo.FindByID(taskId)
-	if err != nil {
-		return nil, fmt.Errorf("ошибка поиске задачи: %s", err)
 	}
 	return task, nil
 }
