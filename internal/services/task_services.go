@@ -10,12 +10,13 @@ import (
 
 type TaskServiceImpl struct {
 	TaskRepo       *rep.TaskRepositoryImpl
+	GroupRepo      *rep.GroupRepositoryImpl
 	GenericService *GenericService[models.Task]
 	Logger         *slog.Logger
 }
 
-func NewTaskService(taskRepo *rep.TaskRepositoryImpl, logger *slog.Logger) *TaskServiceImpl {
-	return &TaskServiceImpl{TaskRepo: taskRepo, Logger: logger}
+func NewTaskService(taskRepo *rep.TaskRepositoryImpl, groupRepo *rep.GroupRepositoryImpl, logger *slog.Logger) *TaskServiceImpl {
+	return &TaskServiceImpl{TaskRepo: taskRepo, GroupRepo: groupRepo, Logger: logger}
 }
 
 type TaskRepositoryImpl interface {
@@ -43,11 +44,22 @@ func (serv TaskServiceImpl) CreateTask(input models.TaskCreateRequest) (task *mo
 		return nil, fmt.Errorf("неверный дедлайн")
 	}
 
-	//TODO: write get group priorty by GroupId
+	var groupPriorty uint64 = 1
+	if input.GroupID != 1 {
+		result, err := serv.GroupRepo.FindByID(input.GroupID)
+		if err != nil {
+			return nil, fmt.Errorf("ошибка при поиске группы: %w", err)
+		}
+		if result != nil {
+			groupPriorty = result.GroupPriority
+		}
+	}
 
 	task = &models.Task{
 		UserId:               input.UserID,
 		GroupId:              input.GroupID,
+		GroupPriorty:         groupPriorty,
+		Name:                 input.Name,
 		Description:          input.Description,
 		DeadLine:             input.DeadLine,
 		TimeForExecution:     input.TimeForExecution,
@@ -76,7 +88,7 @@ func (serv TaskServiceImpl) CreateTask(input models.TaskCreateRequest) (task *mo
 }
 
 func (serv TaskServiceImpl) calculateTaskPriorty(task *models.Task) error {
-	task.Priority = float64(task.GroupId) * float64(task.TimeForExecution) / float64(task.NumberOfHoursUntilDL) * float64(100-task.PercentOfCompleting) / float64(100)
+	task.Priority = float64(task.GroupPriorty) * float64(task.TimeForExecution) / float64(task.NumberOfHoursUntilDL) * float64(100-task.PercentOfCompleting) / float64(100)
 	return nil
 }
 
