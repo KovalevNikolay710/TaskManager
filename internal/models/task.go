@@ -8,9 +8,9 @@ const (
 )
 
 type Task struct {
-	TaskId               int64  `gorm:"primaryKey;autoIncrement"`
-	UserId               int64  `gorm:"index;not null"`
-	GroupId              int64  `gorm:"index"`
+	TaskId               int64 `gorm:"primaryKey;autoIncrement"`
+	UserId               int64 `gorm:"not null"`
+	GroupId              int64
 	GroupPriorty         uint16 `gorm:"default:1"`
 	DeadLine             time.Time
 	TimeForExecution     int `gorm:"not null"`

@@ -41,7 +41,6 @@ func Connect() {
 
 	// Автоматическая миграция схемы
 	err = db.AutoMigrate(
-		&models.User{},
 		&models.Group{},
 		&models.Task{},
 		&models.Day{},

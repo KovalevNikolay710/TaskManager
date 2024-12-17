@@ -91,27 +91,35 @@ func (serv *DayServiceImpl) GetDaysByUserID(userID int64) ([]*models.Day, error)
 }
 
 func (serv *DayServiceImpl) fillDayTaskListAndCalculatePriorty(day *models.Day) (*models.Day, error) {
+	// Получаем задачи пользователя по фильтру
 	tasks, err := serv.TaskRepository.FindByUserID(day.UserId, models.TaskFilter{Status: models.StatusActive, Date: day.Date})
-
 	if err != nil {
 		return nil, fmt.Errorf("не удалось получить задачи пользователя: %w", err)
 	}
 
+	// Сортируем задачи по приоритету
 	sort.Slice(tasks, func(i, j int) bool {
 		return tasks[i].Priority > tasks[j].Priority
 	})
 
+	// Берём задачи, которые соответствуют количеству задач дня
+	selectedTasks := tasks
 	if len(tasks) > day.AmountOfTasks {
-		day.Tasks = tasks[:day.AmountOfTasks]
-	} else {
-		day.Tasks = tasks
+		selectedTasks = tasks[:day.AmountOfTasks]
 	}
 
-	sum := 0.0
-	for _, task := range day.Tasks {
-		sum += task.Priority
+	// Добавляем задачи в таблицу связи day_tasks
+	for _, task := range selectedTasks {
+		if err := serv.DayRepository.AddTaskToDay(day.DayId, task.TaskId); err != nil {
+			return nil, fmt.Errorf("не удалось добавить задачу с ID %d в день: %w", task.TaskId, err)
+		}
 	}
-	day.PriorityOfTheDay = sum
+
+	// Пересчитываем приоритет дня
+	day.PriorityOfTheDay = 0
+	for _, task := range selectedTasks {
+		day.PriorityOfTheDay += task.Priority
+	}
 
 	return day, nil
 }
