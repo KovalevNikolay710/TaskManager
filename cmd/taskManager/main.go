@@ -23,7 +23,7 @@ func main() {
 	logger := slog.InitLogger()
 
 	// Инициализация сервиса
-	taskService := services.NewTaskService(taskRepository, logger)
+	taskService := services.NewTaskService(taskRepository, groupRepository, logger)
 	dayService := services.NewDayService(dayRepository, taskRepository)
 	groupServices := services.NewGroupService(groupRepository, taskRepository)
 
