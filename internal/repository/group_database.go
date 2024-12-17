@@ -29,12 +29,12 @@ func (rep *GroupRepositoryImpl) GetAllUserGroups(userID int64) ([]*models.Group,
 }
 
 func (rep GroupRepositoryImpl) GetAllTasksInGroup(groupId int64) ([]*models.Task, error) {
-	var group models.Group
-	if err := rep.db.Preload("Tasks").First(&group, groupId).Error; err != nil {
+	var tasks []*models.Task
+	if err := rep.db.Where("group_id = ?", groupId).Find(&tasks).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("день с ID %d не найден", groupId)
+			return nil, fmt.Errorf("задачи для группы с ID %d не найдены", groupId)
 		}
-		return nil, fmt.Errorf("ошибка при поиске задач для дня: %w", err)
+		return nil, fmt.Errorf("ошибка при поиске задач для группы: %w", err)
 	}
-	return group.Tasks, nil
+	return tasks, nil
 }

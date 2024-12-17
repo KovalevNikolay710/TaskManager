@@ -29,6 +29,10 @@ func NewGroupService(groupRepo *repository.GroupRepositoryImpl, taskRepo *reposi
 
 func (service GroupServiceImpl) CreateGroup(input models.GroupCreateRequest) (createdGroup *models.Group, err error) {
 
+	if input.GroupPriority < 0 {
+		return nil, fmt.Errorf("неверное значение groupId: %w", err)
+	}
+
 	group := &models.Group{
 		UserId:        input.UserId,
 		GroupPriority: input.GroupPriority,
@@ -70,11 +74,11 @@ func (service GroupServiceImpl) UpdateGroup(groupId int64, input models.GroupUpd
 }
 
 func (serv *GroupServiceImpl) GetAllGroupTasks(groupId int64) ([]*models.Task, error) {
-	group, err := serv.GroupRepository.GenericRepository.FindByID(groupId)
+	tasks, err := serv.GroupRepository.GetAllTasksInGroup(groupId)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при получении всех задач в группе: %w", err)
 	}
-	return group.Tasks, nil
+	return tasks, nil
 }
 
 func (serv *GroupServiceImpl) GetAllUserGroups(userID int64) (groups []*models.Group, err error) {

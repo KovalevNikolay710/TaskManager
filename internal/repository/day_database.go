@@ -19,16 +19,18 @@ func NewDayRepository(db *gorm.DB) *DayRepositoryImpl {
 }
 
 func (rep *DayRepositoryImpl) GetAllTasksForDay(dayID int64) ([]*models.Task, error) {
-	var day models.Day
-	if err := rep.db.Preload("Tasks").First(&day, dayID).Error; err != nil {
+	var tasks []*models.Task
+	if err := rep.db.Table("tasks").
+		Joins("JOIN day_tasks ON day_tasks.task_id = tasks.task_id").
+		Where("day_tasks.day_id = ?", dayID).
+		Find(&tasks).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("день с ID %d не найден", dayID)
+			return nil, fmt.Errorf("задачи для дня с ID %d не найдены", dayID)
 		}
 		return nil, fmt.Errorf("ошибка при поиске задач для дня: %w", err)
 	}
-	return day.Tasks, nil
+	return tasks, nil
 }
-
 func (rep *DayRepositoryImpl) GetAllUserDays(userID int64) ([]*models.Day, error) {
 	var days []*models.Day
 	query := rep.db.Where("user_id = ?", userID)
@@ -37,4 +39,11 @@ func (rep *DayRepositoryImpl) GetAllUserDays(userID int64) ([]*models.Day, error
 		return nil, fmt.Errorf("ошибка при поиске дней в базе данных: %s", err)
 	}
 	return days, nil
+}
+
+func (rep *DayRepositoryImpl) AddTaskToDay(dayID, taskID int64) error {
+	if err := rep.db.Exec("INSERT INTO day_tasks (day_id, task_id) VALUES (?, ?)", dayID, taskID).Error; err != nil {
+		return fmt.Errorf("ошибка при добавлении задачи в день: %w", err)
+	}
+	return nil
 }

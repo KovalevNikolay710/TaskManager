@@ -9,7 +9,7 @@ const (
 
 type Day struct {
 	DayId            int64     `gorm:"primaryKey;autoIncrement"`
-	UserId           int64     `gorm:"uniqueIndex:idx_user_date;not null"`
+	UserId           int64     `gorm:"not null"`
 	Date             time.Time `gorm:"uniqueIndex:idx_user_date;not null"`
 	TimeForTasks     int       `gorm:"not null;default:0"`
 	AmountOfTasks    int       `gorm:"not null;default:0"`
