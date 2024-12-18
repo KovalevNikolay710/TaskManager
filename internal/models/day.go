@@ -16,8 +16,8 @@ type Day struct {
 	PriorityOfTheDay float64   `gorm:"not null;default:0"`
 	Status           uint16    `gorm:"not null;default:0"`
 	UpdatedAt        time.Time
+	Tasks            []*Task `gorm:"many2many:day_tasks;"`
 }
-
 type DayCreateRequest struct {
 	Date          time.Time `json:"date" binding:"required"`
 	UserId        int64     `json:"userId" binding:"required"`

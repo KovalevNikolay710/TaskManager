@@ -26,12 +26,13 @@ type Task struct {
 
 type TaskCreateRequest struct {
 	UserID              int64     `json:"userId" binding:"required"`
-	GroupID             int64     `json:"groupId"`
 	Name                string    `json:"name" binding:"required"`
 	Description         string    `json:"description"`
 	DeadLine            time.Time `json:"deadline" binding:"required"` // RFC3339
 	TimeForExecution    int       `json:"timeForExecution" binding:"required"`
 	PercentOfCompleting int       `json:"percentOfCompleting" binding:"required"`
+	GroupPriority       int
+	GroupId             int64
 }
 
 type TaskUpdateRequest struct {
@@ -40,9 +41,11 @@ type TaskUpdateRequest struct {
 	TimeForExecution    int       `json:"timeForExecution"`
 	PercentOfCompleting int       `json:"percentOfCompleting"`
 	Description         string    `json:"description"`
+	GroupPriority       uint64    `json:"groupPriorty"`
 }
 
 type TaskFilter struct {
-	Status uint64
-	Date   time.Time
+	Status  uint64    `json:"status"`
+	Date    time.Time `json:"date"`
+	GroupId int64     `json:"groupId"`
 }

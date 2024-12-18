@@ -11,13 +11,14 @@ import (
 )
 
 type GroupHandler struct {
-	GroupService    services.GroupServiceImpl
-	GenericServices services.GenericService[models.Group]
+	GroupService    *services.GroupServiceImpl
+	TaskService     *services.TaskServiceImpl
+	GenericServices *services.GenericService[models.Group]
 	Logger          *slog.Logger
 }
 
-func NewGroupHandler(groupService services.GroupServiceImpl, logger *slog.Logger, genServ services.GenericService[models.Group]) *GroupHandler {
-	return &GroupHandler{GroupService: groupService, Logger: logger, GenericServices: genServ}
+func NewGroupHandler(groupService *services.GroupServiceImpl, taskService *services.TaskServiceImpl, logger *slog.Logger, genServ *services.GenericService[models.Group]) *GroupHandler {
+	return &GroupHandler{GroupService: groupService, TaskService: taskService, Logger: logger, GenericServices: genServ}
 }
 
 type GroupServiceImpl interface {
@@ -29,7 +30,6 @@ type GroupServiceImpl interface {
 	GetAllUserGroups(userId int64) *[]models.Group
 }
 
-// CreateGroup handles the creation of a new group
 func (handler *GroupHandler) CreateGroup(context *gin.Context) {
 	var input models.GroupCreateRequest
 	if err := context.ShouldBindJSON(&input); err != nil {
@@ -52,7 +52,6 @@ func (handler *GroupHandler) CreateGroup(context *gin.Context) {
 	context.JSON(http.StatusOK, group)
 }
 
-// DeleteGroup handles deleting a group
 func (handler *GroupHandler) DeleteGroup(context *gin.Context) {
 	groupId, err := strconv.ParseInt(context.Param("id"), 10, 64)
 	if err != nil {
@@ -114,7 +113,8 @@ func (handler *GroupHandler) UpdateGroup(context *gin.Context) {
 		context.JSON(http.StatusBadRequest, gin.H{"error": "Неправильные данные в запросе"})
 		return
 	}
-
+	handler.Logger.Error("Приоритет",
+		slog.Uint64("groupId", input.GroupPriority))
 	updatedGroup, err := handler.GroupService.UpdateGroup(groupId, input)
 	if err != nil {
 		handler.Logger.Error("Ошибка при обновлении группы",
@@ -129,7 +129,47 @@ func (handler *GroupHandler) UpdateGroup(context *gin.Context) {
 	context.JSON(http.StatusOK, updatedGroup)
 }
 
-// GetAllGroupTasks handles retrieving all tasks associated with a group
+func (handler *GroupHandler) AddTaskToGroup(context *gin.Context) {
+	groupId, err := strconv.ParseInt(context.Param("id"), 10, 64)
+	if err != nil {
+		handler.Logger.Error("Неправильное id группы в запросе",
+			slog.String("error", err.Error()))
+		context.JSON(http.StatusBadRequest, gin.H{"error": "Неправильное id группы"})
+	}
+
+	var input models.TaskCreateRequest
+	if err := context.ShouldBindJSON(&input); err != nil {
+		handler.Logger.Error("Ошибка при привязке JSON для обновления группы",
+			slog.String("error", err.Error()))
+		context.JSON(http.StatusBadRequest, gin.H{"error": "Неправильные данные в запросе"})
+		return
+	}
+
+	input.GroupId = groupId
+
+	task, err := handler.TaskService.CreateTask(input)
+	if err != nil {
+		handler.Logger.Error("Ошибка при создании задачи из БД",
+			slog.String("error", err.Error()))
+		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	group := models.GroupUpdateRequest{Task: task}
+
+	updatedGroup, err := handler.GroupService.UpdateGroup(groupId, group)
+	if err != nil {
+		handler.Logger.Error("Ошибка при обновлении группы",
+			slog.Int64("groupId", groupId),
+			slog.String("error", err.Error()))
+		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	handler.Logger.Info("Группа успешно обновлена",
+		slog.Int64("groupId", groupId))
+	context.JSON(http.StatusOK, updatedGroup)
+}
+
 func (handler *GroupHandler) GetAllGroupTasks(context *gin.Context) {
 	groupId, err := strconv.ParseInt(context.Param("id"), 10, 64)
 	if err != nil {

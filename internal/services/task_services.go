@@ -45,20 +45,21 @@ func (serv TaskServiceImpl) CreateTask(input models.TaskCreateRequest) (task *mo
 	}
 
 	var groupPriorty uint64 = 1
-	if input.GroupID != 0 {
-		result, err := serv.GroupRepo.FindByID(input.GroupID)
+	if input.GroupId != 0 {
+		result, err := serv.GroupRepo.FindByID(input.GroupId)
 		if err != nil {
 			return nil, fmt.Errorf("ошибка при поиске группы: %w", err)
 		}
 		if result != nil {
 			groupPriorty = result.GroupPriority
+		} else {
+			input.GroupId = 0
 		}
-		input.GroupID = 0
 	}
 
 	task = &models.Task{
 		UserId:               input.UserID,
-		GroupId:              input.GroupID,
+		GroupId:              input.GroupId,
 		GroupPriorty:         groupPriorty,
 		Name:                 input.Name,
 		Description:          input.Description,
@@ -130,6 +131,10 @@ func (serv TaskServiceImpl) UpdateTask(taskID int64, input models.TaskUpdateRequ
 
 	if !input.DeadLine.IsZero() && input.DeadLine.After(time.Now()) {
 		task.DeadLine = input.DeadLine
+	}
+
+	if input.GroupPriority > 0 {
+		task.GroupPriorty = input.GroupPriority
 	}
 
 	if err := serv.calculateTaskPriorty(task); err != nil {

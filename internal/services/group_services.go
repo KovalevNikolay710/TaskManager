@@ -18,16 +18,18 @@ type GroupRepositoryImpl interface {
 type GroupServiceImpl struct {
 	GroupRepository *repository.GroupRepositoryImpl
 	TaskRepository  *repository.TaskRepositoryImpl
+	TaskService     *TaskServiceImpl
 }
 
-func NewGroupService(groupRepo *repository.GroupRepositoryImpl, taskRepo *repository.TaskRepositoryImpl) *GroupServiceImpl {
+func NewGroupService(groupRepo *repository.GroupRepositoryImpl, taskRepo *repository.TaskRepositoryImpl, taskServ *TaskServiceImpl) *GroupServiceImpl {
 	return &GroupServiceImpl{
 		GroupRepository: groupRepo,
 		TaskRepository:  taskRepo,
+		TaskService:     taskServ,
 	}
 }
 
-func (service GroupServiceImpl) CreateGroup(input models.GroupCreateRequest) (createdGroup *models.Group, err error) {
+func (service *GroupServiceImpl) CreateGroup(input models.GroupCreateRequest) (createdGroup *models.Group, err error) {
 
 	if input.GroupPriority < 0 {
 		return nil, fmt.Errorf("неверное значение groupId: %w", err)
@@ -48,28 +50,44 @@ func (service GroupServiceImpl) CreateGroup(input models.GroupCreateRequest) (cr
 	return createdGroup, err
 }
 
-func (service GroupServiceImpl) UpdateGroup(groupId int64, input models.GroupUpdateRequest) (updatedGroup *models.Group, err error) {
-	group, err := service.GroupRepository.FindByID(groupId)
+func (s *GroupServiceImpl) UpdateGroup(groupId int64, input models.GroupUpdateRequest) (updatedGroup *models.Group, err error) {
+
+	group, err := s.GroupRepository.FindByID(groupId)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось найти группу: %w", err)
 	}
-	if input.Priority != 0 {
-		group.GroupPriority = input.Priority
+
+	if input.GroupPriority > 0 {
+		group.GroupPriority = input.GroupPriority
+		for _, task := range group.Tasks {
+			updateTask := &models.TaskUpdateRequest{
+				GroupPriority: group.GroupPriority,
+			}
+
+			_, err := s.TaskService.UpdateTask(task.TaskId, *updateTask)
+			if err != nil {
+				return nil, fmt.Errorf("ошибка при обновлении задачи с ID %d: %w", task.TaskId, err)
+			}
+		}
 	}
-	if input.Name != "" {
-		group.Name = input.Name
-	}
-	if input.Description != "" {
-		group.Description = input.Description
-	}
+
 	if input.Name != "" {
 		group.Name = input.Name
 	}
 
-	updatedGroup, err = service.GroupRepository.Update(group)
+	if input.Description != "" {
+		group.Description = input.Description
+	}
+
+	if input.Task != nil {
+		group.Tasks = append(group.Tasks, input.Task)
+	}
+
+	updatedGroup, err = s.GroupRepository.Update(group)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось обновить данные группы: %w", err)
 	}
+
 	return updatedGroup, nil
 }
 

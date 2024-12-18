@@ -2,7 +2,6 @@ package repository
 
 import (
 	"TaskManager/internal/models"
-	"errors"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -28,13 +27,12 @@ func (rep *GroupRepositoryImpl) GetAllUserGroups(userID int64) ([]*models.Group,
 	return groups, nil
 }
 
-func (rep GroupRepositoryImpl) GetAllTasksInGroup(groupId int64) ([]*models.Task, error) {
+func (rep *GroupRepositoryImpl) GetAllTasksInGroup(groupId int64) ([]*models.Task, error) {
 	var tasks []*models.Task
-	if err := rep.db.Where("group_id = ?", groupId).Find(&tasks).Error; err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, fmt.Errorf("задачи для группы с ID %d не найдены", groupId)
-		}
-		return nil, fmt.Errorf("ошибка при поиске задач для группы: %w", err)
+	query := rep.db.Where("group_id = ?", groupId)
+
+	if err := query.Find(&tasks).Error; err != nil {
+		return nil, fmt.Errorf("ошибка при поиске задач группы в базе данных: %s", err)
 	}
 	return tasks, nil
 }

@@ -11,12 +11,12 @@ import (
 )
 
 type TaskHandler struct {
-	TaskService    services.TaskServiceImpl
-	GenericService services.GenericService[models.Task]
+	TaskService    *services.TaskServiceImpl
+	GenericService *services.GenericService[models.Task]
 	Logger         *slog.Logger
 }
 
-func NewTaskHandler(taskService services.TaskServiceImpl, logger *slog.Logger, genServ services.GenericService[models.Task]) *TaskHandler {
+func NewTaskHandler(taskService *services.TaskServiceImpl, logger *slog.Logger, genServ *services.GenericService[models.Task]) *TaskHandler {
 	return &TaskHandler{TaskService: taskService, Logger: logger, GenericService: genServ}
 }
 
@@ -41,7 +41,7 @@ func (handler *TaskHandler) CreateTask(context *gin.Context) {
 
 	createdTask, err := handler.TaskService.CreateTask(taskRequest)
 	if err != nil {
-		handler.Logger.Error("Ошибка при получении задачи из БД",
+		handler.Logger.Error("Ошибка при создании задачи из БД",
 			slog.String("error", err.Error()))
 		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

@@ -31,6 +31,7 @@ func (rep *DayRepositoryImpl) GetAllTasksForDay(dayID int64) ([]*models.Task, er
 	}
 	return tasks, nil
 }
+
 func (rep *DayRepositoryImpl) GetAllUserDays(userID int64) ([]*models.Day, error) {
 	var days []*models.Day
 	query := rep.db.Where("user_id = ?", userID)

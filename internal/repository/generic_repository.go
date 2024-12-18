@@ -24,7 +24,9 @@ func (r *GenericRepository[T]) Create(entity *T) (*T, error) {
 
 func (r *GenericRepository[T]) FindByID(id int64) (*T, error) {
 	var entity T
-	if err := r.db.First(&entity, id).Error; err != nil {
+
+	// Проверяем, является ли тип `T` структурой, поддерживающей `Preload`
+	if err := r.db.Preload("Tasks").First(&entity, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}

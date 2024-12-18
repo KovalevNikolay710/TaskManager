@@ -24,14 +24,14 @@ func main() {
 
 	// Инициализация сервиса
 	taskService := services.NewTaskService(taskRepository, groupRepository, logger)
-	dayService := services.NewDayService(dayRepository, taskRepository)
-	groupServices := services.NewGroupService(groupRepository, taskRepository)
+	dayService := services.NewDayService(dayRepository, taskRepository, logger)
+	groupServices := services.NewGroupService(groupRepository, taskRepository, taskService)
 
 	// Создание роутера
 	router := gin.Default()
 
 	// Регистрация маршрутов
-	api.RegisterTaskRoutes(router, *taskService, *dayService, *groupServices, logger, db)
+	api.RegisterTaskRoutes(router, taskService, dayService, groupServices, logger, db)
 
 	// Запуск сервера
 	log.Println("Сервер запущен на порту :8080")

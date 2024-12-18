@@ -25,6 +25,10 @@ func (r *TaskRepositoryImpl) FindByUserID(userID int64, filter models.TaskFilter
 		query = query.Where("status = ?", filter.Status)
 	}
 
+	if filter.GroupId != 0 {
+		query = query.Where("groupId = ?", filter.GroupId)
+	}
+
 	if err := query.Find(&tasks).Error; err != nil {
 		return nil, fmt.Errorf("ошибка при поиске по фильтру задач в базе данных: %s", err)
 	}
