@@ -39,6 +39,7 @@ type TaskUpdateRequest struct {
 	DeadLine            time.Time `json:"deadline"` // RFC3339
 	TimeForExecution    int       `json:"timeForExecution"`
 	PercentOfCompleting int       `json:"percentOfCompleting"`
+	Description         string    `json:"description"`
 }
 
 type TaskFilter struct {
