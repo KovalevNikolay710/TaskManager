@@ -45,7 +45,7 @@ func (serv TaskServiceImpl) CreateTask(input models.TaskCreateRequest) (task *mo
 	}
 
 	var groupPriorty uint64 = 1
-	if input.GroupID != 1 {
+	if input.GroupID != 0 {
 		result, err := serv.GroupRepo.FindByID(input.GroupID)
 		if err != nil {
 			return nil, fmt.Errorf("ошибка при поиске группы: %w", err)
@@ -53,6 +53,7 @@ func (serv TaskServiceImpl) CreateTask(input models.TaskCreateRequest) (task *mo
 		if result != nil {
 			groupPriorty = result.GroupPriority
 		}
+		input.GroupID = 0
 	}
 
 	task = &models.Task{
@@ -103,28 +104,49 @@ func (serv TaskServiceImpl) countWorkHoursForDeadLine(deadline time.Time) (hours
 }
 
 func (serv TaskServiceImpl) UpdateTask(taskID int64, input models.TaskUpdateRequest) (*models.Task, error) {
+
 	task, err := serv.TaskRepo.FindByID(taskID)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка при поиске задачи: %s", err)
+		return nil, fmt.Errorf("ошибка при поиске задачи: %w", err)
 	}
-	if input.PercentOfCompleting == 100 {
-		task.PercentOfCompleting = input.PercentOfCompleting
-		task.Status = models.StatusCompleted
+	if task == nil {
+		return nil, fmt.Errorf("задача с ID %d не найдена", taskID)
 	}
+
 	if input.PercentOfCompleting > 0 {
 		task.PercentOfCompleting = input.PercentOfCompleting
+		if input.PercentOfCompleting == 100 {
+			task.Status = models.StatusCompleted
+		}
 	}
-	err = serv.calculateTaskPriorty(task)
-	if err != nil {
-		return nil, fmt.Errorf("ошибка при расчёте приоритета задачи: %s", err)
+
+	if input.Description != "" {
+		task.Description = input.Description
 	}
+
+	if input.TimeForExecution > 0 {
+		task.TimeForExecution = input.TimeForExecution
+	}
+
+	if !input.DeadLine.IsZero() && input.DeadLine.After(time.Now()) {
+		task.DeadLine = input.DeadLine
+	}
+
+	if err := serv.calculateTaskPriorty(task); err != nil {
+		serv.Logger.Error("Ошибка при расчёте приоритета задачи", slog.Int64("taskID", taskID), slog.String("error", err.Error()))
+		return nil, fmt.Errorf("ошибка при расчёте приоритета задачи: %w", err)
+	}
+
 	task.UpdatedAt = time.Now()
 
-	task, err = serv.TaskRepo.Update(task)
+	updatedTask, err := serv.TaskRepo.Update(task)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка при обновлении задачи: %s", err)
+		return nil, fmt.Errorf("ошибка при обновлении задачи: %w", err)
 	}
-	return task, nil
+
+	serv.Logger.Info("Задача успешно обновлена", slog.Int64("taskID", taskID), slog.Any("updatedTask", updatedTask))
+
+	return updatedTask, nil
 }
 
 func (serv TaskServiceImpl) GetTasksByUserID(userId int64, filters models.TaskFilter) ([]*models.Task, error) {
