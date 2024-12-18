@@ -56,7 +56,7 @@ func (handler *TaskHandler) GetTaskById(context *gin.Context) {
 		return
 	}
 
-	task, err := handler.TaskService.GenericService.GetByID(taskId)
+	task, err := handler.GenericService.GetByID(taskId)
 	if err != nil {
 		handler.Logger.Error("Ошибка при получении задачи из БД",
 			slog.String("error", err.Error()),
@@ -107,7 +107,7 @@ func (handler *TaskHandler) DeleteTask(context *gin.Context) {
 		return
 	}
 
-	if err := handler.TaskService.GenericService.Delete(taskId); err != nil {
+	if err := handler.GenericService.Delete(taskId); err != nil {
 		handler.Logger.Error("Ошибка при удалении задачи",
 			slog.Int64("taskId", taskId),
 			slog.String("error", err.Error()))

@@ -32,7 +32,7 @@ func (r *TaskRepositoryImpl) FindByUserID(userID int64, filter models.TaskFilter
 	if !filter.Date.IsZero() {
 		var filteredTasks []*models.Task
 		for _, task := range tasks {
-			if task.DeadLine.After(filter.Date) || task.DeadLine.Equal(filter.Date) {
+			if task.DeadLine.After(filter.Date) {
 				filteredTasks = append(filteredTasks, task)
 			}
 		}
