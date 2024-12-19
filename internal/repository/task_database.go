@@ -2,6 +2,7 @@ package repository
 
 import (
 	"TaskManager/internal/models"
+	"errors"
 	"fmt"
 
 	"gorm.io/gorm"
@@ -15,6 +16,20 @@ func NewTaskRepository(db *gorm.DB) *TaskRepositoryImpl {
 	return &TaskRepositoryImpl{
 		GenericRepository: NewGenericRepository[models.Task](db),
 	}
+}
+
+func (r *TaskRepositoryImpl) FindByID(taskId int64) (*models.Task, error) {
+	var task models.Task
+
+	if err := r.db.First(&task, taskId).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("ошибка при поиске задачи в базе данных: %w", err)
+	}
+
+	return &task, nil
 }
 
 func (r *TaskRepositoryImpl) FindByUserID(userID int64, filter models.TaskFilter) ([]*models.Task, error) {

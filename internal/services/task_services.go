@@ -154,6 +154,19 @@ func (serv TaskServiceImpl) UpdateTask(taskID int64, input models.TaskUpdateRequ
 	return updatedTask, nil
 }
 
+func (serv *TaskServiceImpl) GetById(taskId int64) (*models.Task, error) {
+	task, err := serv.TaskRepo.FindByID(taskId)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка при получении задачи: %w", err)
+	}
+
+	if task == nil {
+		return nil, nil
+	}
+
+	return task, nil
+}
+
 func (serv TaskServiceImpl) GetTasksByUserID(userId int64, filters models.TaskFilter) ([]*models.Task, error) {
 	tasks, err := serv.TaskRepo.FindByUserID(userId, filters)
 	if err != nil {

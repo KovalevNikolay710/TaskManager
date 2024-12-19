@@ -12,11 +12,11 @@ import (
 
 type TaskHandler struct {
 	TaskService    *services.TaskServiceImpl
-	GenericService *services.GenericService[models.Task]
+	GenericService *services.GenericService[*models.Task]
 	Logger         *slog.Logger
 }
 
-func NewTaskHandler(taskService *services.TaskServiceImpl, logger *slog.Logger, genServ *services.GenericService[models.Task]) *TaskHandler {
+func NewTaskHandler(taskService *services.TaskServiceImpl, logger *slog.Logger, genServ *services.GenericService[*models.Task]) *TaskHandler {
 	return &TaskHandler{TaskService: taskService, Logger: logger, GenericService: genServ}
 }
 
@@ -56,7 +56,7 @@ func (handler *TaskHandler) GetTaskById(context *gin.Context) {
 		return
 	}
 
-	task, err := handler.GenericService.GetByID(taskId)
+	task, err := handler.TaskService.GetById(taskId)
 	if err != nil {
 		handler.Logger.Error("Ошибка при получении задачи из БД",
 			slog.String("error", err.Error()),
