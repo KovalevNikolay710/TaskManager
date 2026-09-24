@@ -59,6 +59,9 @@ func (serv *DayServiceImpl) UpdateDay(dayId int64, input *models.DayUpdateReques
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при поиске дня: %w", err)
 	}
+	if day == nil {
+		return nil, fmt.Errorf("день с ID %d не найден", dayId)
+	}
 
 	if input.AmountOfTasks != day.AmountOfTasks && input.AmountOfTasks > 0 {
 		day.AmountOfTasks = input.AmountOfTasks
@@ -85,19 +88,24 @@ func (serv *DayServiceImpl) GetDaysByUserID(userID int64) ([]*models.Day, error)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось получить дни пользователя: %w", err)
 	}
+
+	// Задачи плана могли быть выполнены после сборки дня — пересчитываем остаток при выдаче
+	for _, day := range days {
+		calculateDayPriority(day)
+	}
 	return days, nil
 }
 
 func (serv *DayServiceImpl) FillDayTaskListAndCalculatePriorty(day *models.Day) (*models.Day, error) {
 
 	tasks, err := serv.TaskRepository.FindByUserID(day.UserId, models.TaskFilter{Status: models.StatusActive, Date: day.Date})
-
-	if tasks == nil {
-		return nil, nil
-	}
-
 	if err != nil {
 		return nil, fmt.Errorf("не удалось получить задачи пользователя: %w", err)
+	}
+
+	// Активных задач может не быть — тогда день остаётся с пустым планом
+	if tasks == nil {
+		tasks = []*models.Task{}
 	}
 
 	sort.Slice(tasks, func(i, j int) bool {
@@ -110,11 +118,23 @@ func (serv *DayServiceImpl) FillDayTaskListAndCalculatePriorty(day *models.Day) 
 		day.Tasks = tasks
 	}
 
-	sum := 0.0
-	for _, task := range day.Tasks {
-		sum += task.Priority
-	}
-	day.PriorityOfTheDay = sum
+	calculateDayPriority(day)
+
+	serv.Logger.Info("План дня сформирован",
+		slog.Int64("userId", day.UserId),
+		slog.Int("taskCount", len(day.Tasks)),
+		slog.Float64("priorityOfTheDay", day.PriorityOfTheDay))
 
 	return day, nil
+}
+
+// calculateDayPriority считает приоритет дня как сумму Priority невыполненных задач плана.
+func calculateDayPriority(day *models.Day) {
+	sum := 0.0
+	for _, task := range day.Tasks {
+		if task.Status != models.StatusCompleted {
+			sum += task.Priority
+		}
+	}
+	day.PriorityOfTheDay = sum
 }
