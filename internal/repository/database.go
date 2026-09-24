@@ -3,6 +3,7 @@ package repository
 import (
 	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"strconv"
 	"time"
@@ -48,6 +49,12 @@ func Connect() {
 
 	if err != nil {
 		log.Fatalf("Ошибка миграции схемы: %v", err)
+	}
+
+	// Разовая идемпотентная чистка данных старых версий; при ошибке транзакция откатывается,
+	// данные остаются прежними, сервер продолжает запуск
+	if err := RepairTaskGroups(db, slog.Default()); err != nil {
+		slog.Error("Не удалось исправить связи задач с группами", slog.String("error", err.Error()))
 	}
 }
 
