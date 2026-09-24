@@ -76,6 +76,11 @@ func (serv *DayServiceImpl) UpdateDay(dayId int64, input *models.DayUpdateReques
 		return nil, fmt.Errorf("не удалось заполнить список задач: %w", err)
 	}
 
+	// Save только добавляет связи many2many, поэтому старые задачи плана убираем явно
+	if err := serv.DayRepository.ReplaceTasks(day, day.Tasks); err != nil {
+		return nil, fmt.Errorf("не удалось обновить задачи дня: %w", err)
+	}
+
 	updatedDay, err := serv.DayRepository.Update(day, "Tasks")
 	if err != nil {
 		return nil, fmt.Errorf("не удалось обновить данные дня: %w", err)
