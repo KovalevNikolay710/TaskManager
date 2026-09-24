@@ -5,6 +5,7 @@ import (
 	"TaskManager/internal/lib/logger/slog"
 	"TaskManager/internal/repository"
 	"TaskManager/internal/services"
+	"TaskManager/web"
 	"log"
 
 	"github.com/gin-gonic/gin"
@@ -32,6 +33,8 @@ func main() {
 
 	// Регистрация маршрутов
 	api.RegisterTaskRoutes(router, taskService, dayService, groupServices, logger, db)
+	// Фронтенд встроен в бинарник; все прочие GET-пути отдаются SPA
+	api.RegisterFrontend(router, web.Dist(), logger)
 
 	// Запуск сервера
 	log.Println("Сервер запущен на порту :8080")

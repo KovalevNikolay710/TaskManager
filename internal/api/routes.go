@@ -15,7 +15,10 @@ func RegisterTaskRoutes(router *gin.Engine, taskService *services.TaskServiceImp
 	dayHandler := handlers.NewDayHandler(dayService, services.NewGenericService[models.Day](db))
 	groupHandler := handlers.NewGroupHandler(groupsServices, taskService, logger, services.NewGenericService[models.Group](db))
 
-	taskRoutes := router.Group("/tasks")
+	// Всё API живёт под /api, чтобы не пересекаться с маршрутами SPA (/day, /tasks/:id, ...)
+	apiRoutes := router.Group("/api")
+
+	taskRoutes := apiRoutes.Group("/tasks")
 	{
 		taskRoutes.POST("/", taskHandler.CreateTask)
 		taskRoutes.GET("/:id", taskHandler.GetTaskById)
@@ -24,7 +27,7 @@ func RegisterTaskRoutes(router *gin.Engine, taskService *services.TaskServiceImp
 		taskRoutes.POST("/user/:user_id", taskHandler.GetTasksByUserID)
 	}
 
-	dayRoutes := router.Group("/days")
+	dayRoutes := apiRoutes.Group("/days")
 	{
 		dayRoutes.POST("/", dayHandler.CreateDayHandler)
 		dayRoutes.GET("/:id", dayHandler.GetDayByIDHandler)
@@ -33,7 +36,7 @@ func RegisterTaskRoutes(router *gin.Engine, taskService *services.TaskServiceImp
 		dayRoutes.GET("/user/:user_id", dayHandler.GetDaysByUserIDHandler)
 	}
 
-	groupRoutes := router.Group("/groups")
+	groupRoutes := apiRoutes.Group("/groups")
 	{
 		groupRoutes.POST("/", groupHandler.CreateGroup)
 		groupRoutes.GET("/:id", groupHandler.GetGroupByID)

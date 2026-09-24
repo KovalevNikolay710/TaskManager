@@ -15,12 +15,18 @@ services:
     networks:
       - manager_network
     command: ["postgres", "-c", "timezone=Europe/Moscow"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d task_manager_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   app:
     build: .
     container_name: task_manager_app
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     environment:
       - DB_HOST=db
       - DB_USER=postgres

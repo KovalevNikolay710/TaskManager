@@ -1,27 +1,28 @@
+import { writeFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import react from '@vitejs/plugin-react'
-import { defineConfig, type ProxyOptions } from 'vite'
+import { defineConfig, type Plugin } from 'vite'
 
-const API_TARGET = 'http://localhost:8080'
-
-// Пути SPA (например, /tasks/:id — экран задачи) пересекаются с путями API.
-// Переходы браузера (Accept: text/html) отдаём фронтенду, остальные запросы — Go-серверу.
-const apiProxy: ProxyOptions = {
-  target: API_TARGET,
-  changeOrigin: true,
-  bypass(req) {
-    if (req.method === 'GET' && req.headers.accept?.includes('text/html')) {
-      return '/index.html'
-    }
+// Go встраивает web/dist через go:embed, поэтому папка закоммичена с .gitkeep
+// (иначе `go build` падает, пока фронтенд не собран). Vite очищает dist перед сборкой —
+// возвращаем .gitkeep, чтобы он не пропадал из рабочей копии.
+const keepDistPlaceholder: Plugin = {
+  name: 'keep-dist-placeholder',
+  apply: 'build',
+  closeBundle() {
+    writeFileSync(resolve(import.meta.dirname, 'dist/.gitkeep'), '')
   },
 }
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), keepDistPlaceholder],
   server: {
+    // API под /api, поэтому с маршрутами SPA (/day, /tasks/:id) не пересекается
     proxy: {
-      '/tasks': apiProxy,
-      '/groups': apiProxy,
-      '/days': apiProxy,
+      '/api': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
     },
   },
 })

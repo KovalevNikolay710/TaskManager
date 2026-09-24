@@ -1,4 +1,5 @@
-const BASE_URL = import.meta.env.VITE_API_URL ?? ''
+// VITE_API_URL — origin Go-сервера (по умолчанию тот же origin); всё API живёт под /api
+const BASE_URL = (import.meta.env.VITE_API_URL ?? '') + '/api'
 
 /** Ошибка API: текст из {"error": "..."} и HTTP-статус (0 — сервер недоступен). */
 export class ApiError extends Error {

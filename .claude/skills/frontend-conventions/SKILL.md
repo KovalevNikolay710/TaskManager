@@ -37,17 +37,17 @@ web/src/
 ## Работа с API
 
 - Все запросы — через `api/client.ts`: базовый путь из `import.meta.env.VITE_API_URL` (по умолчанию пустая строка — тот же origin), JSON, ошибки из `{"error": "..."}` превращаются в `Error` с этим текстом.
-- В dev-режиме Vite проксирует API на Go-сервер: в `vite.config.ts` настрой `server.proxy` для путей API (`/tasks`, `/groups`, `/days`, либо `/api`, если API уже под этим префиксом) на `http://localhost:8080`.
+- В dev-режиме Vite проксирует API на Go-сервер: в `vite.config.ts` `server.proxy` проксирует только `/api` на `http://localhost:8080`. Префикс `/api` добавляется один раз в `BASE_URL` в `api/client.ts` — в `tasks.ts`, `days.ts` и других пути пишутся без него (`/tasks/user/1`).
 - Типы в `api/types.ts` повторяют **реальные** поля ответа Go-моделей (`TaskId`, `DeadLine`, `Priority`...), запросы — camelCase как в `*Request` DTO. Сверяйся с `internal/models/`.
 - `userId` пока передаётся явно (авторизации нет): держи его в одном месте — `api/user.ts`, константа `CURRENT_USER_ID = 1`.
 - Сортировка задач по `Priority` по убыванию — в одном хелпере, не в каждом компоненте.
 
 ## Встраивание в Go
 
-Цель — один бинарник. Когда настраиваешь раздачу фронтенда:
-- `npm run build` кладёт сборку в `web/dist`;
-- Go встраивает её через `embed` (пакет, например, `web/embed.go` или `internal/web`) и отдаёт через gin, с fallback на `index.html` для путей SPA;
-- API при этом должен жить под префиксом `/api`, чтобы не конфликтовать с маршрутами SPA;
+Уже настроено — один бинарник отдаёт и API, и фронтенд:
+- `npm run build` кладёт сборку в `web/dist` (плагин в `vite.config.ts` сохраняет `dist/.gitkeep`);
+- `web/embed.go` встраивает `web/dist` через `//go:embed`, `internal/api/spa.go` отдаёт файлы и fallback на `index.html` для путей SPA; неизвестные `/api/...` — 404 JSON;
+- всё API живёт под `/api`, поэтому маршруты SPA (`/day`, `/tasks/:id`, ...) с ним не пересекаются;
 - Dockerfile собирает фронтенд отдельным stage на `node:lts-alpine`.
 
 ## Проверка
