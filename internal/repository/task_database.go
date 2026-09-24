@@ -41,7 +41,7 @@ func (r *TaskRepositoryImpl) FindByUserID(userID int64, filter models.TaskFilter
 		query = query.Where("status = ?", filter.Status)
 	}
 
-	if filter.Status != 0 {
+	if filter.GroupId != 0 {
 		query = query.Where("group_id = ?", filter.GroupId)
 	}
 
