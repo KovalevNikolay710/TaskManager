@@ -1,0 +1,24 @@
+.fab {
+  position: fixed;
+  z-index: 9;
+  right: var(--space-4);
+  bottom: calc(var(--size-bottom-nav) + env(safe-area-inset-bottom) + var(--space-4));
+  display: grid;
+  place-items: center;
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+  box-shadow: var(--shadow-lg);
+}
+
+.fab:hover {
+  background: var(--color-accent-hover);
+}
+
+@media (min-width: 960px) {
+  .fab {
+    display: none;
+  }
+}

@@ -1,0 +1,75 @@
+.checkbox {
+  position: relative;
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--size-touch);
+  height: var(--size-touch);
+  margin: calc(-1 * var(--space-3)) 0 calc(-1 * var(--space-3)) calc(-1 * var(--space-3));
+  cursor: pointer;
+}
+
+.checkbox input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.checkbox input:disabled {
+  cursor: not-allowed;
+}
+
+.box {
+  display: grid;
+  place-items: center;
+  width: var(--size-checkbox);
+  height: var(--size-checkbox);
+  border-radius: var(--radius-sm);
+  border: 2px solid var(--color-border-strong);
+  color: transparent;
+  transition:
+    background var(--duration-fast),
+    border-color var(--duration-fast);
+}
+
+.checkbox input:checked + .box {
+  background: var(--color-success);
+  border-color: var(--color-success);
+  color: var(--color-text-inverse);
+}
+
+.checkbox input:focus-visible + .box {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.pending,
+.pending input {
+  cursor: progress;
+}
+
+.pending .box,
+.pending input:checked + .box {
+  background: none;
+  border-color: var(--color-success);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pending .box,
+  .pending input:checked + .box {
+    animation: none;
+  }
+}

@@ -1,0 +1,143 @@
+.task {
+  --bar: var(--color-priority-low);
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4) var(--space-3) calc(var(--space-4) + var(--size-priority-bar));
+  background: var(--color-surface);
+  cursor: pointer;
+  transition: background var(--duration-fast);
+}
+
+.task::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: var(--size-priority-bar);
+  background: var(--bar);
+}
+
+@media (hover: hover) {
+  .task:hover {
+    background: var(--color-surface-sunken);
+  }
+}
+
+.high {
+  --bar: var(--color-priority-high);
+}
+
+.mid {
+  --bar: var(--color-priority-mid);
+}
+
+.low {
+  --bar: var(--color-priority-low);
+}
+
+/* Разделитель начинается от текста, а не от чекбокса */
+.divider::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 1px;
+  background: var(--color-border);
+  left: calc(var(--space-4) + var(--size-priority-bar) + var(--size-touch) - var(--space-3) + var(--space-2));
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+  padding-top: 1px;
+}
+
+.name {
+  margin: 0;
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+}
+
+/* Название — кнопка открытия задачи (доступ с клавиатуры); до 2 строк, затем многоточие */
+.open {
+  width: 100%;
+  text-align: left;
+  font-weight: inherit;
+  line-height: inherit;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.name mark {
+  background: var(--color-accent-soft);
+  color: inherit;
+  border-radius: 3px;
+  padding: 0 1px;
+}
+
+.meta {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.facts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  column-gap: var(--space-2);
+  row-gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.fact {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  white-space: nowrap;
+}
+
+.fact + .fact::before {
+  content: '·';
+  margin-right: var(--space-1);
+  color: var(--color-border-strong);
+}
+
+/* DeadlineLabel */
+.soon {
+  color: var(--color-warning);
+  font-weight: var(--font-weight-medium);
+}
+
+.overdue {
+  color: var(--color-danger);
+  font-weight: var(--font-weight-medium);
+}
+
+.normal {
+  color: inherit;
+}
+
+/* Выполненная задача */
+.done {
+  --bar: var(--color-border);
+}
+
+.done .open {
+  color: var(--color-text-muted);
+  text-decoration: line-through;
+}
+
+.done .body,
+.done > label {
+  opacity: 0.7;
+}
