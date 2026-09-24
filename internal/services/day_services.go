@@ -4,6 +4,7 @@ import (
 	"TaskManager/internal/models"
 	"TaskManager/internal/repository"
 	"fmt"
+	"log/slog"
 	"sort"
 )
 
@@ -20,12 +21,14 @@ type DayServiceImpl struct {
 	DayRepository  *repository.DayRepositoryImpl
 	TaskRepository *repository.TaskRepositoryImpl
 	GenericService *GenericService[models.Day]
+	Logger         *slog.Logger
 }
 
-func NewDayService(dayRepo *repository.DayRepositoryImpl, taskRepo *repository.TaskRepositoryImpl) *DayServiceImpl {
+func NewDayService(dayRepo *repository.DayRepositoryImpl, taskRepo *repository.TaskRepositoryImpl, logger *slog.Logger) *DayServiceImpl {
 	return &DayServiceImpl{
 		DayRepository:  dayRepo,
 		TaskRepository: taskRepo,
+		Logger:         logger,
 	}
 }
 
@@ -38,47 +41,50 @@ func (serv *DayServiceImpl) CreateDay(input *models.DayCreateRequest) (createdDa
 		AmountOfTasks: input.AmountOfTasks,
 	}
 
-	createdDay, err = serv.DayRepository.Create(day)
-	if err != nil {
-		return nil, fmt.Errorf("не удалось создать день: %w", err)
-	}
-
-	createdDay, err = serv.fillDayTaskListAndCalculatePriorty(createdDay)
+	day, err = serv.FillDayTaskListAndCalculatePriorty(day)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось заполнить список задач: %w", err)
+	}
+
+	createdDay, err = serv.DayRepository.Create(day, "Tasks")
+	if err != nil {
+		return nil, fmt.Errorf("не удалось создать день: %w", err)
 	}
 
 	return createdDay, nil
 }
 
-func (serv *DayServiceImpl) UpdateDay(dayId int64, input *models.DayUpdateRequest) (updatedDay *models.Day, err error) {
+func (serv *DayServiceImpl) UpdateDay(dayId int64, input *models.DayUpdateRequest) (*models.Day, error) {
 	day, err := serv.DayRepository.FindByID(dayId)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка при поиске дня: %s", err)
+		return nil, fmt.Errorf("ошибка при поиске дня: %w", err)
+	}
+	if day == nil {
+		return nil, fmt.Errorf("день с ID %d не найден", dayId)
 	}
 
-	dayChanged := false
-	if *input.AmountOfTasks != 0 && *input.AmountOfTasks != day.AmountOfTasks && *input.AmountOfTasks > 0 {
-		day.AmountOfTasks = *input.AmountOfTasks
-		dayChanged = true
-	}
-	if *input.TimeForTasks != 0 && *input.TimeForTasks != day.AmountOfTasks && *input.TimeForTasks > 0 {
-		day.AmountOfTasks = *input.AmountOfTasks
-		dayChanged = true
+	if input.AmountOfTasks != day.AmountOfTasks && input.AmountOfTasks > 0 {
+		day.AmountOfTasks = input.AmountOfTasks
 	}
 
-	if dayChanged {
-		updatedDay, err = serv.fillDayTaskListAndCalculatePriorty(updatedDay)
-		if err != nil {
-			return nil, fmt.Errorf("не удалось заполнить список задач: %w", err)
-		}
+	if input.TimeForTasks != day.TimeForTasks && input.TimeForTasks > 0 {
+		day.TimeForTasks = input.TimeForTasks
 	}
 
-	updatedDay, err = serv.DayRepository.Update(day)
+	day, err = serv.FillDayTaskListAndCalculatePriorty(day)
+	if err != nil {
+		return nil, fmt.Errorf("не удалось заполнить список задач: %w", err)
+	}
+
+	// Save только добавляет связи many2many, поэтому старые задачи плана убираем явно
+	if err := serv.DayRepository.ReplaceTasks(day, day.Tasks); err != nil {
+		return nil, fmt.Errorf("не удалось обновить задачи дня: %w", err)
+	}
+
+	updatedDay, err := serv.DayRepository.Update(day, "Tasks")
 	if err != nil {
 		return nil, fmt.Errorf("не удалось обновить данные дня: %w", err)
 	}
-
 	return updatedDay, nil
 }
 
@@ -87,39 +93,53 @@ func (serv *DayServiceImpl) GetDaysByUserID(userID int64) ([]*models.Day, error)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось получить дни пользователя: %w", err)
 	}
+
+	// Задачи плана могли быть выполнены после сборки дня — пересчитываем остаток при выдаче
+	for _, day := range days {
+		calculateDayPriority(day)
+	}
 	return days, nil
 }
 
-func (serv *DayServiceImpl) fillDayTaskListAndCalculatePriorty(day *models.Day) (*models.Day, error) {
-	// Получаем задачи пользователя по фильтру
+func (serv *DayServiceImpl) FillDayTaskListAndCalculatePriorty(day *models.Day) (*models.Day, error) {
+
 	tasks, err := serv.TaskRepository.FindByUserID(day.UserId, models.TaskFilter{Status: models.StatusActive, Date: day.Date})
 	if err != nil {
 		return nil, fmt.Errorf("не удалось получить задачи пользователя: %w", err)
 	}
 
-	// Сортируем задачи по приоритету
+	// Активных задач может не быть — тогда день остаётся с пустым планом
+	if tasks == nil {
+		tasks = []*models.Task{}
+	}
+
 	sort.Slice(tasks, func(i, j int) bool {
 		return tasks[i].Priority > tasks[j].Priority
 	})
 
-	// Берём задачи, которые соответствуют количеству задач дня
-	selectedTasks := tasks
 	if len(tasks) > day.AmountOfTasks {
-		selectedTasks = tasks[:day.AmountOfTasks]
+		day.Tasks = tasks[:day.AmountOfTasks]
+	} else {
+		day.Tasks = tasks
 	}
 
-	// Добавляем задачи в таблицу связи day_tasks
-	for _, task := range selectedTasks {
-		if err := serv.DayRepository.AddTaskToDay(day.DayId, task.TaskId); err != nil {
-			return nil, fmt.Errorf("не удалось добавить задачу с ID %d в день: %w", task.TaskId, err)
-		}
-	}
+	calculateDayPriority(day)
 
-	// Пересчитываем приоритет дня
-	day.PriorityOfTheDay = 0
-	for _, task := range selectedTasks {
-		day.PriorityOfTheDay += task.Priority
-	}
+	serv.Logger.Info("План дня сформирован",
+		slog.Int64("userId", day.UserId),
+		slog.Int("taskCount", len(day.Tasks)),
+		slog.Float64("priorityOfTheDay", day.PriorityOfTheDay))
 
 	return day, nil
+}
+
+// calculateDayPriority считает приоритет дня как сумму Priority невыполненных задач плана.
+func calculateDayPriority(day *models.Day) {
+	sum := 0.0
+	for _, task := range day.Tasks {
+		if task.Status != models.StatusCompleted {
+			sum += task.Priority
+		}
+	}
+	day.PriorityOfTheDay = sum
 }

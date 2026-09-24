@@ -1,0 +1,47 @@
+.search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: var(--size-touch);
+  margin-bottom: var(--space-6);
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-md);
+  color: var(--color-text-muted);
+}
+
+.search:focus-within {
+  box-shadow: 0 0 0 2px var(--color-focus);
+}
+
+.icon {
+  margin-left: var(--space-3);
+}
+
+.input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0 var(--space-2);
+  border: 0;
+  background: none;
+  outline: none;
+  font: inherit;
+  color: var(--color-text);
+}
+
+.input::placeholder {
+  color: var(--color-text-muted);
+}
+
+/* Своя кнопка очистки вместо встроенной у type="search" */
+.input::-webkit-search-cancel-button {
+  appearance: none;
+}
+
+.clear {
+  display: grid;
+  place-items: center;
+  width: var(--size-touch);
+  height: var(--size-touch);
+  color: var(--color-text-muted);
+}

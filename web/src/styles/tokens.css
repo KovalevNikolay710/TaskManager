@@ -1,0 +1,187 @@
+/*
+ * TaskManager — дизайн-токены.
+ * Единственный источник значений для макетов (design/screens) и фронтенда (web/).
+ * Цвета семантические: меняется тема — меняются значения, имена остаются.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* ---------- Цвета: поверхности и текст ---------- */
+  --color-bg: #f4f5f8;              /* фон страницы */
+  --color-surface: #ffffff;         /* карточки, панели */
+  --color-surface-raised: #ffffff;  /* всплывающие элементы (меню, нижняя навигация) */
+  --color-surface-sunken: #eceef3;  /* поле поиска, skeleton, трек прогресса */
+  --color-text: #1a1d26;            /* основной текст, 15.9:1 на surface */
+  --color-text-muted: #5b6172;      /* вторичный текст, 6.1:1 на surface, 5.6:1 на bg */
+  --color-text-inverse: #ffffff;    /* текст на accent */
+  --color-border: #dfe2ea;          /* разделители, обводка карточек */
+  --color-border-strong: #9aa0b0;   /* обводка чекбокса, полей ввода (3:1 для UI) */
+
+  /* ---------- Цвета: акцент и статусы ---------- */
+  --color-accent: #4c4fd8;          /* основные действия, активная вкладка; 5.9:1 на белом */
+  --color-accent-hover: #3d40c0;
+  --color-accent-soft: #ebebfc;     /* фон активного пункта навигации, выделения */
+  --color-focus: #4c4fd8;           /* кольцо фокуса */
+  --color-danger: #c62828;          /* ошибки, просроченный дедлайн; 5.6:1 на белом */
+  --color-danger-soft: #fdecec;
+  --color-success: #1e7d3c;         /* выполнено, чекбокс; 5.3:1 на белом */
+  --color-success-soft: #e6f4ea;
+  --color-warning: #a15c00;         /* дедлайн скоро; 5.4:1 на белом */
+
+  /* ---------- Шкала приоритета ----------
+   * base — полоска/точка индикатора (графический элемент, контраст ≥ 3:1),
+   * -soft — фон чипа с числом, -text — текст числа на -soft (≥ 4.5:1).
+   */
+  --color-priority-low: #8a93a6;
+  --color-priority-low-soft: #eef0f4;
+  --color-priority-low-text: #4a5163;
+  --color-priority-mid: #e08a00;
+  --color-priority-mid-soft: #fff3de;
+  --color-priority-mid-text: #8a4b00;
+  --color-priority-high: #e0433a;
+  --color-priority-high-soft: #fdeae8;
+  --color-priority-high-text: #a8231b;
+
+  /* ---------- Типографика ---------- */
+  --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  --text-xs: 12px;    /* подписи, бейджи, чип приоритета */
+  --text-sm: 13px;    /* мета-строка задачи, подписи навигации */
+  --text-md: 15px;    /* основной текст, название задачи */
+  --text-lg: 17px;    /* заголовки групп */
+  --text-xl: 22px;    /* заголовок экрана (мобильный) */
+  --text-2xl: 28px;   /* заголовок экрана (десктоп), крупные числа сводки */
+
+  --font-weight-regular: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  --line-height-tight: 1.25;
+  --line-height-normal: 1.45;
+
+  /* ---------- Отступы (шкала 4px) ---------- */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-12: 48px;
+
+  /* ---------- Радиусы ---------- */
+  --radius-sm: 6px;     /* чекбокс, чип */
+  --radius-md: 10px;    /* поля ввода, кнопки */
+  --radius-lg: 14px;    /* карточки, группы */
+  --radius-full: 999px; /* аватар, pill-элементы */
+
+  /* ---------- Тени ---------- */
+  --shadow-sm: 0 1px 2px rgba(20, 24, 40, 0.06);
+  --shadow-md: 0 2px 8px rgba(20, 24, 40, 0.08);
+  --shadow-lg: 0 8px 24px rgba(20, 24, 40, 0.12);
+  --shadow-nav: 0 -1px 0 var(--color-border), 0 -4px 16px rgba(20, 24, 40, 0.05);
+
+  /* ---------- Размеры и раскладка ---------- */
+  --size-touch: 44px;         /* минимальная зона нажатия */
+  --size-checkbox: 22px;
+  --size-avatar: 36px;
+  --size-priority-bar: 4px;   /* ширина цветной полоски приоритета */
+  --size-bottom-nav: 64px;
+  --size-side-nav: 240px;
+  --layout-max-width: 720px;
+  --breakpoint-desktop: 960px; /* справочно: в @media переменные не работают, значение дублируется */
+
+  /* ---------- Анимация ---------- */
+  --duration-fast: 120ms;
+  --duration-normal: 200ms;
+  --easing-standard: cubic-bezier(0.2, 0, 0, 1);
+}
+
+/* ---------- Тёмная тема ---------- */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --color-bg: #111318;
+    --color-surface: #1b1e26;
+    --color-surface-raised: #232732;
+    --color-surface-sunken: #262a35;
+    --color-text: #eceef4;
+    --color-text-muted: #a2a8b8;
+    --color-text-inverse: #ffffff;
+    --color-border: #2e3340;
+    --color-border-strong: #6b7285;
+
+    --color-accent: #8b8ef5;
+    --color-accent-hover: #a3a5f8;
+    --color-accent-soft: #2a2c52;
+    --color-focus: #a3a5f8;
+    --color-danger: #ff7b72;
+    --color-danger-soft: #3a1f22;
+    --color-success: #5fcf83;
+    --color-success-soft: #1d3325;
+    --color-warning: #f0b35a;
+
+    --color-priority-low: #7a8398;
+    --color-priority-low-soft: #2a2e39;
+    --color-priority-low-text: #c3c8d4;
+    --color-priority-mid: #f0a02a;
+    --color-priority-mid-soft: #3a2d16;
+    --color-priority-mid-text: #ffc76b;
+    --color-priority-high: #ff6259;
+    --color-priority-high-soft: #3d1f1f;
+    --color-priority-high-text: #ff9a93;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+    --shadow-nav: 0 -1px 0 var(--color-border), 0 -4px 16px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* Принудительная тёмная тема (переключатель в профиле) — те же значения */
+[data-theme="dark"] {
+  color-scheme: dark;
+  --color-bg: #111318;
+  --color-surface: #1b1e26;
+  --color-surface-raised: #232732;
+  --color-surface-sunken: #262a35;
+  --color-text: #eceef4;
+  --color-text-muted: #a2a8b8;
+  --color-text-inverse: #ffffff;
+  --color-border: #2e3340;
+  --color-border-strong: #6b7285;
+
+  --color-accent: #8b8ef5;
+  --color-accent-hover: #a3a5f8;
+  --color-accent-soft: #2a2c52;
+  --color-focus: #a3a5f8;
+  --color-danger: #ff7b72;
+  --color-danger-soft: #3a1f22;
+  --color-success: #5fcf83;
+  --color-success-soft: #1d3325;
+  --color-warning: #f0b35a;
+
+  --color-priority-low: #7a8398;
+  --color-priority-low-soft: #2a2e39;
+  --color-priority-low-text: #c3c8d4;
+  --color-priority-mid: #f0a02a;
+  --color-priority-mid-soft: #3a2d16;
+  --color-priority-mid-text: #ffc76b;
+  --color-priority-high: #ff6259;
+  --color-priority-high-soft: #3d1f1f;
+  --color-priority-high-text: #ff9a93;
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
+  --shadow-nav: 0 -1px 0 var(--color-border), 0 -4px 16px rgba(0, 0, 0, 0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-normal: 0ms;
+  }
+}

@@ -31,14 +31,25 @@ func (rep *DayRepositoryImpl) GetAllTasksForDay(dayID int64) ([]*models.Task, er
 	}
 	return tasks, nil
 }
+
 func (rep *DayRepositoryImpl) GetAllUserDays(userID int64) ([]*models.Day, error) {
 	var days []*models.Day
-	query := rep.db.Where("user_id = ?", userID)
+
+	query := rep.db.Where("user_id = ?", userID).Preload("Tasks")
 
 	if err := query.Find(&days).Error; err != nil {
 		return nil, fmt.Errorf("ошибка при поиске дней в базе данных: %s", err)
 	}
+
 	return days, nil
+}
+
+// ReplaceTasks заменяет набор задач дня в day_tasks: связи, которых нет в tasks, удаляются.
+func (rep *DayRepositoryImpl) ReplaceTasks(day *models.Day, tasks []*models.Task) error {
+	if err := rep.db.Model(day).Association("Tasks").Replace(tasks); err != nil {
+		return fmt.Errorf("ошибка при замене задач дня: %w", err)
+	}
+	return nil
 }
 
 func (rep *DayRepositoryImpl) AddTaskToDay(dayID, taskID int64) error {

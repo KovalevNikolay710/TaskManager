@@ -45,20 +45,28 @@ func (serv TaskServiceImpl) CreateTask(input models.TaskCreateRequest) (task *mo
 	}
 
 	var groupPriorty uint64 = 1
-	if input.GroupID != 0 {
-		result, err := serv.GroupRepo.FindByID(input.GroupID)
+	if input.GroupId != 0 {
+		result, err := serv.GroupRepo.FindByID(input.GroupId)
 		if err != nil {
 			return nil, fmt.Errorf("ошибка при поиске группы: %w", err)
 		}
-		if result != nil {
+		switch {
+		case result == nil:
+			serv.Logger.Warn("Группа задачи не найдена, задача создаётся без группы",
+				slog.Int64("groupId", input.GroupId))
+			input.GroupId = 0
+		case result.UserId != input.UserID:
+			serv.Logger.Warn("Группа принадлежит другому пользователю, задача создаётся без группы",
+				slog.Int64("groupId", input.GroupId), slog.Int64("userId", input.UserID))
+			input.GroupId = 0
+		default:
 			groupPriorty = result.GroupPriority
 		}
-		input.GroupID = 0
 	}
 
 	task = &models.Task{
 		UserId:               input.UserID,
-		GroupId:              input.GroupID,
+		GroupId:              input.GroupId,
 		GroupPriorty:         groupPriorty,
 		Name:                 input.Name,
 		Description:          input.Description,
@@ -74,7 +82,7 @@ func (serv TaskServiceImpl) CreateTask(input models.TaskCreateRequest) (task *mo
 		return nil, fmt.Errorf("ошибка при расчёте приоритета задачи: %w", err)
 	}
 
-	task, err = serv.TaskRepo.Create(task)
+	task, err = serv.TaskRepo.CreateInGroup(task)
 	if err != nil {
 		serv.Logger.Error("Ошибка при записи задачи в БД", slog.String("error", err.Error()))
 		return nil, fmt.Errorf("ошибка при записи задачи: %w", err)
@@ -120,6 +128,21 @@ func (serv TaskServiceImpl) UpdateTask(taskID int64, input models.TaskUpdateRequ
 		}
 	}
 
+	switch input.Status {
+	case models.StatusCompleted:
+		task.Status = models.StatusCompleted
+		task.PercentOfCompleting = 100
+	case models.StatusActive:
+		task.Status = models.StatusActive
+		// Возвращённая в работу задача не может оставаться выполненной на 100%:
+		// берём переданный процент (< 100) или сбрасываем в 0
+		if input.PercentOfCompleting > 0 && input.PercentOfCompleting < 100 {
+			task.PercentOfCompleting = input.PercentOfCompleting
+		} else if task.PercentOfCompleting >= 100 {
+			task.PercentOfCompleting = 0
+		}
+	}
+
 	if input.Description != "" {
 		task.Description = input.Description
 	}
@@ -130,6 +153,10 @@ func (serv TaskServiceImpl) UpdateTask(taskID int64, input models.TaskUpdateRequ
 
 	if !input.DeadLine.IsZero() && input.DeadLine.After(time.Now()) {
 		task.DeadLine = input.DeadLine
+	}
+
+	if input.GroupPriority > 0 {
+		task.GroupPriorty = input.GroupPriority
 	}
 
 	if err := serv.calculateTaskPriorty(task); err != nil {
@@ -147,6 +174,19 @@ func (serv TaskServiceImpl) UpdateTask(taskID int64, input models.TaskUpdateRequ
 	serv.Logger.Info("Задача успешно обновлена", slog.Int64("taskID", taskID), slog.Any("updatedTask", updatedTask))
 
 	return updatedTask, nil
+}
+
+func (serv *TaskServiceImpl) GetById(taskId int64) (*models.Task, error) {
+	task, err := serv.TaskRepo.FindByID(taskId)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка при получении задачи: %w", err)
+	}
+
+	if task == nil {
+		return nil, nil
+	}
+
+	return task, nil
 }
 
 func (serv TaskServiceImpl) GetTasksByUserID(userId int64, filters models.TaskFilter) ([]*models.Task, error) {

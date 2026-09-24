@@ -1,0 +1,26 @@
+.switcher {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.date {
+  text-align: center;
+}
+
+.main {
+  display: block;
+  font-weight: var(--font-weight-semibold);
+}
+
+.sub {
+  display: block;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.badge {
+  display: block;
+  margin-top: var(--space-1);
+}

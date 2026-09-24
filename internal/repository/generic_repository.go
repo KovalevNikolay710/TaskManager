@@ -15,16 +15,28 @@ func NewGenericRepository[T any](db *gorm.DB) *GenericRepository[T] {
 	return &GenericRepository[T]{db: db}
 }
 
-func (r *GenericRepository[T]) Create(entity *T) (*T, error) {
+func (r *GenericRepository[T]) Create(entity *T, preloads ...string) (*T, error) {
 	if err := r.db.Create(entity).Error; err != nil {
-		return nil, fmt.Errorf("ошибка при записи в базу данных: %w", err)
+		return nil, fmt.Errorf("ошибка при создании записи в базе данных: %w", err)
 	}
+
+	if len(preloads) > 0 {
+		query := r.db
+		for _, preload := range preloads {
+			query = query.Preload(preload)
+		}
+		if err := query.First(entity, entity).Error; err != nil {
+			return nil, fmt.Errorf("ошибка при перезагрузке сущности: %w", err)
+		}
+	}
+
 	return entity, nil
 }
 
 func (r *GenericRepository[T]) FindByID(id int64) (*T, error) {
 	var entity T
-	if err := r.db.First(&entity, id).Error; err != nil {
+
+	if err := r.db.Preload("Tasks").First(&entity, id).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
@@ -33,10 +45,21 @@ func (r *GenericRepository[T]) FindByID(id int64) (*T, error) {
 	return &entity, nil
 }
 
-func (r *GenericRepository[T]) Update(entity *T) (*T, error) {
+func (r *GenericRepository[T]) Update(entity *T, preloads ...string) (*T, error) {
 	if err := r.db.Save(entity).Error; err != nil {
-		return nil, fmt.Errorf("ошибка при обновлении в базе данных: %w", err)
+		return nil, fmt.Errorf("ошибка при обновлении записи в базе данных: %w", err)
 	}
+
+	if len(preloads) > 0 {
+		query := r.db
+		for _, preload := range preloads {
+			query = query.Preload(preload)
+		}
+		if err := query.First(entity, entity).Error; err != nil {
+			return nil, fmt.Errorf("ошибка при перезагрузке сущности: %w", err)
+		}
+	}
+
 	return entity, nil
 }
 

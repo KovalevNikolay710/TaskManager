@@ -5,11 +5,12 @@ import "time"
 type Group struct {
 	GroupId       int64  `gorm:"primaryKey;autoIncrement"`
 	GroupPriority uint64 `gorm:"not null"`
-	UserId        int64
+	UserId        int64  `gorm:"not null;index"`
 	Name          string `gorm:"not null"`
 	Description   string
 	CreatedAt     time.Time `gorm:"autoCreateTime"`
 	UpdatedAt     time.Time `gorm:"autoUpdateTime"`
+	Tasks         []*Task   `gorm:"many2many:group_tasks;constraint:OnDelete:CASCADE;"`
 }
 
 type GroupCreateRequest struct {
@@ -20,7 +21,7 @@ type GroupCreateRequest struct {
 }
 
 type GroupUpdateRequest struct {
-	Priority    uint64 `json:"groupPriority,omitempty"`
-	Name        string `json:"name,omitempty"`
-	Description string `json:"description,omitempty"`
+	Name          string `json:"name,omitempty"`
+	Description   string `json:"description,omitempty"`
+	GroupPriority uint64 `json:"groupPriorty,omitempty"`
 }

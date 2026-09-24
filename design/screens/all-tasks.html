@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Все задачи — TaskManager (макет)</title>
+  <link rel="stylesheet" href="../tokens.css">
+  <link rel="stylesheet" href="../components.css">
+</head>
+<body>
+
+<!-- Иконки (линейные, currentColor) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M3 6.5l1.8 1.8L8 5M3 13.5l1.8 1.8L8 12M11 7h10M11 14h10M11 20h10M3.5 20h1"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5 16 16"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M3 13h5l1.5 3h5L16 13h5M5.5 5h13L21 13v6a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 19v-6l2.5-8z"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3zM12 10v4M12 17h.01"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4.5L3 9M3 4v5h5M4 13a8 8 0 0 0 14.5 4.5L21 15M21 20v-5h-5"/></symbol>
+</svg>
+
+<div class="app">
+
+  <!-- SideNav (десктоп) -->
+  <aside class="side-nav" aria-label="Основная навигация">
+    <p class="side-nav__brand">TaskManager</p>
+    <a class="side-nav__item" href="day.html"><svg class="icon"><use href="#i-calendar"/></svg>День</a>
+    <a class="side-nav__item" href="all-tasks.html" aria-current="page"><svg class="icon"><use href="#i-list"/></svg>Все задачи</a>
+    <button class="side-nav__profile" type="button" aria-label="Профиль">
+      <span class="avatar-btn__circle">Я</span>
+      <span><span class="side-nav__profile-name">Профиль</span><span class="side-nav__profile-sub">Пользователь #1</span></span>
+    </button>
+  </aside>
+
+  <main class="app__main">
+    <div class="app__content">
+
+      <header class="app-header">
+        <div>
+          <h1 class="app-header__title">Все задачи</h1>
+          <p class="app-header__subtitle">9 активных · 2 выполнено</p>
+        </div>
+        <div class="app-header__actions">
+          <button class="btn btn--primary app-header__new" type="button"><svg class="icon icon--sm"><use href="#i-plus"/></svg>Новая задача</button>
+          <button class="avatar-btn" type="button" aria-label="Профиль"><span class="avatar-btn__circle">Я</span></button>
+        </div>
+      </header>
+
+      <!-- ============ Состояние: данные ============ -->
+      <section data-view="data" data-active>
+        <label class="search">
+          <svg class="icon icon--sm"><use href="#i-search"/></svg>
+          <span class="visually-hidden">Поиск задач</span>
+          <input class="search__input" type="search" placeholder="Поиск задач">
+        </label>
+
+        <!-- Группа: Учёба (×3) -->
+        <section class="group" aria-labelledby="g1">
+          <button class="group__header" type="button" aria-expanded="true">
+            <span class="group__name" id="g1">Учёба</span>
+            <span class="group__weight" title="Приоритет группы 3">×3</span>
+            <span class="group__count">1 / 4</span>
+            <svg class="icon icon--sm group__chevron"><use href="#i-chevron"/></svg>
+          </button>
+          <ul class="group__body">
+            <li>
+              <article class="task p-high">
+                <label class="checkbox"><input type="checkbox" aria-labelledby="t1"><span class="checkbox__box"><svg class="icon icon--xs"><use href="#i-check"/></svg></span></label>
+                <div class="task__body">
+                  <p class="task__name" id="t1">Подготовить отчёт по ТИПИС</p>
+                  <div class="task__meta">
+                    <span class="task__facts">
+                      <span class="task__fact"><svg class="icon icon--xs"><use href="#i-clock"/></svg><span aria-hidden="true">3:00</span><span class="visually-hidden">Время на выполнение: 3 часа</span></span>
+                      <span class="task__fact deadline deadline--soon"><svg class="icon icon--xs"><use href="#i-flag"/></svg>завтра, 10:00</span>
+                      <span class="task__fact">40%</span>
+                    </span>
+                    <span class="priority-chip" aria-label="Приоритет 16,2, высокий"><svg class="icon"><use href="#i-zap"/></svg>16,2</span>
+                  </div>
+                </div>
+              </article>
+            </li>
+            <li>
+              <article class="task p-mid">
+                <label class="checkbox"><input type="checkbox" aria-labelledby="t2"><span class="checkbox__box"><svg class="icon icon--xs"><use href="#i-check"/></svg></span></label>
+                <div class="task__body">
+                  <p class="task__name" id="t2">Лабораторная №4 по базам данных: нормализация схемы</p>
+                  <div class="task__meta">
+                    <span class="task__facts">
+                      <span class="task__fact"><svg class="icon icon--xs"><use href="#i-clock"/></svg><span aria-hidden="true">2:00</span><span class="visually-hidden">Время на выполнение: 2 часа</span></span>
+                      <span class="task__fact deadline"><svg class="icon icon--xs"><use href="#i-flag"/></svg>через 3 дня</span>
+                    </span>
+                    <span class="priority-chip" aria-label="Приоритет 5,0, средний"><svg class="icon"><use href="#i-zap"/></svg>5,0</span>
+                  </div>
+                </div>
+              </article>
+            </li>
+            <li>
+              <article class="task p-low">
+                <label class="checkbox"><input type="checkbox" aria-labelledby="t3"><span class="checkbox__box"><svg class="icon icon--xs"><use href="#i-check"/></svg></span></label>
+                <div class="task__body">
+                  <p class="task__name" id="t3">Прочитать главу 5 по матанализу</p>
+                  <div class="task__meta">
+                    <span class="task__facts">
+                      <span class="task__fact"><svg class="icon icon--xs"><use href="#i-clock"/></svg><span aria-hidden="true">1:00</span><span class="visually-hidden">Время на выполнение: 1 час</span></span>
+                      <span class="task__fact deadline"><svg class="icon icon--xs"><use href="#i-flag"/></svg>через 6 дней</span>
+                    </span>
+                    <span class="priority-chip" aria-label="Приоритет 1,3, низкий"><svg class="icon"><use href="#i-zap"/></svg>1,3</span>
+                  </div>
+                </div>
+              </article>
+            </li>
+            <li>
+              <article class="task p-low task--done">
+                <label class="checkbox" title="Возврат задачи в работу пока не поддерживается"><input type="checkbox" checked disabled aria-labelledby="t4"><span class="checkbox__box"><svg class="icon icon--xs"><use href="#i-check"/></svg></span></label>
+                <div class="task__body">
+                  <p class="task__name" id="t4">Сдать эссе по философии</p>
+                  <div class="task__meta">
+                    <span class="task__facts">
+                      <span class="task__fact deadline"><svg class="icon icon--xs"><use href="#i-flag"/></svg>26 сен</span>
+                    </span>
+                  </div>
+                </div>
+              </article>
+            </li>
+          </ul>
+        </section>
+
+        <!-- Группа: Работа (×2) -->
+        <section class="group" aria-labelledby="g2">
+          <button class="group__header" type="button" aria-expanded="true">
+            <span class="group__name" id="g2">Работа</span>
+            <span class="group__weight" title="Приоритет группы 2">×2</span>
+            <span class="group__count">1 / 3</span>
+            <svg class="icon icon--sm group__chevron"><use href="#i-chevron"/></svg>
+          </button>
+          <ul class="group__body">
+            <li>
+              <article class="task p-high">
+                <label class="checkbox checkbox--pending"><input type="checkbox" checked aria-labelledby="t5" aria-busy="true"><span class="checkbox__box"></span></label>
+                <div class="task__body">
+                  <p class="task__name" id="t5">Ревью пулл-реквеста в TaskManager</p>
+                  <div class="task__meta">
+                    <span class="task__facts">
+                      <span class="task__fact"><svg class="icon icon--xs"><use href="#i-clock"/></svg><span aria-hidden="true">0:45</span><span class="visually-hidden">Время на выполнение: 45 минут</span></span>
+                      <span class="task__fact deadline deadline--soon"><svg class="icon icon--xs"><use href="#i-flag"/></svg>сегодня, 18:00</span>
+                    </span>
+                    <span class="priority-chip" aria-label="Приоритет 15,0, высокий"><svg class="icon"><use href="#i-zap"/></svg>15,0</span>
+                  </div>
+                </div>
+              </article>
+            </li>
+            <li>
+              <article class="task p-low">
+                <label class="checkbox"><input type="checkbox" aria-labelledby="t6"><span class="checkbox__box"><svg class="icon icon--xs"><use href="#i-check"/></svg></span></label>
+                <div class="task__body">
+                  <p class="task__name" id="t6">Подготовить демо для созвона с заказчиком</p>
+                  <div class="task__meta">
+                    <span class="task__facts">
+                      <span class="task__fact"><svg class="icon icon--xs"><use href="#i-clock"/></svg><span aria-hidden="true">1:30</span><span class="visually-hidden">Время на выполнение: 1 час 30 минут</span></span>
+                      <span class="task__fact deadline"><svg class="icon icon--xs"><use href="#i-flag"/></svg>29 сен</span>
+                      <span class="task__fact">10%</span>
+                    </span>
+                    <span class="priority-chip" aria-label="Приоритет 1,4, низкий"><svg class="icon"><use href="#i-zap"/></svg>1,4</span>
+                  </div>
+                </div>
+              </article>
+            </li>
+            <li>
+              <article class="task p-low task--done">
+                <label class="checkbox" title="Возврат задачи в работу пока не поддерживается"><input type="checkbox" checked disabled aria-labelledby="t7"><span class="checkbox__box"><svg class="icon icon--xs"><use href="#i-check"/></svg></span></label>
+                <div class="task__body">
+                  <p class="task__name" id="t7">Обновить зависимости Go в сервисе</p>
+                  <div class="task__meta">
+                    <span class="task__facts">
+                      <span class="task__fact deadline"><svg class="icon icon--xs"><use href="#i-flag"/></svg>сегодня, 12:00</span>
+                    </span>
+                  </div>
+                </div>
+              </article>
+            </li>
+          </ul>
+        </section>
+
+        <!-- Группа: Дом (×1) -->
+        <section class="group" aria-labelledby="g3">
+          <button class="group__header" type="button" aria-expanded="true">
+            <span class="group__name" id="g3">Дом</span>
+            <span class="group__weight" title="Приоритет группы 1">×1</span>
+            <span class="group__count">0 / 3</span>
+            <svg class="icon icon--sm group__chevron"><use href="#i-chevron"/></svg>
+          </button>
+          <ul class="group__body">
+            <li>
+              <article class="task p-low">
+                <label class="checkbox"><input type="checkbox" aria-labelledby="t8"><span class="checkbox__box"><svg class="icon icon--xs"><use href="#i-check"/></svg></span></label>
+                <div class="task__body">
+                  <p class="task__name" id="t8">Купить продукты на неделю</p>
+                  <div class="task__meta">
+                    <span class="task__facts">
+                      <span class="task__fact"><svg class="icon icon--xs"><use href="#i-clock"/></svg><span aria-hidden="true">1:00</span><span class="visually-hidden">Время на выполнение: 1 час</span></span>
+                      <span class="task__fact deadline"><svg class="icon icon--xs"><use href="#i-flag"/></svg>завтра, 20:00</span>
+                    </span>
+                    <span class="priority-chip" aria-label="Приоритет 2,0, низкий"><svg class="icon"><use href="#i-zap"/></svg>2,0</span>
+                  </div>
+                </div>
+              </article>
+            </li>
+            <li>
+              <article class="task p-low">
+                <label class="checkbox"><input type="checkbox" aria-labelledby="t9"><span class="checkbox__box"><svg class="icon icon--xs"><use href="#i-check"/></svg></span></label>
+                <div class="task__body">
+                  <p class="task__name" id="t9">Оплатить интернет</p>
+                  <div class="task__meta">
+                    <span class="task__facts">
+                      <span class="task__fact"><svg class="icon icon--xs"><use href="#i-clock"/></svg><span aria-hidden="true">0:10</span><span class="visually-hidden">Время на выполнение: 10 минут</span></span>
+                      <span class="task__fact deadline deadline--soon"><svg class="icon icon--xs"><use href="#i-flag"/></svg>сегодня, 21:00</span>
+                    </span>
+                    <span class="priority-chip" aria-label="Приоритет 1,1, низкий"><svg class="icon"><use href="#i-zap"/></svg>1,1</span>
+                  </div>
+                </div>
+              </article>
+            </li>
+            <li>
+              <article class="task p-low">
+                <label class="checkbox"><input type="checkbox" aria-labelledby="t10"><span class="checkbox__box"><svg class="icon icon--xs"><use href="#i-check"/></svg></span></label>
+                <div class="task__body">
+                  <p class="task__name" id="t10">Записаться к стоматологу</p>
+                  <div class="task__meta">
+                    <span class="task__facts">
+                      <span class="task__fact"><svg class="icon icon--xs"><use href="#i-clock"/></svg><span aria-hidden="true">0:15</span><span class="visually-hidden">Время на выполнение: 15 минут</span></span>
+                      <span class="task__fact deadline"><svg class="icon icon--xs"><use href="#i-flag"/></svg>3 окт</span>
+                    </span>
+                    <span class="priority-chip" aria-label="Приоритет меньше 0,1, низкий"><svg class="icon"><use href="#i-zap"/></svg>&lt;0,1</span>
+                  </div>
+                </div>
+              </article>
+            </li>
+          </ul>
+        </section>
+
+        <!-- Без группы -->
+        <section class="group" aria-labelledby="g0">
+          <button class="group__header" type="button" aria-expanded="true">
+            <span class="group__name" id="g0">Без группы</span>
+            <span class="group__count">0 / 1</span>
+            <svg class="icon icon--sm group__chevron"><use href="#i-chevron"/></svg>
+          </button>
+          <ul class="group__body">
+            <li>
+              <article class="task p-low">
+                <label class="checkbox"><input type="checkbox" aria-labelledby="t11"><span class="checkbox__box"><svg class="icon icon--xs"><use href="#i-check"/></svg></span></label>
+                <div class="task__body">
+                  <p class="task__name" id="t11">Позвонить бабушке</p>
+                  <div class="task__meta">
+                    <span class="task__facts">
+                      <span class="task__fact"><svg class="icon icon--xs"><use href="#i-clock"/></svg><span aria-hidden="true">0:20</span><span class="visually-hidden">Время на выполнение: 20 минут</span></span>
+                      <span class="task__fact deadline"><svg class="icon icon--xs"><use href="#i-flag"/></svg>28 сен</span>
+                    </span>
+                    <span class="priority-chip" aria-label="Приоритет 0,2, низкий"><svg class="icon"><use href="#i-zap"/></svg>0,2</span>
+                  </div>
+                </div>
+              </article>
+            </li>
+          </ul>
+        </section>
+
+        <!-- Toast: пример ошибки фонового действия -->
+        <div class="toast" role="status" data-view="toast">
+          Не удалось отметить задачу
+          <button class="btn btn--ghost" type="button">Повторить</button>
+        </div>
+      </section>
+
+      <!-- ============ Состояние: поиск ============ -->
+      <section data-view="search">
+        <label class="search">
+          <svg class="icon icon--sm"><use href="#i-search"/></svg>
+          <span class="visually-hidden">Поиск задач</span>
+          <input class="search__input" type="search" placeholder="Поиск задач" value="подгот">
+          <button class="search__clear" type="button" aria-label="Очистить поиск"><svg class="icon icon--sm"><use href="#i-x"/></svg></button>
+        </label>
+
+        <section class="group" aria-labelledby="sg1">
+          <div class="group__header"><h2 class="group__name" id="sg1">Учёба</h2><span class="group__weight">×3</span><span class="group__count">1 найдено</span></div>
+          <ul class="group__body">
+            <li>
+              <article class="task p-high">
+                <label class="checkbox"><input type="checkbox" aria-labelledby="st1"><span class="checkbox__box"><svg class="icon icon--xs"><use href="#i-check"/></svg></span></label>
+                <div class="task__body">
+                  <p class="task__name" id="st1"><mark>Подгот</mark>овить отчёт по ТИПИС</p>
+                  <div class="task__meta">
+                    <span class="task__facts">
+                      <span class="task__fact"><svg class="icon icon--xs"><use href="#i-clock"/></svg><span aria-hidden="true">3:00</span><span class="visually-hidden">Время на выполнение: 3 часа</span></span>
+                      <span class="task__fact deadline deadline--soon"><svg class="icon icon--xs"><use href="#i-flag"/></svg>завтра, 10:00</span>
+                      <span class="task__fact">40%</span>
+                    </span>
+                    <span class="priority-chip" aria-label="Приоритет 16,2, высокий"><svg class="icon"><use href="#i-zap"/></svg>16,2</span>
+                  </div>
+                </div>
+              </article>
+            </li>
+          </ul>
+        </section>
+        <section class="group" aria-labelledby="sg2">
+          <div class="group__header"><h2 class="group__name" id="sg2">Работа</h2><span class="group__weight">×2</span><span class="group__count">1 найдено</span></div>
+          <ul class="group__body">
+            <li>
+              <article class="task p-low">
+                <label class="checkbox"><input type="checkbox" aria-labelledby="st2"><span class="checkbox__box"><svg class="icon icon--xs"><use href="#i-check"/></svg></span></label>
+                <div class="task__body">
+                  <p class="task__name" id="st2"><mark>Подгот</mark>овить демо для созвона с заказчиком</p>
+                  <div class="task__meta">
+                    <span class="task__facts">
+                      <span class="task__fact"><svg class="icon icon--xs"><use href="#i-clock"/></svg><span aria-hidden="true">1:30</span><span class="visually-hidden">Время на выполнение: 1 час 30 минут</span></span>
+                      <span class="task__fact deadline"><svg class="icon icon--xs"><use href="#i-flag"/></svg>29 сен</span>
+                      <span class="task__fact">10%</span>
+                    </span>
+                    <span class="priority-chip" aria-label="Приоритет 1,4, низкий"><svg class="icon"><use href="#i-zap"/></svg>1,4</span>
+                  </div>
+                </div>
+              </article>
+            </li>
+          </ul>
+        </section>
+      </section>
+
+      <!-- ============ Состояние: поиск без результатов ============ -->
+      <section data-view="search-empty">
+        <label class="search">
+          <svg class="icon icon--sm"><use href="#i-search"/></svg>
+          <span class="visually-hidden">Поиск задач</span>
+          <input class="search__input" type="search" placeholder="Поиск задач" value="диплом">
+          <button class="search__clear" type="button" aria-label="Очистить поиск"><svg class="icon icon--sm"><use href="#i-x"/></svg></button>
+        </label>
+        <div class="state">
+          <div class="state__icon"><svg class="icon"><use href="#i-search"/></svg></div>
+          <h2 class="state__title">Ничего не найдено</h2>
+          <p class="state__text">По запросу «диплом» задач нет. Проверьте написание или создайте такую задачу.</p>
+          <button class="btn btn--secondary" type="button">Сбросить поиск</button>
+        </div>
+      </section>
+
+      <!-- ============ Состояние: загрузка ============ -->
+      <section data-view="loading" aria-busy="true" aria-label="Загрузка задач">
+        <div class="skeleton" style="height: var(--size-touch); border-radius: var(--radius-md); margin-bottom: var(--space-6);"></div>
+        <div class="group">
+          <div class="group__header"><div class="skeleton" style="width: 96px; height: 20px;"></div><div class="skeleton" style="width: 28px; height: 16px; border-radius: var(--radius-full);"></div></div>
+          <div class="group__body" style="padding: var(--space-3) var(--space-4); display: grid; gap: var(--space-4);">
+            <div style="display:flex; gap: var(--space-3);"><div class="skeleton" style="width:22px;height:22px;"></div><div style="flex:1;display:grid;gap:6px;"><div class="skeleton" style="height:16px;width:70%;"></div><div class="skeleton" style="height:12px;width:45%;"></div></div></div>
+            <div style="display:flex; gap: var(--space-3);"><div class="skeleton" style="width:22px;height:22px;"></div><div style="flex:1;display:grid;gap:6px;"><div class="skeleton" style="height:16px;width:85%;"></div><div class="skeleton" style="height:12px;width:40%;"></div></div></div>
+            <div style="display:flex; gap: var(--space-3);"><div class="skeleton" style="width:22px;height:22px;"></div><div style="flex:1;display:grid;gap:6px;"><div class="skeleton" style="height:16px;width:55%;"></div><div class="skeleton" style="height:12px;width:50%;"></div></div></div>
+          </div>
+        </div>
+        <div class="group">
+          <div class="group__header"><div class="skeleton" style="width: 120px; height: 20px;"></div></div>
+          <div class="group__body" style="padding: var(--space-3) var(--space-4); display: grid; gap: var(--space-4);">
+            <div style="display:flex; gap: var(--space-3);"><div class="skeleton" style="width:22px;height:22px;"></div><div style="flex:1;display:grid;gap:6px;"><div class="skeleton" style="height:16px;width:65%;"></div><div class="skeleton" style="height:12px;width:35%;"></div></div></div>
+            <div style="display:flex; gap: var(--space-3);"><div class="skeleton" style="width:22px;height:22px;"></div><div style="flex:1;display:grid;gap:6px;"><div class="skeleton" style="height:16px;width:75%;"></div><div class="skeleton" style="height:12px;width:45%;"></div></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ Состояние: пусто ============ -->
+      <section data-view="empty">
+        <div class="state">
+          <div class="state__icon"><svg class="icon"><use href="#i-inbox"/></svg></div>
+          <h2 class="state__title">Задач пока нет</h2>
+          <p class="state__text">Добавьте первую задачу с дедлайном и оценкой времени — мы сами расставим приоритеты.</p>
+          <button class="btn btn--primary" type="button"><svg class="icon icon--sm"><use href="#i-plus"/></svg>Добавить задачу</button>
+        </div>
+      </section>
+
+      <!-- ============ Состояние: ошибка ============ -->
+      <section data-view="error">
+        <div class="state state--error" role="alert">
+          <div class="state__icon"><svg class="icon"><use href="#i-alert"/></svg></div>
+          <h2 class="state__title">Не удалось загрузить задачи</h2>
+          <p class="state__text">Проверьте, что сервер запущен, и попробуйте ещё раз.</p>
+          <p class="state__detail">ошибка поиске задач по userId: dial tcp 127.0.0.1:5432: connection refused</p>
+          <button class="btn btn--secondary" type="button"><svg class="icon icon--sm"><use href="#i-refresh"/></svg>Повторить</button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <button class="fab" type="button" aria-label="Добавить задачу"><svg class="icon"><use href="#i-plus"/></svg></button>
+
+  <!-- BottomNav (мобильный) -->
+  <nav class="bottom-nav" aria-label="Основная навигация">
+    <a class="bottom-nav__item" href="day.html"><span class="bottom-nav__pill"><svg class="icon"><use href="#i-calendar"/></svg></span>День</a>
+    <a class="bottom-nav__item" href="all-tasks.html" aria-current="page"><span class="bottom-nav__pill"><svg class="icon"><use href="#i-list"/></svg></span>Все задачи</a>
+  </nav>
+</div>
+
+<!-- Переключатель состояний макета (не часть интерфейса) -->
+<div class="mock-panel" aria-hidden="true">
+  <span class="mock-panel__label">Макет · состояние</span>
+  <button data-set="data" aria-pressed="true">Данные</button>
+  <button data-set="search">Поиск</button>
+  <button data-set="search-empty">Поиск: пусто</button>
+  <button data-set="loading">Загрузка</button>
+  <button data-set="empty">Пусто</button>
+  <button data-set="error">Ошибка</button>
+  <button data-set="toast">+ Toast</button>
+  <button data-theme-toggle>Тема</button>
+</div>
+<script>
+  (function () {
+    var views = document.querySelectorAll('main [data-view]:not([data-view="toast"])');
+    var toast = document.querySelector('[data-view="toast"]');
+    var buttons = document.querySelectorAll('.mock-panel [data-set]');
+    buttons.forEach(function (b) {
+      b.addEventListener('click', function () {
+        var v = b.dataset.set;
+        if (v === 'toast') {
+          var on = !toast.hasAttribute('data-active');
+          toast.toggleAttribute('data-active', on);
+          b.setAttribute('aria-pressed', on);
+          return;
+        }
+        views.forEach(function (el) { el.toggleAttribute('data-active', el.dataset.view === v); });
+        buttons.forEach(function (x) { if (x.dataset.set !== 'toast') x.setAttribute('aria-pressed', x === b); });
+      });
+    });
+    document.querySelector('[data-theme-toggle]').addEventListener('click', function () {
+      var root = document.documentElement;
+      var dark = root.dataset.theme === 'dark' ||
+        (!root.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches);
+      root.dataset.theme = dark ? 'light' : 'dark';
+    });
+    // Сворачивание групп
+    document.querySelectorAll('button.group__header').forEach(function (h) {
+      h.addEventListener('click', function () {
+        var g = h.closest('.group');
+        g.classList.toggle('group--collapsed');
+        h.setAttribute('aria-expanded', !g.classList.contains('group--collapsed'));
+      });
+    });
+  })();
+</script>
+</body>
+</html>

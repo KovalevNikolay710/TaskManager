@@ -1,0 +1,36 @@
+.region {
+  position: fixed;
+  z-index: 20;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: calc(var(--size-bottom-nav) + env(safe-area-inset-bottom) + var(--space-4));
+  width: max-content;
+  max-width: calc(100% - 2 * var(--space-4));
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  min-height: var(--size-touch);
+  background: var(--color-text);
+  color: var(--color-bg);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  font-size: var(--text-sm);
+}
+
+.toast .action {
+  color: var(--color-accent-soft);
+  min-height: 36px;
+}
+
+@media (min-width: 960px) {
+  .region {
+    left: auto;
+    right: var(--space-8);
+    transform: none;
+    bottom: var(--space-8);
+  }
+}

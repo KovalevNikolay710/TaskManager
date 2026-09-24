@@ -10,36 +10,37 @@ import (
 	"gorm.io/gorm"
 )
 
-func RegisterTaskRoutes(router *gin.Engine, taskService services.TaskServiceImpl, dayService services.DayServiceImpl, groupsServices services.GroupServiceImpl, logger *slog.Logger, db *gorm.DB) {
-	taskHandler := handlers.NewTaskHandler(taskService, logger, *services.NewGenericService[models.Task](db))
-	dayHandler := handlers.NewDayHandler(dayService, *services.NewGenericService[models.Day](db))
-	groupHandler := handlers.NewGroupHandler(groupsServices, logger, *services.NewGenericService[models.Group](db))
+func RegisterTaskRoutes(router *gin.Engine, taskService *services.TaskServiceImpl, dayService *services.DayServiceImpl, groupsServices *services.GroupServiceImpl, logger *slog.Logger, db *gorm.DB) {
+	taskHandler := handlers.NewTaskHandler(taskService, logger, services.NewGenericService[*models.Task](db))
+	dayHandler := handlers.NewDayHandler(dayService, services.NewGenericService[models.Day](db))
+	groupHandler := handlers.NewGroupHandler(groupsServices, taskService, logger, services.NewGenericService[models.Group](db))
 
 	taskRoutes := router.Group("/tasks")
 	{
 		taskRoutes.POST("/", taskHandler.CreateTask)
 		taskRoutes.GET("/:id", taskHandler.GetTaskById)
-		taskRoutes.PUT("/:id", taskHandler.UpdateTask)
-		taskRoutes.DELETE("/:id", taskHandler.DeleteTask)
-		taskRoutes.GET("/user/:user_id", taskHandler.GetTasksByUserID)
+		taskRoutes.POST("/update/:id", taskHandler.UpdateTask)
+		taskRoutes.GET("/delete/:id", taskHandler.DeleteTask)
+		taskRoutes.POST("/user/:user_id", taskHandler.GetTasksByUserID)
 	}
 
 	dayRoutes := router.Group("/days")
 	{
 		dayRoutes.POST("/", dayHandler.CreateDayHandler)
 		dayRoutes.GET("/:id", dayHandler.GetDayByIDHandler)
-		dayRoutes.PUT("/", dayHandler.UpdateDayHandler)
-		dayRoutes.DELETE("/:id", dayHandler.DeleteDayHandler)
-		dayRoutes.GET("/user", dayHandler.GetDaysByUserIDHandler)
+		dayRoutes.POST("/update/:id", dayHandler.UpdateDayHandler)
+		dayRoutes.GET("/delete/:id", dayHandler.DeleteDayHandler)
+		dayRoutes.GET("/user/:user_id", dayHandler.GetDaysByUserIDHandler)
 	}
 
 	groupRoutes := router.Group("/groups")
 	{
 		groupRoutes.POST("/", groupHandler.CreateGroup)
 		groupRoutes.GET("/:id", groupHandler.GetGroupByID)
-		groupRoutes.PUT("/:id", groupHandler.UpdateGroup)
-		groupRoutes.DELETE("/:id", groupHandler.DeleteGroup)
-		groupRoutes.GET("/:id/tasks", groupHandler.GetAllGroupTasks)
+		groupRoutes.POST("/update/:id", groupHandler.UpdateGroup)
+		groupRoutes.POST("/add/:id", groupHandler.AddTaskToGroup)
+		groupRoutes.GET("/delete/:id", groupHandler.DeleteGroup)
+		groupRoutes.GET("/tasks/:id", groupHandler.GetAllGroupTasks)
 		groupRoutes.GET("/user/:user_id", groupHandler.GetAllUserGroups)
 	}
 }
