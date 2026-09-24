@@ -34,9 +34,11 @@ internal/models/             GORM-модели и DTO запросов (*CreateR
 internal/repository/         доступ к БД; GenericRepository[T] + специфичные методы
 internal/services/           бизнес-логика; GenericService[T] для GetByID/Delete
 internal/api/handlers/       gin-обработчики
-internal/api/routes.go       все маршруты
+internal/api/routes.go       все маршруты API (под префиксом /api)
+internal/api/spa.go          раздача встроенного фронтенда, fallback на index.html для путей SPA
 internal/config/             загрузка config.yaml (пока не подключена в main)
 web/                         фронтенд: Vite + React + TypeScript (экраны «Все задачи» и «День»)
+web/embed.go                 go:embed собранного web/dist в бинарник (в git — только dist/.gitkeep)
 design/                      дизайн-система и макеты экранов (ведёт агент designer)
 ```
 
@@ -46,23 +48,23 @@ design/                      дизайн-система и макеты экр�
 
 | Метод | Путь | Что делает |
 |---|---|---|
-| POST | `/tasks/` | создать задачу |
-| GET | `/tasks/:id` | задача по id |
-| POST | `/tasks/update/:id` | обновить задачу; `status`: 1 — вернуть в работу, 2 — выполнена |
-| GET | `/tasks/delete/:id` | удалить задачу |
-| POST | `/tasks/user/:user_id` | задачи пользователя, фильтр `{status, groupId, date}` в теле (необязателен) |
-| POST | `/days/` | создать день |
-| GET | `/days/:id` | день по id |
-| POST | `/days/update/:id` | обновить день |
-| GET | `/days/delete/:id` | удалить день |
-| GET | `/days/user/:user_id` | дни пользователя |
-| POST | `/groups/` | создать группу |
-| GET | `/groups/:id` | группа по id |
-| POST | `/groups/update/:id` | обновить группу |
-| POST | `/groups/add/:id` | добавить задачу в группу |
-| GET | `/groups/delete/:id` | удалить группу |
-| GET | `/groups/tasks/:id` | задачи группы |
-| GET | `/groups/user/:user_id` | группы пользователя |
+| POST | `/api/tasks/` | создать задачу |
+| GET | `/api/tasks/:id` | задача по id |
+| POST | `/api/tasks/update/:id` | обновить задачу; `status`: 1 — вернуть в работу, 2 — выполнена |
+| GET | `/api/tasks/delete/:id` | удалить задачу |
+| POST | `/api/tasks/user/:user_id` | задачи пользователя, фильтр `{status, groupId, date}` в теле (необязателен) |
+| POST | `/api/days/` | создать день |
+| GET | `/api/days/:id` | день по id |
+| POST | `/api/days/update/:id` | обновить день |
+| GET | `/api/days/delete/:id` | удалить день |
+| GET | `/api/days/user/:user_id` | дни пользователя |
+| POST | `/api/groups/` | создать группу |
+| GET | `/api/groups/:id` | группа по id |
+| POST | `/api/groups/update/:id` | обновить группу |
+| POST | `/api/groups/add/:id` | добавить задачу в группу |
+| GET | `/api/groups/delete/:id` | удалить группу |
+| GET | `/api/groups/tasks/:id` | задачи группы |
+| GET | `/api/groups/user/:user_id` | группы пользователя |
 
 Особенности, о которых надо помнить:
 - Запросы принимают camelCase (`userId`, `deadline`, ...), а **ответы отдают поля моделей как есть** (`TaskId`, `UserId`, `DeadLine`, `Priority`...) — у моделей нет json-тегов. Менять это можно только синхронно с фронтендом.
@@ -72,19 +74,25 @@ design/                      дизайн-система и макеты экр�
 - `Task.GroupId = 0` означает «без группы».
 - Длительности (`TimeForExecution`, `Day.TimeForTasks`) хранятся в минутах; фронтенд показывает их как `ч:мм`.
 - `Day.PriorityOfTheDay` — сумма `Priority` невыполненных задач плана, считается при выдаче, в БД не хранится.
-- Удаление через GET — временно; при подключении фронтенда планируется перевести API под префикс `/api` и удаление на `DELETE`.
+- Всё API — под префиксом `/api`; остальные GET-пути отдают фронтенд (SPA). Неизвестный `/api/...` — 404 JSON.
+- Удаление через GET — временно; планируется перевести на `DELETE`.
 
 ## Команды
 
 ```bash
 go build ./...                       # сборка бэкенда
 go vet ./...
-docker-compose up -d db              # только PostgreSQL (localhost:5432, postgres/12345678, task_manager_db)
-DB_HOST=localhost DB_PORT=5432 DB_USER=postgres DB_PASSWORD=12345678 DB_NAME=task_manager_db go run ./cmd/taskManager
-docker-compose up --build            # всё приложение
+docker compose up -d db              # только PostgreSQL (localhost:5434, postgres/12345678, task_manager_db)
+DB_HOST=localhost DB_PORT=5434 DB_USER=postgres DB_PASSWORD=12345678 DB_NAME=task_manager_db go run ./cmd/taskManager
+docker compose up --build            # всё приложение: http://localhost:8080 (UI + API)
 ```
 
-Фронтенд: `cd web && npm install && npm run dev` — Vite проксирует запросы к API на `localhost:8080`.
+Фронтенд: `cd web && npm install && npm run dev` — Vite проксирует `/api` на `localhost:8080`.
+
+Сборка в один бинарник: `cd web && npm run build`, затем `go build ./...` — `web/embed.go` встраивает `web/dist`.
+Без собранного фронтенда Go собирается (в `web/dist` закоммичен `.gitkeep`), но сервер отдаёт только API.
+Docker-образ собирается в три stage: `node:lts-alpine` (фронтенд) → `golang` (бинарник) → `alpine`.
+Используйте `docker compose` (v2), а не `docker-compose` (v1).
 
 ## Как ведётся работа (агенты)
 

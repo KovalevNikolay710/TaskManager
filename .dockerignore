@@ -1,0 +1,16 @@
+# Контекст сборки: только исходники. Фронтенд собирается внутри образа (stage web).
+.git
+.gitignore
+.claude
+.idea
+.vscode
+design
+**/node_modules
+web/dist
+**/*.log
+**/.DS_Store
+Dockerfile
+docker-compose.yaml
+.dockerignore
+README.md
+CLAUDE.md

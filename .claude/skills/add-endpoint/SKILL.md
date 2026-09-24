@@ -42,7 +42,7 @@ func NewXRepository(db *gorm.DB) *XRepositoryImpl {
 
 ## 5. Маршрут — `internal/api/routes.go`
 
-Добавь в нужную группу. Если сущность новая — создай сервис/репозиторий в `cmd/taskManager/main.go` и передай в `RegisterTaskRoutes`.
+Добавь в нужную группу — все группы вложены в `apiRoutes` (префикс `/api`). Если сущность новая, группу тоже создавай от `apiRoutes`, а сервис и репозиторий — в `cmd/taskManager/main.go` и передай их в `RegisterTaskRoutes`.
 
 ## 6. Проверка
 
@@ -53,7 +53,7 @@ go build ./... && go vet ./...
 Если поднята БД — проверь curl'ом:
 
 ```bash
-curl -s -X POST localhost:8080/tasks/ -H 'Content-Type: application/json' \
+curl -s -X POST localhost:8080/api/tasks/ -H 'Content-Type: application/json' \
   -d '{"userId":1,"name":"Проверка","deadline":"2030-01-01T10:00:00Z","timeForExecution":60,"percentOfCompleting":0}'
 ```
 
