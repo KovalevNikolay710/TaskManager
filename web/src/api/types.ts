@@ -62,12 +62,47 @@ export interface TaskFilter {
   date?: string
 }
 
+export interface TaskCreateRequest {
+  userId: number
+  name: string
+  description: string
+  /** RFC3339 */
+  deadline: string
+  /** Минуты */
+  timeForExecution: number
+  /** 0–99 */
+  percentOfCompleting: number
+  /** 0 — без группы */
+  groupId: number
+}
+
+/** Частичное обновление: передаются только изменённые поля. */
 export interface TaskUpdateRequest {
   status?: TaskStatus
+  name?: string
+  /** RFC3339 */
   deadline?: string
+  /** Минуты */
   timeForExecution?: number
+  /** 0–100; 100 — задача станет выполненной */
   percentOfCompleting?: number
   description?: string
+  /** 0 — убрать из группы */
+  groupId?: number
+}
+
+export interface GroupCreateRequest {
+  userId: number
+  name: string
+  /** Вес группы 1–10 */
+  groupPriority: number
+}
+
+/** Частичное обновление: передаются только изменённые поля. */
+export interface GroupUpdateRequest {
+  name?: string
+  /** Вес группы 1–10 */
+  groupPriority?: number
 }
 
 export interface DayCreateRequest {

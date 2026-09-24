@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from 'react-router-dom'
 import { AllTasksPage } from './pages/AllTasksPage'
 import { DayPage } from './pages/DayPage'
+import { GroupsPage } from './pages/GroupsPage'
 import { NewTaskPage } from './pages/NewTaskPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { TaskPage } from './pages/TaskPage'
@@ -13,6 +14,7 @@ export default function App() {
       <Route path="/all-tasks" element={<AllTasksPage />} />
       <Route path="/tasks/new" element={<NewTaskPage />} />
       <Route path="/tasks/:taskId" element={<TaskPage />} />
+      <Route path="/groups" element={<GroupsPage />} />
       <Route path="/profile" element={<ProfilePage />} />
       <Route path="*" element={<Navigate to="/day" replace />} />
     </Routes>

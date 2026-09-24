@@ -24,6 +24,7 @@
   --color-accent-soft: #ebebfc;     /* фон активного пункта навигации, выделения */
   --color-focus: #4c4fd8;           /* кольцо фокуса */
   --color-danger: #c62828;          /* ошибки, просроченный дедлайн; 5.6:1 на белом */
+  --color-danger-hover: #a61f1f;
   --color-danger-soft: #fdecec;
   --color-success: #1e7d3c;         /* выполнено, чекбокс; 5.3:1 на белом */
   --color-success-soft: #e6f4ea;
@@ -109,7 +110,7 @@
     --color-surface-sunken: #262a35;
     --color-text: #eceef4;
     --color-text-muted: #a2a8b8;
-    --color-text-inverse: #ffffff;
+    --color-text-inverse: #111318;   /* тёмный текст на светлом accent/danger: 6.4:1 и 7.4:1 (белый давал 2.9:1) */
     --color-border: #2e3340;
     --color-border-strong: #6b7285;
 
@@ -118,6 +119,7 @@
     --color-accent-soft: #2a2c52;
     --color-focus: #a3a5f8;
     --color-danger: #ff7b72;
+    --color-danger-hover: #ff968f;
     --color-danger-soft: #3a1f22;
     --color-success: #5fcf83;
     --color-success-soft: #1d3325;
@@ -149,7 +151,7 @@
   --color-surface-sunken: #262a35;
   --color-text: #eceef4;
   --color-text-muted: #a2a8b8;
-  --color-text-inverse: #ffffff;
+  --color-text-inverse: #111318;
   --color-border: #2e3340;
   --color-border-strong: #6b7285;
 
@@ -158,6 +160,7 @@
   --color-accent-soft: #2a2c52;
   --color-focus: #a3a5f8;
   --color-danger: #ff7b72;
+  --color-danger-hover: #ff968f;
   --color-danger-soft: #3a1f22;
   --color-success: #5fcf83;
   --color-success-soft: #1d3325;

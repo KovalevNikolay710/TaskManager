@@ -13,7 +13,7 @@ export class ApiError extends Error {
 }
 
 interface RequestOptions {
-  method?: 'GET' | 'POST'
+  method?: 'GET' | 'POST' | 'DELETE'
   body?: unknown
 }
 
@@ -48,8 +48,7 @@ export async function request<T>(path: string, { method = 'GET', body }: Request
 function extractError(data: unknown): string | null {
   if (data && typeof data === 'object' && 'error' in data) {
     const error = (data as { error: unknown }).error
-    // Часть обработчиков кладёт в error объект ошибки валидации, а не строку
-    return typeof error === 'string' ? error : JSON.stringify(error)
+    return typeof error === 'string' ? error : null
   }
   return typeof data === 'string' && data ? data : null
 }

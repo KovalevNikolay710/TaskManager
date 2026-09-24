@@ -60,7 +60,7 @@ func (serv *DayServiceImpl) UpdateDay(dayId int64, input *models.DayUpdateReques
 		return nil, fmt.Errorf("ошибка при поиске дня: %w", err)
 	}
 	if day == nil {
-		return nil, fmt.Errorf("день с ID %d не найден", dayId)
+		return nil, ErrDayNotFound
 	}
 
 	if input.AmountOfTasks != day.AmountOfTasks && input.AmountOfTasks > 0 {

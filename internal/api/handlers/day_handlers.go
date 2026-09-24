@@ -3,6 +3,8 @@ package handlers
 import (
 	"TaskManager/internal/models"
 	"TaskManager/internal/services"
+	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -12,22 +14,23 @@ import (
 type DayHandler struct {
 	dayService     *services.DayServiceImpl
 	GenericService *services.GenericService[models.Day]
+	Logger         *slog.Logger
 }
 
-func NewDayHandler(dayService *services.DayServiceImpl, genServ *services.GenericService[models.Day]) *DayHandler {
-	return &DayHandler{dayService: dayService, GenericService: genServ}
+func NewDayHandler(dayService *services.DayServiceImpl, genServ *services.GenericService[models.Day], logger *slog.Logger) *DayHandler {
+	return &DayHandler{dayService: dayService, GenericService: genServ, Logger: logger}
 }
 
 func (handler *DayHandler) CreateDayHandler(c *gin.Context) {
 	var day models.DayCreateRequest
 	if err := c.ShouldBindJSON(&day); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		respondBindingError(c, handler.Logger, err)
 		return
 	}
 
 	createdDay, err := handler.dayService.CreateDay(&day)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(c, handler.Logger, err, "Ошибка при создании дня")
 		return
 	}
 	c.JSON(http.StatusCreated, createdDay)
@@ -41,13 +44,16 @@ func (handler *DayHandler) GetDayByIDHandler(context *gin.Context) {
 
 	day, err := handler.GenericService.GetByID(dayId)
 	if err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if errors.Is(err, services.ErrNotFound) {
+			err = services.ErrDayNotFound
+		}
+		respondError(context, handler.Logger, err, "Ошибка при получении дня", slog.Int64("dayId", dayId))
 		return
 	}
 
 	day, err = handler.dayService.FillDayTaskListAndCalculatePriorty(day)
 	if err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(context, handler.Logger, err, "Ошибка при получении дня", slog.Int64("dayId", dayId))
 		return
 	}
 
@@ -67,7 +73,7 @@ func (handler *DayHandler) UpdateDayHandler(context *gin.Context) {
 
 	updatedDay, err := handler.dayService.UpdateDay(dayId, &input)
 	if err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(context, handler.Logger, err, "Ошибка при обновлении дня", slog.Int64("dayId", dayId))
 		return
 	}
 
@@ -81,11 +87,15 @@ func (handler *DayHandler) DeleteDayHandler(context *gin.Context) {
 	}
 
 	if err := handler.GenericService.Delete(dayId); err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		if errors.Is(err, services.ErrNotFound) {
+			err = services.ErrDayNotFound
+		}
+		respondError(context, handler.Logger, err, "Ошибка при удалении дня", slog.Int64("dayId", dayId))
 		return
 	}
 
-	context.JSON(http.StatusNoContent, nil)
+	handler.Logger.Info("День успешно удалён", slog.Int64("dayId", dayId))
+	context.JSON(http.StatusOK, gin.H{"message": "День успешно удалён"})
 }
 
 func (handler *DayHandler) GetDaysByUserIDHandler(context *gin.Context) {
@@ -96,7 +106,7 @@ func (handler *DayHandler) GetDaysByUserIDHandler(context *gin.Context) {
 
 	days, err := handler.dayService.GetDaysByUserID(userId)
 	if err != nil {
-		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(context, handler.Logger, err, "Ошибка при получении дней пользователя", slog.Int64("userId", userId))
 		return
 	}
 	if days == nil {

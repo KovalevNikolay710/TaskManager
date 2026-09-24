@@ -11,9 +11,12 @@ import (
 )
 
 func RegisterTaskRoutes(router *gin.Engine, taskService *services.TaskServiceImpl, dayService *services.DayServiceImpl, groupsServices *services.GroupServiceImpl, logger *slog.Logger, db *gorm.DB) {
-	taskHandler := handlers.NewTaskHandler(taskService, logger, services.NewGenericService[*models.Task](db))
-	dayHandler := handlers.NewDayHandler(dayService, services.NewGenericService[models.Day](db))
-	groupHandler := handlers.NewGroupHandler(groupsServices, taskService, logger, services.NewGenericService[models.Group](db))
+	// Ошибки валидации называют поля так же, как их отправляет клиент (json-теги)
+	handlers.UseJSONFieldNames()
+
+	taskHandler := handlers.NewTaskHandler(taskService, logger)
+	dayHandler := handlers.NewDayHandler(dayService, services.NewGenericService[models.Day](db), logger)
+	groupHandler := handlers.NewGroupHandler(groupsServices, logger)
 
 	// Всё API живёт под /api, чтобы не пересекаться с маршрутами SPA (/day, /tasks/:id, ...)
 	apiRoutes := router.Group("/api")
@@ -23,7 +26,7 @@ func RegisterTaskRoutes(router *gin.Engine, taskService *services.TaskServiceImp
 		taskRoutes.POST("/", taskHandler.CreateTask)
 		taskRoutes.GET("/:id", taskHandler.GetTaskById)
 		taskRoutes.POST("/update/:id", taskHandler.UpdateTask)
-		taskRoutes.GET("/delete/:id", taskHandler.DeleteTask)
+		taskRoutes.DELETE("/:id", taskHandler.DeleteTask)
 		taskRoutes.POST("/user/:user_id", taskHandler.GetTasksByUserID)
 	}
 
@@ -32,7 +35,7 @@ func RegisterTaskRoutes(router *gin.Engine, taskService *services.TaskServiceImp
 		dayRoutes.POST("/", dayHandler.CreateDayHandler)
 		dayRoutes.GET("/:id", dayHandler.GetDayByIDHandler)
 		dayRoutes.POST("/update/:id", dayHandler.UpdateDayHandler)
-		dayRoutes.GET("/delete/:id", dayHandler.DeleteDayHandler)
+		dayRoutes.DELETE("/:id", dayHandler.DeleteDayHandler)
 		dayRoutes.GET("/user/:user_id", dayHandler.GetDaysByUserIDHandler)
 	}
 
@@ -42,7 +45,7 @@ func RegisterTaskRoutes(router *gin.Engine, taskService *services.TaskServiceImp
 		groupRoutes.GET("/:id", groupHandler.GetGroupByID)
 		groupRoutes.POST("/update/:id", groupHandler.UpdateGroup)
 		groupRoutes.POST("/add/:id", groupHandler.AddTaskToGroup)
-		groupRoutes.GET("/delete/:id", groupHandler.DeleteGroup)
+		groupRoutes.DELETE("/:id", groupHandler.DeleteGroup)
 		groupRoutes.GET("/tasks/:id", groupHandler.GetAllGroupTasks)
 		groupRoutes.GET("/user/:user_id", groupHandler.GetAllUserGroups)
 	}

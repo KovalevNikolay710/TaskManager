@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import type { Group, Task } from '../api/types'
 import { AppHeader } from '../components/AppHeader'
@@ -18,6 +18,7 @@ import { useGroups } from '../hooks/useGroups'
 import { useTasks } from '../hooks/useTasks'
 import { useToggleTask } from '../hooks/useToggleTask'
 import { plural } from '../lib/format'
+import { clearTaskHighlight, peekTaskHighlight } from '../lib/highlight'
 import { isDone, matchesQuery, maxActivePriority, normalizeForSearch, priorityLevel, sortTasks } from '../lib/tasks'
 import styles from './AllTasksPage.module.css'
 
@@ -25,6 +26,7 @@ const NEW_TASK_PATH = '/tasks/new'
 /** Больше стольких выполненных — сворачиваем их в строку «Выполнено: N — показать» */
 const DONE_COLLAPSE_THRESHOLD = 3
 const NO_GROUP_ID = 0
+const HIGHLIGHT_MS = 1500
 
 interface Section {
   id: number
@@ -54,7 +56,10 @@ export function AllTasksPage() {
   const tasksQuery = useTasks()
   const groupsQuery = useGroups()
   const { toggle, pendingIds } = useToggleTask()
-  const { collapsed, toggleGroup } = useCollapsedGroups()
+  // После «Новой задачи»: раскрыть группу задачи, прокрутить к карточке и подсветить её
+  const [highlight] = useState(peekTaskHighlight)
+  const [highlightedId, setHighlightedId] = useState(highlight?.taskId ?? null)
+  const { collapsed, toggleGroup } = useCollapsedGroups(highlight?.groupId)
   const [search, setSearch] = useState('')
   const [shownDone, setShownDone] = useState<ReadonlySet<number>>(new Set())
 
@@ -67,6 +72,15 @@ export function AllTasksPage() {
 
   const sections = useMemo(() => (tasks && groups ? buildSections(tasks, groups) : []), [tasks, groups])
   const maxPriority = useMemo(() => maxActivePriority(tasks ?? []), [tasks])
+
+  const highlightReady = highlightedId !== null && sections.some((s) => s.tasks.some((t) => t.TaskId === highlightedId))
+  useEffect(() => {
+    if (!highlightReady) return
+    clearTaskHighlight()
+    document.getElementById(`task-name-${highlightedId}`)?.scrollIntoView({ block: 'center' })
+    const timer = window.setTimeout(() => setHighlightedId(null), HIGHLIGHT_MS)
+    return () => window.clearTimeout(timer)
+  }, [highlightReady, highlightedId])
 
   const doneCount = tasks?.filter(isDone).length ?? 0
   const activeCount = (tasks?.length ?? 0) - doneCount
@@ -175,6 +189,7 @@ export function AllTasksPage() {
                       query={query}
                       pending={pendingIds.has(task.TaskId)}
                       divider={index > 0}
+                      highlighted={task.TaskId === highlightedId}
                       onToggle={toggle}
                       onOpen={openTask}
                     />
@@ -194,10 +209,15 @@ export function AllTasksPage() {
         title="Все задачи"
         subtitle={subtitle}
         actions={
-          <Link to={NEW_TASK_PATH} className={buttonClassName('primary', styles.newTask)}>
-            <Icon name="plus" size="sm" />
-            Новая задача
-          </Link>
+          <>
+            <Link to={NEW_TASK_PATH} className={buttonClassName('primary', styles.newTask)}>
+              <Icon name="plus" size="sm" />
+              Новая задача
+            </Link>
+            <Link to="/groups" className={buttonClassName('icon', styles.groups)} aria-label="Группы" title="Группы">
+              <Icon name="folder" />
+            </Link>
+          </>
         }
       />
       {renderContent()}

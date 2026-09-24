@@ -19,11 +19,13 @@ interface TaskRowProps {
   pending?: boolean
   /** Разделитель сверху (строки внутри GroupSection) */
   divider?: boolean
+  /** Только что созданная задача: фон --color-accent-soft, гаснет за 1,5 с */
+  highlighted?: boolean
   onToggle: (task: Task) => void
   onOpen: (task: Task) => void
 }
 
-export function TaskRow({ task, level, groupName, query = '', pending = false, divider = false, onToggle, onOpen }: TaskRowProps) {
+export function TaskRow({ task, level, groupName, query = '', pending = false, divider = false, highlighted = false, onToggle, onOpen }: TaskRowProps) {
   const done = isDone(task)
   const nameId = `task-name-${task.TaskId}`
   const deadline = describeDeadline(task.DeadLine)
@@ -31,7 +33,7 @@ export function TaskRow({ task, level, groupName, query = '', pending = false, d
 
   return (
     <article
-      className={cx(styles.task, styles[level], done && styles.done, divider && styles.divider)}
+      className={cx(styles.task, styles[level], done && styles.done, divider && styles.divider, highlighted && styles.highlighted)}
       onClick={() => onOpen(task)}
     >
       <Checkbox

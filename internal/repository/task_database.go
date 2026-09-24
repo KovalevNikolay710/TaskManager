@@ -83,3 +83,48 @@ func (r *TaskRepositoryImpl) CreateInGroup(task *models.Task) (*models.Task, err
 	}
 	return task, nil
 }
+
+// UpdateWithGroup сохраняет задачу; если groupChanged — заменяет её связь в group_tasks
+// на task.GroupId (0 — без связи). Всё в одной транзакции, чтобы Task.GroupId и состав группы не расходились.
+func (r *TaskRepositoryImpl) UpdateWithGroup(task *models.Task, groupChanged bool) (*models.Task, error) {
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Save(task).Error; err != nil {
+			return fmt.Errorf("ошибка при обновлении задачи: %w", err)
+		}
+		if !groupChanged {
+			return nil
+		}
+		if err := tx.Exec("DELETE FROM group_tasks WHERE task_task_id = ?", task.TaskId).Error; err != nil {
+			return fmt.Errorf("ошибка при удалении связи задачи %d с группой: %w", task.TaskId, err)
+		}
+		if task.GroupId == 0 {
+			return nil
+		}
+		if err := tx.Exec("INSERT INTO group_tasks (group_group_id, task_task_id) VALUES (?, ?) ON CONFLICT DO NOTHING",
+			task.GroupId, task.TaskId).Error; err != nil {
+			return fmt.Errorf("ошибка при добавлении задачи %d в группу %d: %w", task.TaskId, task.GroupId, err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return task, nil
+}
+
+// DeleteWithLinks удаляет задачу вместе с её связями в day_tasks и group_tasks в одной транзакции.
+// Связи удаляются явно, не полагаясь на ON DELETE CASCADE: в старых базах его может не быть.
+func (r *TaskRepositoryImpl) DeleteWithLinks(taskID int64) error {
+	return r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Exec("DELETE FROM day_tasks WHERE task_task_id = ?", taskID).Error; err != nil {
+			return fmt.Errorf("ошибка при удалении задачи %d из планов дней: %w", taskID, err)
+		}
+		if err := tx.Exec("DELETE FROM group_tasks WHERE task_task_id = ?", taskID).Error; err != nil {
+			return fmt.Errorf("ошибка при удалении связи задачи %d с группой: %w", taskID, err)
+		}
+		if err := tx.Delete(&models.Task{}, taskID).Error; err != nil {
+			return fmt.Errorf("ошибка при удалении задачи %d: %w", taskID, err)
+		}
+		return nil
+	})
+}

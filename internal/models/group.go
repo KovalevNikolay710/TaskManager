@@ -15,13 +15,14 @@ type Group struct {
 
 type GroupCreateRequest struct {
 	UserId        int64  `json:"userId" binding:"required"`
-	GroupPriority uint64 `json:"groupPriority" binding:"required"`
+	GroupPriority uint64 `json:"groupPriority" binding:"required,min=1,max=10"` // вес группы: 1–10
 	Name          string `json:"name" binding:"required"`
 	Description   string `json:"description"`
 }
 
+// GroupUpdateRequest — частичное обновление: nil (поле не передано) — не менять.
 type GroupUpdateRequest struct {
-	Name          string `json:"name,omitempty"`
-	Description   string `json:"description,omitempty"`
-	GroupPriority uint64 `json:"groupPriorty,omitempty"`
+	Name          *string `json:"name"`
+	Description   *string `json:"description"`
+	GroupPriority *uint64 `json:"groupPriority" binding:"omitempty,min=1,max=10"`
 }

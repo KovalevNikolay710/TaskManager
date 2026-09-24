@@ -37,8 +37,10 @@ func NewXRepository(db *gorm.DB) *XRepositoryImpl {
 ## 4. Обработчик — `internal/api/handlers/<entity>_handler(s).go`
 
 - Разбор параметров (`strconv.ParseInt(context.Param("id"), 10, 64)`), `ShouldBindJSON` в DTO.
-- Коды ответа: 400 — неверный ввод, 404 — не найдено, 500 — ошибка сервиса, 201 — создано, 200 — остальное.
-- Ошибки в формате `gin.H{"error": "..."}` (текст на русском).
+- Коды ответа: 400 — неверный ввод, 404 — не найдено, 409 — конфликт, 500 — прочее, 201 — создано, 200 — остальное.
+- Ошибку `ShouldBindJSON` отдавай через `respondBindingError`, ошибку сервиса — через `respondError` (`internal/api/handlers/errors.go`): статус выбирается по виду ошибки.
+- Бизнес-ошибки объявляй в `internal/services/errors.go` через `newError(ErrKindNotFound | ErrKindInvalidInput | ErrKindConflict, "текст для пользователя")`. Текст на русском, без технических подробностей.
+- Удаление — метод `DELETE /:id`.
 
 ## 5. Маршрут — `internal/api/routes.go`
 

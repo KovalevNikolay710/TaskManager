@@ -105,3 +105,63 @@ export function describeDeadline(deadline: string, now = new Date()): { text: st
   const year = date.getFullYear() !== now.getFullYear() ? ` ${date.getFullYear()}` : ''
   return { text: `${date.getDate()} ${MONTHS_SHORT[date.getMonth()]}${year}`, tone }
 }
+
+const WEEKDAYS_SHORT = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб']
+
+/** «HH:MM» локального времени. */
+export function toTimeKey(date: Date): string {
+  return timeOfDay(date)
+}
+
+/** Дата «YYYY-MM-DD» и время «HH:MM» в локальном поясе → Date; null, если части некорректны. */
+export function combineDateTime(dateKey: string, timeKey: string): Date | null {
+  const date = fromDateKey(dateKey)
+  const match = /^(\d{2}):(\d{2})$/.exec(timeKey)
+  if (!date || !match) return null
+  date.setHours(Number(match[1]), Number(match[2]), 0, 0)
+  return date
+}
+
+/** Момент в RFC3339 с локальным смещением: «2026-09-25T10:00:00+03:00». */
+export function toLocalRFC3339(date: Date): string {
+  const offset = -date.getTimezoneOffset()
+  const sign = offset >= 0 ? '+' : '-'
+  const abs = Math.abs(offset)
+  const hh = String(Math.floor(abs / 60)).padStart(2, '0')
+  const mm = String(abs % 60).padStart(2, '0')
+  const seconds = String(date.getSeconds()).padStart(2, '0')
+  return `${toDateKey(date)}T${timeOfDay(date)}:${seconds}${sign}${hh}:${mm}`
+}
+
+/** Длительность промежутка словами: «40 мин», «20 ч», «3 дн». */
+export function formatSpan(ms: number): string {
+  const abs = Math.abs(ms)
+  if (abs < HOUR) return `${Math.max(1, Math.floor(abs / MINUTE))} мин`
+  if (abs < DAY) return `${Math.floor(abs / HOUR)} ч`
+  return `${Math.floor(abs / DAY)} дн`
+}
+
+/**
+ * Расшифровка дедлайна в поле ввода: DeadlineLabel + относительное время.
+ * «завтра, 10:00 — через 20 ч», «через 3 дня — пт, 27 сентября, 18:00», «просрочено на 3 ч».
+ */
+export function describeDeadlineInput(date: Date, now = new Date()): { text: string; tone: DeadlineTone } {
+  const label = describeDeadline(date.toISOString(), now)
+  if (label.tone === 'overdue') return label
+  const diff = date.getTime() - now.getTime()
+  if (label.text.startsWith('через')) {
+    return { text: `${label.text} — ${WEEKDAYS_SHORT[date.getDay()]}, ${formatDayMonth(date)}, ${timeOfDay(date)}`, tone: label.tone }
+  }
+  const withTime = label.text.includes(':') ? label.text : `${label.text}, ${timeOfDay(date)}`
+  return { text: `${withTime} — через ${formatSpan(diff)}`, tone: label.tone }
+}
+
+/** Служебная дата (CreatedAt, UpdatedAt): «сегодня, 11:05», «вчера, 21:40», «20 сентября, 09:12». */
+export function formatMetaDate(value: string, now = new Date()): string {
+  const date = new Date(value)
+  const diff = calendarDayDiff(now, date)
+  if (diff === 0) return `сегодня, ${timeOfDay(date)}`
+  if (diff === -1) return `вчера, ${timeOfDay(date)}`
+  const year = date.getFullYear() !== now.getFullYear() ? ` ${date.getFullYear()}` : ''
+  return `${formatDayMonth(date)}${year}, ${timeOfDay(date)}`
+}
