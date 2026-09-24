@@ -5,14 +5,14 @@ import (
 	rep "TaskManager/internal/repository"
 	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 )
 
 type TaskServiceImpl struct {
-	TaskRepo       *rep.TaskRepositoryImpl
-	GroupRepo      *rep.GroupRepositoryImpl
-	GenericService *GenericService[models.Task]
-	Logger         *slog.Logger
+	TaskRepo  *rep.TaskRepositoryImpl
+	GroupRepo *rep.GroupRepositoryImpl
+	Logger    *slog.Logger
 }
 
 func NewTaskService(taskRepo *rep.TaskRepositoryImpl, groupRepo *rep.GroupRepositoryImpl, logger *slog.Logger) *TaskServiceImpl {
@@ -28,59 +28,39 @@ type TaskRepositoryImpl interface {
 }
 
 func (serv TaskServiceImpl) CreateTask(input models.TaskCreateRequest) (task *models.Task, err error) {
-
-	if input.PercentOfCompleting == 100 {
-		return nil, fmt.Errorf("новая задача не может быть выполненна на 100%%")
+	name := strings.TrimSpace(input.Name)
+	if name == "" {
+		return nil, ErrEmptyTaskName
 	}
 
-	dl, err := serv.countWorkHoursForDeadLine(input.DeadLine)
-	if err != nil {
-		serv.Logger.Error("Ошибка в countWorkHoursForDeadLine", slog.String("error", err.Error()))
-		return nil, fmt.Errorf("ошибка расчёта дедлайна: %w", err)
-	}
-
-	if dl <= 0 {
-		serv.Logger.Warn("Неверный дедлайн", slog.Int("workHours", dl))
-		return nil, fmt.Errorf("неверный дедлайн")
+	hours := hoursUntilDeadline(input.DeadLine, time.Now())
+	if hours < minHoursUntilDeadline {
+		serv.Logger.Warn("Неверный дедлайн", slog.Int("hoursUntilDeadline", hours))
+		return nil, ErrInvalidDeadline
 	}
 
 	var groupPriorty uint64 = 1
 	if input.GroupId != 0 {
-		result, err := serv.GroupRepo.FindByID(input.GroupId)
+		group, err := serv.findUserGroup(input.GroupId, input.UserID)
 		if err != nil {
-			return nil, fmt.Errorf("ошибка при поиске группы: %w", err)
+			return nil, err
 		}
-		switch {
-		case result == nil:
-			serv.Logger.Warn("Группа задачи не найдена, задача создаётся без группы",
-				slog.Int64("groupId", input.GroupId))
-			input.GroupId = 0
-		case result.UserId != input.UserID:
-			serv.Logger.Warn("Группа принадлежит другому пользователю, задача создаётся без группы",
-				slog.Int64("groupId", input.GroupId), slog.Int64("userId", input.UserID))
-			input.GroupId = 0
-		default:
-			groupPriorty = result.GroupPriority
-		}
+		groupPriorty = group.GroupPriority
 	}
 
 	task = &models.Task{
 		UserId:               input.UserID,
 		GroupId:              input.GroupId,
 		GroupPriorty:         groupPriorty,
-		Name:                 input.Name,
+		Name:                 name,
 		Description:          input.Description,
 		DeadLine:             input.DeadLine,
 		TimeForExecution:     input.TimeForExecution,
 		PercentOfCompleting:  input.PercentOfCompleting,
-		NumberOfHoursUntilDL: dl,
+		NumberOfHoursUntilDL: hours,
+		Status:               models.StatusActive,
 	}
-
-	err = serv.calculateTaskPriorty(task)
-	if err != nil {
-		serv.Logger.Error("Ошибка при расчёте приоритета задачи", slog.String("error", err.Error()))
-		return nil, fmt.Errorf("ошибка при расчёте приоритета задачи: %w", err)
-	}
+	calculateTaskPriorty(task)
 
 	task, err = serv.TaskRepo.CreateInGroup(task)
 	if err != nil {
@@ -96,77 +76,119 @@ func (serv TaskServiceImpl) CreateTask(input models.TaskCreateRequest) (task *mo
 	return task, nil
 }
 
-func (serv TaskServiceImpl) calculateTaskPriorty(task *models.Task) error {
-	task.Priority = float64(task.GroupPriorty) * float64(task.TimeForExecution) / float64(task.NumberOfHoursUntilDL) * float64(100-task.PercentOfCompleting) / float64(100)
-	return nil
-}
-
-func (serv TaskServiceImpl) countWorkHoursForDeadLine(deadline time.Time) (hours int, err error) {
-	difference := deadline.Sub(time.Now())
-
-	if difference <= 0 && difference <= time.Hour*24 {
-		return 0, fmt.Errorf("неверная дата.")
+// findUserGroup возвращает группу пользователя или ErrTaskGroupInvalid, если группы нет или она чужая.
+func (serv TaskServiceImpl) findUserGroup(groupID, userID int64) (*models.Group, error) {
+	group, err := serv.GroupRepo.FindByID(groupID)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка при поиске группы: %w", err)
 	}
-	hours = int(difference.Hours())
-	return hours, nil
+	if group == nil || group.UserId != userID {
+		serv.Logger.Warn("Группа задачи не найдена или принадлежит другому пользователю",
+			slog.Int64("groupId", groupID), slog.Int64("userId", userID))
+		return nil, ErrTaskGroupInvalid
+	}
+	return group, nil
 }
 
-func (serv TaskServiceImpl) UpdateTask(taskID int64, input models.TaskUpdateRequest) (*models.Task, error) {
+// minHoursUntilDeadline — новый дедлайн должен быть не раньше чем через час:
+// Tl считается в целых часах и стоит в знаменателе формулы.
+const minHoursUntilDeadline = 1
 
+// hoursUntilDeadline — целые часы от now до дедлайна (Tl); для прошедшего дедлайна — 0 или меньше.
+func hoursUntilDeadline(deadline, now time.Time) int {
+	return int(deadline.Sub(now).Hours())
+}
+
+// calculateTaskPriorty считает приоритет задачи: Pt = Pg * Te / Tl * %in.
+func calculateTaskPriorty(task *models.Task) {
+	task.Priority = float64(task.GroupPriorty) * float64(task.TimeForExecution) / float64(task.NumberOfHoursUntilDL) * float64(100-task.PercentOfCompleting) / float64(100)
+}
+
+// refreshTaskPriorty пересчитывает Tl от текущего времени и приоритет задачи.
+// Для просроченной задачи (и задачи, до дедлайна которой меньше часа) Tl = 1:
+// приоритет максимальный для её параметров и без деления на ноль.
+func refreshTaskPriorty(task *models.Task, now time.Time) {
+	task.NumberOfHoursUntilDL = max(hoursUntilDeadline(task.DeadLine, now), minHoursUntilDeadline)
+	calculateTaskPriorty(task)
+}
+
+// UpdateTask применяет переданные поля (nil — не менять), пересчитывает Tl от текущего времени
+// и приоритет. Смена группы и связь в group_tasks сохраняются вместе с задачей в одной транзакции.
+func (serv TaskServiceImpl) UpdateTask(taskID int64, input models.TaskUpdateRequest) (*models.Task, error) {
 	task, err := serv.TaskRepo.FindByID(taskID)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при поиске задачи: %w", err)
 	}
 	if task == nil {
-		return nil, fmt.Errorf("задача с ID %d не найдена", taskID)
+		return nil, ErrTaskNotFound
+	}
+	now := time.Now()
+
+	if input.Name != nil {
+		name := strings.TrimSpace(*input.Name)
+		if name == "" {
+			return nil, ErrEmptyTaskName
+		}
+		task.Name = name
 	}
 
-	if input.PercentOfCompleting > 0 {
-		task.PercentOfCompleting = input.PercentOfCompleting
-		if input.PercentOfCompleting == 100 {
+	if input.Description != nil {
+		task.Description = *input.Description
+	}
+
+	if input.TimeForExecution != nil {
+		task.TimeForExecution = *input.TimeForExecution
+	}
+
+	if input.DeadLine != nil {
+		if hoursUntilDeadline(*input.DeadLine, now) < minHoursUntilDeadline {
+			return nil, ErrInvalidDeadline
+		}
+		task.DeadLine = *input.DeadLine
+	}
+
+	// Инвариант: Status = 2 тогда и только тогда, когда выполнено 100%
+	if input.PercentOfCompleting != nil {
+		task.PercentOfCompleting = *input.PercentOfCompleting
+		if task.PercentOfCompleting == 100 {
 			task.Status = models.StatusCompleted
+		} else {
+			task.Status = models.StatusActive
 		}
 	}
 
-	switch input.Status {
-	case models.StatusCompleted:
-		task.Status = models.StatusCompleted
-		task.PercentOfCompleting = 100
-	case models.StatusActive:
-		task.Status = models.StatusActive
-		// Возвращённая в работу задача не может оставаться выполненной на 100%:
-		// берём переданный процент (< 100) или сбрасываем в 0
-		if input.PercentOfCompleting > 0 && input.PercentOfCompleting < 100 {
-			task.PercentOfCompleting = input.PercentOfCompleting
-		} else if task.PercentOfCompleting >= 100 {
-			task.PercentOfCompleting = 0
+	if input.Status != nil {
+		switch *input.Status {
+		case models.StatusCompleted:
+			task.Status = models.StatusCompleted
+			task.PercentOfCompleting = 100
+		case models.StatusActive:
+			task.Status = models.StatusActive
+			// Возвращённая в работу задача не может оставаться выполненной на 100%:
+			// берём переданный процент (< 100) или сбрасываем в 0
+			if task.PercentOfCompleting >= 100 {
+				task.PercentOfCompleting = 0
+			}
 		}
 	}
 
-	if input.Description != "" {
-		task.Description = input.Description
+	groupChanged := input.GroupId != nil && *input.GroupId != task.GroupId
+	if groupChanged {
+		task.GroupId = *input.GroupId
+		task.GroupPriorty = 1
+		if task.GroupId != 0 {
+			group, err := serv.findUserGroup(task.GroupId, task.UserId)
+			if err != nil {
+				return nil, err
+			}
+			task.GroupPriorty = group.GroupPriority
+		}
 	}
 
-	if input.TimeForExecution > 0 {
-		task.TimeForExecution = input.TimeForExecution
-	}
+	refreshTaskPriorty(task, now)
+	task.UpdatedAt = now
 
-	if !input.DeadLine.IsZero() && input.DeadLine.After(time.Now()) {
-		task.DeadLine = input.DeadLine
-	}
-
-	if input.GroupPriority > 0 {
-		task.GroupPriorty = input.GroupPriority
-	}
-
-	if err := serv.calculateTaskPriorty(task); err != nil {
-		serv.Logger.Error("Ошибка при расчёте приоритета задачи", slog.Int64("taskID", taskID), slog.String("error", err.Error()))
-		return nil, fmt.Errorf("ошибка при расчёте приоритета задачи: %w", err)
-	}
-
-	task.UpdatedAt = time.Now()
-
-	updatedTask, err := serv.TaskRepo.Update(task)
+	updatedTask, err := serv.TaskRepo.UpdateWithGroup(task, groupChanged)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при обновлении задачи: %w", err)
 	}
@@ -174,6 +196,22 @@ func (serv TaskServiceImpl) UpdateTask(taskID int64, input models.TaskUpdateRequ
 	serv.Logger.Info("Задача успешно обновлена", slog.Int64("taskID", taskID), slog.Any("updatedTask", updatedTask))
 
 	return updatedTask, nil
+}
+
+// DeleteTask удаляет задачу вместе с её связями в планах дней и в группе.
+func (serv TaskServiceImpl) DeleteTask(taskID int64) error {
+	task, err := serv.TaskRepo.FindByID(taskID)
+	if err != nil {
+		return fmt.Errorf("ошибка при поиске задачи: %w", err)
+	}
+	if task == nil {
+		return ErrTaskNotFound
+	}
+	if err := serv.TaskRepo.DeleteWithLinks(taskID); err != nil {
+		return fmt.Errorf("ошибка при удалении задачи: %w", err)
+	}
+	serv.Logger.Info("Задача удалена", slog.Int64("taskId", taskID))
+	return nil
 }
 
 func (serv *TaskServiceImpl) GetById(taskId int64) (*models.Task, error) {

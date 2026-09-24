@@ -25,24 +25,29 @@ type Task struct {
 }
 
 type TaskCreateRequest struct {
-	UserID              int64     `json:"userId" binding:"required"`
-	Name                string    `json:"name" binding:"required"`
-	Description         string    `json:"description"`
-	DeadLine            time.Time `json:"deadline" binding:"required"` // RFC3339
-	TimeForExecution    int       `json:"timeForExecution" binding:"required"`
-	PercentOfCompleting int       `json:"percentOfCompleting" binding:"required"`
-	GroupPriority       int
-	GroupId             int64
+	UserID           int64     `json:"userId" binding:"required"`
+	Name             string    `json:"name" binding:"required"`
+	Description      string    `json:"description"`
+	DeadLine         time.Time `json:"deadline" binding:"required"` // RFC3339
+	TimeForExecution int       `json:"timeForExecution" binding:"required,min=1"`
+	// Новая задача не может быть выполнена: 0–99, по умолчанию 0
+	PercentOfCompleting int `json:"percentOfCompleting" binding:"min=0,max=99"`
+	// 0 или не передан — без группы
+	GroupId int64 `json:"groupId" binding:"min=0"`
 }
 
+// TaskUpdateRequest — частичное обновление: nil (поле не передано) — не менять.
+// Указатели нужны, чтобы отличать «не передано» от 0 и пустой строки.
 type TaskUpdateRequest struct {
-	// Status: 1 — вернуть задачу в работу, 2 — отметить выполненной; 0 (не передан) — не менять
-	Status              uint16    `json:"status" binding:"omitempty,oneof=1 2"`
-	DeadLine            time.Time `json:"deadline"` // RFC3339
-	TimeForExecution    int       `json:"timeForExecution"`
-	PercentOfCompleting int       `json:"percentOfCompleting"`
-	Description         string    `json:"description"`
-	GroupPriority       uint64    `json:"groupPriorty"`
+	// Status: 1 — вернуть задачу в работу, 2 — отметить выполненной
+	Status              *uint16    `json:"status" binding:"omitempty,oneof=1 2"`
+	Name                *string    `json:"name"`
+	Description         *string    `json:"description"`
+	DeadLine            *time.Time `json:"deadline"` // RFC3339
+	TimeForExecution    *int       `json:"timeForExecution" binding:"omitempty,min=1"`
+	PercentOfCompleting *int       `json:"percentOfCompleting" binding:"omitempty,min=0,max=100"`
+	// 0 — убрать из группы
+	GroupId *int64 `json:"groupId" binding:"omitempty,min=0"`
 }
 
 type TaskFilter struct {

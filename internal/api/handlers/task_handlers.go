@@ -11,13 +11,12 @@ import (
 )
 
 type TaskHandler struct {
-	TaskService    *services.TaskServiceImpl
-	GenericService *services.GenericService[*models.Task]
-	Logger         *slog.Logger
+	TaskService *services.TaskServiceImpl
+	Logger      *slog.Logger
 }
 
-func NewTaskHandler(taskService *services.TaskServiceImpl, logger *slog.Logger, genServ *services.GenericService[*models.Task]) *TaskHandler {
-	return &TaskHandler{TaskService: taskService, Logger: logger, GenericService: genServ}
+func NewTaskHandler(taskService *services.TaskServiceImpl, logger *slog.Logger) *TaskHandler {
+	return &TaskHandler{TaskService: taskService, Logger: logger}
 }
 
 type TaskServiceImpl interface {
@@ -31,19 +30,13 @@ type TaskServiceImpl interface {
 func (handler *TaskHandler) CreateTask(context *gin.Context) {
 	var taskRequest models.TaskCreateRequest
 	if err := context.ShouldBindJSON(&taskRequest); err != nil {
-		handler.Logger.Error("Ошибка при получении задачи от пользователя",
-			slog.String("error", err.Error()),
-			slog.String("method", context.Request.Method),
-			slog.String("path", context.Request.URL.Path))
-		context.JSON(http.StatusBadRequest, gin.H{"error": err})
+		respondBindingError(context, handler.Logger, err)
 		return
 	}
 
 	createdTask, err := handler.TaskService.CreateTask(taskRequest)
 	if err != nil {
-		handler.Logger.Error("Ошибка при создании задачи из БД",
-			slog.String("error", err.Error()))
-		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(context, handler.Logger, err, "Ошибка при создании задачи")
 		return
 	}
 
@@ -65,7 +58,7 @@ func (handler *TaskHandler) GetTaskById(context *gin.Context) {
 		return
 	}
 	if task == nil {
-		context.JSON(http.StatusNotFound, gin.H{"error": "Задача не найдена"})
+		context.JSON(http.StatusNotFound, gin.H{"error": services.ErrTaskNotFound.Error()})
 		return
 	}
 	context.JSON(http.StatusOK, task)
@@ -79,20 +72,13 @@ func (handler *TaskHandler) UpdateTask(context *gin.Context) {
 
 	var input models.TaskUpdateRequest
 	if err := context.ShouldBindJSON(&input); err != nil {
-		handler.Logger.Error("Ошибка при привязке JSON для обновления задачи",
-			slog.String("method", context.Request.Method),
-			slog.String("path", context.Request.URL.Path),
-			slog.String("error", err.Error()))
-		context.JSON(http.StatusBadRequest, gin.H{"error": "Неправильные данные в запросе"})
+		respondBindingError(context, handler.Logger, err)
 		return
 	}
 
 	updatedTask, err := handler.TaskService.UpdateTask(taskId, input)
 	if err != nil {
-		handler.Logger.Error("Ошибка при обновлении задачи",
-			slog.Int64("taskId", taskId),
-			slog.String("error", err.Error()))
-		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(context, handler.Logger, err, "Ошибка при обновлении задачи", slog.Int64("taskId", taskId))
 		return
 	}
 
@@ -107,11 +93,8 @@ func (handler *TaskHandler) DeleteTask(context *gin.Context) {
 		return
 	}
 
-	if err := handler.GenericService.Delete(taskId); err != nil {
-		handler.Logger.Error("Ошибка при удалении задачи",
-			slog.Int64("taskId", taskId),
-			slog.String("error", err.Error()))
-		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if err := handler.TaskService.DeleteTask(taskId); err != nil {
+		respondError(context, handler.Logger, err, "Ошибка при удалении задачи", slog.Int64("taskId", taskId))
 		return
 	}
 

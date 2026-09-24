@@ -50,32 +50,35 @@ design/                      дизайн-система и макеты экр�
 |---|---|---|
 | POST | `/api/tasks/` | создать задачу |
 | GET | `/api/tasks/:id` | задача по id |
-| POST | `/api/tasks/update/:id` | обновить задачу; `status`: 1 — вернуть в работу, 2 — выполнена |
-| GET | `/api/tasks/delete/:id` | удалить задачу |
+| POST | `/api/tasks/update/:id` | частичное обновление: `name`, `description`, `deadline`, `timeForExecution`, `percentOfCompleting` (0–100), `groupId` (0 — без группы), `status` (1 — вернуть в работу, 2 — выполнена) |
+| DELETE | `/api/tasks/:id` | удалить задачу (вместе со связями в `day_tasks` и `group_tasks`) |
 | POST | `/api/tasks/user/:user_id` | задачи пользователя, фильтр `{status, groupId, date}` в теле (необязателен) |
 | POST | `/api/days/` | создать день |
 | GET | `/api/days/:id` | день по id |
 | POST | `/api/days/update/:id` | обновить день |
-| GET | `/api/days/delete/:id` | удалить день |
+| DELETE | `/api/days/:id` | удалить день |
 | GET | `/api/days/user/:user_id` | дни пользователя |
 | POST | `/api/groups/` | создать группу |
 | GET | `/api/groups/:id` | группа по id |
-| POST | `/api/groups/update/:id` | обновить группу |
+| POST | `/api/groups/update/:id` | обновить группу: `name`, `description`, `groupPriority` (1–10); смена веса пересчитывает задачи группы |
 | POST | `/api/groups/add/:id` | добавить задачу в группу |
-| GET | `/api/groups/delete/:id` | удалить группу |
+| DELETE | `/api/groups/:id` | удалить группу; её задачи переходят в «без группы» с пересчётом приоритета |
 | GET | `/api/groups/tasks/:id` | задачи группы |
 | GET | `/api/groups/user/:user_id` | группы пользователя |
 
 Особенности, о которых надо помнить:
 - Запросы принимают camelCase (`userId`, `deadline`, ...), а **ответы отдают поля моделей как есть** (`TaskId`, `UserId`, `DeadLine`, `Priority`...) — у моделей нет json-тегов. Менять это можно только синхронно с фронтендом.
 - Даты — RFC3339.
-- Ошибки: `{"error": "..."}`.
+- Ошибки: `{"error": "..."}`, `error` всегда строка. Коды: 201 — создание, 400 — ошибка ввода или валидации, 404 — нет сущности, 409 — конфликт (имя группы занято), 500 — прочее. Бизнес-ошибки объявлены в `internal/services/errors.go`, обработчики отвечают через `respondError` / `respondBindingError` (`internal/api/handlers/errors.go`).
 - Пустые списки отдаются как 200 `[]` (не 404 и не `null`).
 - `Task.GroupId = 0` означает «без группы».
 - Длительности (`TimeForExecution`, `Day.TimeForTasks`) хранятся в минутах; фронтенд показывает их как `ч:мм`.
 - `Day.PriorityOfTheDay` — сумма `Priority` невыполненных задач плана, считается при выдаче, в БД не хранится.
 - Всё API — под префиксом `/api`; остальные GET-пути отдают фронтенд (SPA). Неизвестный `/api/...` — 404 JSON.
-- Удаление через GET — временно; планируется перевести на `DELETE`.
+- Удаление — методом `DELETE`.
+- Вес группы — 1–10; имя группы уникально у пользователя без учёта регистра и пробелов по краям.
+- Дедлайн — не раньше чем через час. `NumberOfHoursUntilDL` (Tl) пересчитывается от текущего времени при каждом изменении задачи; у просроченной задачи Tl = 1.
+- `Status = 2` тогда и только тогда, когда `PercentOfCompleting = 100`.
 
 ## Команды
 
