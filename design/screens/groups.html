@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Группы — TaskManager (макет)</title>
+  <link rel="stylesheet" href="../tokens.css">
+  <link rel="stylesheet" href="../components.css">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M3 6.5l1.8 1.8L8 5M3 13.5l1.8 1.8L8 12M11 7h10M11 14h10M11 20h10M3.5 20h1"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4l2 2.5h9A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12.5A1.5 1.5 0 0 0 8.5 21h7a1.5 1.5 0 0 0 1.5-1.5L18 7M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3zM12 10v4M12 17h.01"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4.5L3 9M3 4v5h5M4 13a8 8 0 0 0 14.5 4.5L21 15M21 20v-5h-5"/></symbol>
+</svg>
+
+<div class="app">
+
+  <aside class="side-nav" aria-label="Основная навигация">
+    <p class="side-nav__brand">TaskManager</p>
+    <a class="side-nav__item" href="day.html"><svg class="icon"><use href="#i-calendar"/></svg>День</a>
+    <a class="side-nav__item" href="all-tasks.html"><svg class="icon"><use href="#i-list"/></svg>Все задачи</a>
+    <a class="side-nav__item" href="groups.html" aria-current="page"><svg class="icon"><use href="#i-folder"/></svg>Группы</a>
+    <button class="side-nav__profile" type="button" aria-label="Профиль">
+      <span class="avatar-btn__circle">Я</span>
+      <span><span class="side-nav__profile-name">Профиль</span><span class="side-nav__profile-sub">Пользователь #1</span></span>
+    </button>
+  </aside>
+
+  <main class="app__main">
+    <div class="app__content">
+
+      <header class="page-header">
+        <a class="btn btn--icon" href="all-tasks.html" aria-label="Назад к задачам"><svg class="icon"><use href="#i-left"/></svg></a>
+        <h1 class="page-header__title">Группы</h1>
+        <div class="page-header__actions">
+          <button class="btn btn--ghost" type="button" data-open="create"><svg class="icon icon--sm"><use href="#i-plus"/></svg>Новая группа</button>
+        </div>
+      </header>
+
+      <!-- ============ Данные ============ -->
+      <section data-view="data" data-active>
+        <p class="page-intro">Вес группы умножает приоритет всех её задач: задача из группы ×3 при прочих равных встанет выше задачи из группы ×1.</p>
+
+        <ul class="group-list" aria-label="Группы по весу">
+          <li>
+            <button class="group-row" type="button" data-open="edit" aria-label="Учёба, вес 3, 4 задачи, 1 выполнена. Изменить">
+              <span class="weight-tile" aria-hidden="true">×3</span>
+              <span class="group-row__body">
+                <span class="group-row__name">Учёба</span>
+                <span class="group-row__meta">4 задачи · 1 выполнена</span>
+              </span>
+              <svg class="icon group-row__chevron"><use href="#i-right"/></svg>
+            </button>
+          </li>
+          <li>
+            <button class="group-row group-row--pending" type="button" aria-busy="true" aria-label="Работа, вес 2, 3 задачи, 1 выполнена. Сохраняется">
+              <span class="weight-tile" aria-hidden="true">×2</span>
+              <span class="group-row__body">
+                <span class="group-row__name">Работа</span>
+                <span class="group-row__meta">3 задачи · 1 выполнена</span>
+              </span>
+              <span class="spinner" style="margin-right: 10px; color: var(--color-text-muted)" aria-hidden="true"></span>
+            </button>
+          </li>
+          <li>
+            <button class="group-row" type="button" data-open="edit" aria-label="Дом, вес 1, 3 задачи. Изменить">
+              <span class="weight-tile" aria-hidden="true">×1</span>
+              <span class="group-row__body">
+                <span class="group-row__name">Дом</span>
+                <span class="group-row__meta">3 задачи</span>
+              </span>
+              <svg class="icon group-row__chevron"><use href="#i-right"/></svg>
+            </button>
+          </li>
+          <li>
+            <button class="group-row" type="button" data-open="edit" aria-label="Спорт, вес 1, нет задач. Изменить">
+              <span class="weight-tile" aria-hidden="true">×1</span>
+              <span class="group-row__body">
+                <span class="group-row__name">Спорт</span>
+                <span class="group-row__meta">Нет задач</span>
+              </span>
+              <svg class="icon group-row__chevron"><use href="#i-right"/></svg>
+            </button>
+          </li>
+        </ul>
+
+        <ul class="group-list" aria-label="Задачи без группы">
+          <li>
+            <div class="group-row group-row--static">
+              <span class="weight-tile weight-tile--base" aria-hidden="true">×1</span>
+              <span class="group-row__body">
+                <span class="group-row__name">Без группы</span>
+                <span class="group-row__meta">1 задача · вес всегда ×1</span>
+              </span>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ============ Загрузка ============ -->
+      <section data-view="loading" aria-busy="true" aria-label="Загрузка групп">
+        <div class="skeleton" style="height:14px; width:90%; margin: 0 var(--space-1) var(--space-2)"></div>
+        <div class="skeleton" style="height:14px; width:60%; margin: 0 var(--space-1) var(--space-4)"></div>
+        <ul class="group-list">
+          <li><div class="group-row"><div class="skeleton" style="width:40px;height:40px;border-radius:var(--radius-md)"></div><div style="flex:1;display:grid;gap:6px"><div class="skeleton" style="height:16px;width:40%"></div><div class="skeleton" style="height:12px;width:55%"></div></div></div></li>
+          <li><div class="group-row"><div class="skeleton" style="width:40px;height:40px;border-radius:var(--radius-md)"></div><div style="flex:1;display:grid;gap:6px"><div class="skeleton" style="height:16px;width:30%"></div><div class="skeleton" style="height:12px;width:50%"></div></div></div></li>
+          <li><div class="group-row"><div class="skeleton" style="width:40px;height:40px;border-radius:var(--radius-md)"></div><div style="flex:1;display:grid;gap:6px"><div class="skeleton" style="height:16px;width:35%"></div><div class="skeleton" style="height:12px;width:30%"></div></div></div></li>
+        </ul>
+      </section>
+
+      <!-- ============ Пусто ============ -->
+      <section data-view="empty">
+        <div class="state">
+          <div class="state__icon"><svg class="icon"><use href="#i-folder"/></svg></div>
+          <h2 class="state__title">Групп пока нет</h2>
+          <p class="state__text">Группы — это области жизни: учёба, работа, дом. У каждой свой вес, и он поднимает важные задачи выше.</p>
+          <button class="btn btn--primary" type="button" data-open="create"><svg class="icon icon--sm"><use href="#i-plus"/></svg>Создать группу</button>
+        </div>
+      </section>
+
+      <!-- ============ Ошибка ============ -->
+      <section data-view="error">
+        <div class="state state--error" role="alert">
+          <div class="state__icon"><svg class="icon"><use href="#i-alert"/></svg></div>
+          <h2 class="state__title">Не удалось загрузить группы</h2>
+          <p class="state__text">Проверьте, что сервер запущен, и попробуйте ещё раз.</p>
+          <p class="state__detail">Не удалось получить группы пользователя</p>
+          <button class="btn btn--secondary" type="button"><svg class="icon icon--sm"><use href="#i-refresh"/></svg>Повторить</button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <nav class="bottom-nav" aria-label="Основная навигация">
+    <a class="bottom-nav__item" href="day.html"><span class="bottom-nav__pill"><svg class="icon"><use href="#i-calendar"/></svg></span>День</a>
+    <a class="bottom-nav__item" href="all-tasks.html" aria-current="page"><span class="bottom-nav__pill"><svg class="icon"><use href="#i-list"/></svg></span>Все задачи</a>
+  </nav>
+
+  <!-- ============ Sheet: изменить группу ============ -->
+  <div class="sheet-backdrop" data-sheet="edit">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="edit-title">
+      <div class="sheet__grip"></div>
+      <div class="sheet__head">
+        <h2 class="sheet__title" id="edit-title">Группа «Учёба»</h2>
+        <button class="btn btn--icon" type="button" aria-label="Закрыть"><svg class="icon"><use href="#i-x"/></svg></button>
+      </div>
+      <form class="form" onsubmit="return false" style="gap: var(--space-6)">
+        <div class="field">
+          <label class="field__label" for="e-name">Название</label>
+          <input class="input" id="e-name" type="text" maxlength="60" value="Учёба" autocomplete="off">
+        </div>
+        <div class="field">
+          <span class="field__label" id="e-w">Вес в приоритете</span>
+          <div class="stepper" role="group" aria-labelledby="e-w">
+            <button class="btn btn--icon" type="button" aria-label="Меньше"><svg class="icon icon--sm"><use href="#i-minus"/></svg></button>
+            <output class="stepper__value" aria-live="polite">×4</output>
+            <button class="btn btn--icon" type="button" aria-label="Больше"><svg class="icon icon--sm"><use href="#i-plus"/></svg></button>
+          </div>
+          <span class="field__hint">Было ×3. Приоритет 3 активных задач группы пересчитается — они поднимутся в списке.</span>
+        </div>
+      </form>
+      <div class="sheet__actions">
+        <button class="btn btn--secondary" type="button">Отмена</button>
+        <button class="btn btn--primary" type="button">Сохранить</button>
+      </div>
+      <div class="danger-zone" style="margin-top: var(--space-4)">
+        <button class="btn btn--danger-ghost" type="button" data-open="delete"><svg class="icon icon--sm"><use href="#i-trash"/></svg>Удалить группу</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Sheet: новая группа (тот же GroupForm, что и в «Новой задаче») ============ -->
+  <div class="sheet-backdrop" data-sheet="create">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="create-title">
+      <div class="sheet__grip"></div>
+      <div class="sheet__head">
+        <h2 class="sheet__title" id="create-title">Новая группа</h2>
+        <button class="btn btn--icon" type="button" aria-label="Закрыть"><svg class="icon"><use href="#i-x"/></svg></button>
+      </div>
+      <form class="form" onsubmit="return false" style="gap: var(--space-6)">
+        <div class="alert" role="alert">
+          <svg class="icon icon--sm"><use href="#i-alert"/></svg>
+          <div class="alert__body">
+            <p class="alert__title">Не удалось создать группу</p>
+            <p class="alert__text">Не удалось связаться с сервером. Попробуйте ещё раз.</p>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field__label" for="c-name">Название</label>
+          <input class="input input--error" id="c-name" type="text" maxlength="60" value="учёба" autocomplete="off" aria-invalid="true" aria-describedby="c-name-err" placeholder="Например, учёба">
+          <span class="field__hint field__hint--error" id="c-name-err">Группа «Учёба» уже есть</span>
+        </div>
+        <div class="field">
+          <span class="field__label" id="c-w">Вес в приоритете</span>
+          <div class="stepper" role="group" aria-labelledby="c-w">
+            <button class="btn btn--icon" type="button" aria-label="Меньше" disabled><svg class="icon icon--sm"><use href="#i-minus"/></svg></button>
+            <output class="stepper__value" aria-live="polite">×1</output>
+            <button class="btn btn--icon" type="button" aria-label="Больше"><svg class="icon icon--sm"><use href="#i-plus"/></svg></button>
+          </div>
+          <span class="field__hint">×1 — как у задач без группы. Чем больше вес, тем выше задачи группы. От ×1 до ×10.</span>
+        </div>
+      </form>
+      <div class="sheet__actions">
+        <button class="btn btn--secondary" type="button">Отмена</button>
+        <button class="btn btn--primary" type="button">Создать группу</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ Sheet: удаление группы ============ -->
+  <div class="sheet-backdrop" data-sheet="delete">
+    <div class="sheet" role="alertdialog" aria-modal="true" aria-labelledby="del-title" aria-describedby="del-text">
+      <div class="sheet__grip"></div>
+      <div class="sheet__head">
+        <h2 class="sheet__title" id="del-title">Удалить группу «Учёба»?</h2>
+        <button class="btn btn--icon" type="button" aria-label="Закрыть"><svg class="icon"><use href="#i-x"/></svg></button>
+      </div>
+      <p id="del-text" style="margin:0; color: var(--color-text-muted)">4 задачи группы не удалятся — они перейдут в «Без группы», и их приоритет пересчитается с весом ×1, то есть станет в 3 раза ниже.</p>
+      <div class="sheet__actions">
+        <button class="btn btn--secondary" type="button">Отмена</button>
+        <button class="btn btn--danger" type="button">Удалить группу</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mock-panel" aria-hidden="true">
+  <span class="mock-panel__label">Макет · состояние</span>
+  <button data-set="data" aria-pressed="true">Данные</button>
+  <button data-set="loading">Загрузка</button>
+  <button data-set="empty">Пусто</button>
+  <button data-set="error">Ошибка</button>
+  <button data-sheet-set="edit">+ Изменить</button>
+  <button data-sheet-set="create">+ Новая (ошибки)</button>
+  <button data-sheet-set="delete">+ Удаление</button>
+  <button data-theme-toggle>Тема</button>
+</div>
+<script>
+  (function () {
+    var views = document.querySelectorAll('[data-view]');
+    var buttons = document.querySelectorAll('.mock-panel [data-set]');
+    buttons.forEach(function (b) {
+      b.addEventListener('click', function () {
+        views.forEach(function (el) { el.toggleAttribute('data-active', el.dataset.view === b.dataset.set); });
+        buttons.forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
+      });
+    });
+    var sheets = document.querySelectorAll('[data-sheet]');
+    function openSheet(name) {
+      sheets.forEach(function (s) { s.style.display = s.dataset.sheet === name ? 'flex' : 'none'; });
+      document.querySelectorAll('.mock-panel [data-sheet-set]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.sheetSet === name); });
+    }
+    openSheet(null);
+    document.querySelectorAll('.mock-panel [data-sheet-set]').forEach(function (b) {
+      b.addEventListener('click', function () { openSheet(b.getAttribute('aria-pressed') === 'true' ? null : b.dataset.sheetSet); });
+    });
+    document.querySelectorAll('[data-open]').forEach(function (b) {
+      b.addEventListener('click', function () { openSheet(b.dataset.open); });
+    });
+    sheets.forEach(function (s) {
+      s.addEventListener('click', function (e) {
+        if (e.target === s || e.target.closest('.sheet__head .btn, .sheet__actions .btn')) openSheet(null);
+      });
+    });
+    document.querySelector('[data-theme-toggle]').addEventListener('click', function () {
+      var root = document.documentElement;
+      var dark = root.dataset.theme === 'dark' || (!root.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches);
+      root.dataset.theme = dark ? 'light' : 'dark';
+    });
+  })();
+</script>
+</body>
+</html>
