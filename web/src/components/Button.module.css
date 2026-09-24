@@ -43,6 +43,32 @@
   color: var(--color-text-muted);
 }
 
+.danger {
+  background: var(--color-danger);
+  color: var(--color-text-inverse);
+}
+
+.danger:hover {
+  background: var(--color-danger-hover);
+}
+
+.dangerGhost {
+  color: var(--color-danger);
+  padding: 0 var(--space-2);
+}
+
+.dangerGhost:hover {
+  background: var(--color-danger-soft);
+}
+
+.block {
+  width: 100%;
+}
+
+.btn[aria-busy='true'] {
+  cursor: progress;
+}
+
 .btn:disabled {
   opacity: 0.5;
   cursor: default;
@@ -56,11 +82,21 @@
   background: var(--color-accent);
 }
 
+.danger:disabled:hover {
+  background: var(--color-danger);
+}
+
+/* Кнопка в состоянии загрузки не бледнеет: спиннер и текст процесса и так видны */
+.btn[aria-busy='true']:disabled {
+  opacity: 1;
+}
+
 .link {
   text-decoration: none;
 }
 
 .spinner {
+  flex: none;
   width: 16px;
   height: 16px;
   border-radius: var(--radius-full);

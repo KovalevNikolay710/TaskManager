@@ -3,9 +3,18 @@
   display: none;
 }
 
+/* «Группы» в шапке — только на мобильном (на десктопе есть пункт SideNav) */
+.groups {
+  color: var(--color-text);
+}
+
 @media (min-width: 960px) {
   .newTask {
     display: inline-flex;
+  }
+
+  .groups {
+    display: none;
   }
 }
 

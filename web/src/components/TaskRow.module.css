@@ -141,3 +141,20 @@
 .done > label {
   opacity: 0.7;
 }
+
+/* Только что созданная задача (после «Новой задачи») */
+.highlighted {
+  animation: highlight 1.5s var(--easing-standard);
+}
+
+@keyframes highlight {
+  from {
+    background: var(--color-accent-soft);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .highlighted {
+    animation: none;
+  }
+}

@@ -4,4 +4,5 @@ export const queryKeys = {
   tasks: ['tasks', CURRENT_USER_ID] as const,
   groups: ['groups', CURRENT_USER_ID] as const,
   days: ['days', CURRENT_USER_ID] as const,
+  task: (taskId: number) => ['task', taskId] as const,
 }
