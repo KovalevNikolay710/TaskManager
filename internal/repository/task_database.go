@@ -61,3 +61,25 @@ func (r *TaskRepositoryImpl) FindByUserID(userID int64, filter models.TaskFilter
 
 	return tasks, nil
 }
+
+// CreateInGroup создаёт задачу и, если GroupId != 0, связь в group_tasks — в одной транзакции,
+// чтобы Task.GroupId и состав группы не расходились.
+func (r *TaskRepositoryImpl) CreateInGroup(task *models.Task) (*models.Task, error) {
+	err := r.db.Transaction(func(tx *gorm.DB) error {
+		if err := tx.Create(task).Error; err != nil {
+			return fmt.Errorf("ошибка при создании задачи: %w", err)
+		}
+		if task.GroupId == 0 {
+			return nil
+		}
+		group := &models.Group{GroupId: task.GroupId}
+		if err := tx.Model(group).Association("Tasks").Append(task); err != nil {
+			return fmt.Errorf("ошибка при добавлении задачи в группу %d: %w", task.GroupId, err)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return task, nil
+}

@@ -50,10 +50,17 @@ func (serv TaskServiceImpl) CreateTask(input models.TaskCreateRequest) (task *mo
 		if err != nil {
 			return nil, fmt.Errorf("ошибка при поиске группы: %w", err)
 		}
-		if result != nil {
-			groupPriorty = result.GroupPriority
-		} else {
+		switch {
+		case result == nil:
+			serv.Logger.Warn("Группа задачи не найдена, задача создаётся без группы",
+				slog.Int64("groupId", input.GroupId))
 			input.GroupId = 0
+		case result.UserId != input.UserID:
+			serv.Logger.Warn("Группа принадлежит другому пользователю, задача создаётся без группы",
+				slog.Int64("groupId", input.GroupId), slog.Int64("userId", input.UserID))
+			input.GroupId = 0
+		default:
+			groupPriorty = result.GroupPriority
 		}
 	}
 
@@ -75,7 +82,7 @@ func (serv TaskServiceImpl) CreateTask(input models.TaskCreateRequest) (task *mo
 		return nil, fmt.Errorf("ошибка при расчёте приоритета задачи: %w", err)
 	}
 
-	task, err = serv.TaskRepo.Create(task)
+	task, err = serv.TaskRepo.CreateInGroup(task)
 	if err != nil {
 		serv.Logger.Error("Ошибка при записи задачи в БД", slog.String("error", err.Error()))
 		return nil, fmt.Errorf("ошибка при записи задачи: %w", err)

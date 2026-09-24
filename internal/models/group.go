@@ -24,5 +24,4 @@ type GroupUpdateRequest struct {
 	Name          string `json:"name,omitempty"`
 	Description   string `json:"description,omitempty"`
 	GroupPriority uint64 `json:"groupPriorty,omitempty"`
-	Task          *Task
 }

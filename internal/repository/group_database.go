@@ -39,3 +39,20 @@ func (rep *GroupRepositoryImpl) GetAllTasksInGroup(groupId int64) ([]*models.Tas
 	}
 	return group.Tasks, nil
 }
+
+// DeleteDetachingTasks удаляет группу и сохраняет её задачи, уже отвязанные сервисом
+// (GroupId, GroupPriorty, Priority), в одной транзакции. Связи в group_tasks удаляются каскадно.
+func (rep *GroupRepositoryImpl) DeleteDetachingTasks(groupID int64, tasks []*models.Task) error {
+	return rep.db.Transaction(func(tx *gorm.DB) error {
+		for _, task := range tasks {
+			// Select нужен, чтобы записать нулевые значения (GroupId = 0)
+			if err := tx.Model(task).Select("GroupId", "GroupPriorty", "Priority").Updates(task).Error; err != nil {
+				return fmt.Errorf("ошибка при отвязке задачи %d от группы: %w", task.TaskId, err)
+			}
+		}
+		if err := tx.Delete(&models.Group{}, groupID).Error; err != nil {
+			return fmt.Errorf("ошибка при удалении группы: %w", err)
+		}
+		return nil
+	})
+}

@@ -3,6 +3,7 @@ package handlers
 import (
 	"TaskManager/internal/models"
 	"TaskManager/internal/services"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -61,7 +62,11 @@ func (handler *GroupHandler) DeleteGroup(context *gin.Context) {
 		return
 	}
 
-	if err := handler.GenericServices.Delete(groupId); err != nil {
+	if err := handler.GroupService.DeleteGroup(groupId); err != nil {
+		if errors.Is(err, services.ErrGroupNotFound) {
+			context.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
 		handler.Logger.Error("Ошибка при удалении группы",
 			slog.Int64("groupId", groupId),
 			slog.String("error", err.Error()))
@@ -113,10 +118,12 @@ func (handler *GroupHandler) UpdateGroup(context *gin.Context) {
 		context.JSON(http.StatusBadRequest, gin.H{"error": "Неправильные данные в запросе"})
 		return
 	}
-	handler.Logger.Error("Приоритет",
-		slog.Uint64("groupId", input.GroupPriority))
 	updatedGroup, err := handler.GroupService.UpdateGroup(groupId, input)
 	if err != nil {
+		if errors.Is(err, services.ErrGroupNotFound) {
+			context.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		}
 		handler.Logger.Error("Ошибка при обновлении группы",
 			slog.Int64("groupId", groupId),
 			slog.String("error", err.Error()))
@@ -135,37 +142,34 @@ func (handler *GroupHandler) AddTaskToGroup(context *gin.Context) {
 		handler.Logger.Error("Неправильное id группы в запросе",
 			slog.String("error", err.Error()))
 		context.JSON(http.StatusBadRequest, gin.H{"error": "Неправильное id группы"})
+		return
 	}
 
 	var input models.TaskCreateRequest
 	if err := context.ShouldBindJSON(&input); err != nil {
-		handler.Logger.Error("Ошибка при привязке JSON для обновления группы",
+		handler.Logger.Error("Ошибка при привязке JSON для добавления задачи в группу",
 			slog.String("error", err.Error()))
 		context.JSON(http.StatusBadRequest, gin.H{"error": "Неправильные данные в запросе"})
 		return
 	}
 
-	input.GroupId = groupId
-
-	task, err := handler.TaskService.CreateTask(input)
+	updatedGroup, err := handler.GroupService.AddTaskToGroup(groupId, input)
 	if err != nil {
-		handler.Logger.Error("Ошибка при создании задачи из БД",
-			slog.String("error", err.Error()))
-		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	group := models.GroupUpdateRequest{Task: task}
-
-	updatedGroup, err := handler.GroupService.UpdateGroup(groupId, group)
-	if err != nil {
-		handler.Logger.Error("Ошибка при обновлении группы",
-			slog.Int64("groupId", groupId),
-			slog.String("error", err.Error()))
-		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		switch {
+		case errors.Is(err, services.ErrGroupNotFound):
+			context.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		case errors.Is(err, services.ErrGroupOwner):
+			context.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		default:
+			handler.Logger.Error("Ошибка при добавлении задачи в группу",
+				slog.Int64("groupId", groupId),
+				slog.String("error", err.Error()))
+			context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		}
 		return
 	}
 
-	handler.Logger.Info("Группа успешно обновлена",
+	handler.Logger.Info("Задача добавлена в группу",
 		slog.Int64("groupId", groupId))
 	context.JSON(http.StatusOK, updatedGroup)
 }
