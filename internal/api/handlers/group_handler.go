@@ -184,9 +184,9 @@ func (handler *GroupHandler) GetAllGroupTasks(context *gin.Context) {
 		context.JSON(http.StatusNotFound, gin.H{"error": "Ошибка при поиске задач группы"})
 		return
 	}
-	if tasks == nil || len(tasks) == 0 {
-		context.JSON(http.StatusNotFound, gin.H{"error": "Задачи для группы не найдены"})
-		return
+	// Пустая группа — не ошибка: отдаём пустой массив, а не null
+	if tasks == nil {
+		tasks = []*models.Task{}
 	}
 
 	handler.Logger.Info("Задачи группы успешно получены",
@@ -215,11 +215,9 @@ func (handler *GroupHandler) GetAllUserGroups(context *gin.Context) {
 		return
 	}
 
-	if len(groups) == 0 {
-		handler.Logger.Info("Группы пользователя не найдены",
-			slog.Int64("userId", userID))
-		context.JSON(http.StatusNotFound, gin.H{"error": "Группы пользователя не найдены"})
-		return
+	// Отсутствие групп — не ошибка: отдаём пустой массив
+	if groups == nil {
+		groups = []*models.Group{}
 	}
 
 	handler.Logger.Info("Группы пользователя успешно получены",

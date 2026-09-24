@@ -99,6 +99,9 @@ func (handler *DayHandler) GetDaysByUserIDHandler(context *gin.Context) {
 		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	if days == nil {
+		days = []*models.Day{}
+	}
 
 	context.JSON(http.StatusOK, days)
 }

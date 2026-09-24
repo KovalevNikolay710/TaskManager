@@ -151,6 +151,9 @@ func (handler *TaskHandler) GetTasksByUserID(context *gin.Context) {
 		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
+	if tasks == nil {
+		tasks = []*models.Task{}
+	}
 
 	handler.Logger.Info("Задачи успешно получены",
 		slog.Int64("userId", userId),
