@@ -24,6 +24,7 @@
   <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M3 13h5l1.5 3h5L16 13h5M5.5 5h13L21 13v6a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 19v-6l2.5-8z"/></symbol>
   <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3zM12 10v4M12 17h.01"/></symbol>
   <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4.5L3 9M3 4v5h5M4 13a8 8 0 0 0 14.5 4.5L21 15M21 20v-5h-5"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4l2 2.5h9A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/></symbol>
 </svg>
 
 <div class="app">
@@ -33,6 +34,7 @@
     <p class="side-nav__brand">TaskManager</p>
     <a class="side-nav__item" href="day.html"><svg class="icon"><use href="#i-calendar"/></svg>День</a>
     <a class="side-nav__item" href="all-tasks.html" aria-current="page"><svg class="icon"><use href="#i-list"/></svg>Все задачи</a>
+    <a class="side-nav__item" href="groups.html"><svg class="icon"><use href="#i-folder"/></svg>Группы</a>
     <button class="side-nav__profile" type="button" aria-label="Профиль">
       <span class="avatar-btn__circle">Я</span>
       <span><span class="side-nav__profile-name">Профиль</span><span class="side-nav__profile-sub">Пользователь #1</span></span>
@@ -48,7 +50,8 @@
           <p class="app-header__subtitle">9 активных · 2 выполнено</p>
         </div>
         <div class="app-header__actions">
-          <button class="btn btn--primary app-header__new" type="button"><svg class="icon icon--sm"><use href="#i-plus"/></svg>Новая задача</button>
+          <button class="btn btn--primary app-header__new" type="button" onclick="location.href='new-task.html'"><svg class="icon icon--sm"><use href="#i-plus"/></svg>Новая задача</button>
+          <a class="btn btn--icon app-header__groups" href="groups.html" aria-label="Группы" title="Группы"><svg class="icon"><use href="#i-folder"/></svg></a>
           <button class="avatar-btn" type="button" aria-label="Профиль"><span class="avatar-btn__circle">Я</span></button>
         </div>
       </header>
@@ -391,7 +394,7 @@
     </div>
   </main>
 
-  <button class="fab" type="button" aria-label="Добавить задачу"><svg class="icon"><use href="#i-plus"/></svg></button>
+  <button class="fab" type="button" aria-label="Добавить задачу" onclick="location.href='new-task.html'"><svg class="icon"><use href="#i-plus"/></svg></button>
 
   <!-- BottomNav (мобильный) -->
   <nav class="bottom-nav" aria-label="Основная навигация">
@@ -445,6 +448,8 @@
       });
     });
   })();
+  // Макет: нажатие на карточку открывает экран задачи
+  document.querySelectorAll('.task').forEach(function (t) { t.addEventListener('click', function (e) { if (!e.target.closest('.checkbox')) location.href = 'task.html'; }); });
 </script>
 </body>
 </html>
