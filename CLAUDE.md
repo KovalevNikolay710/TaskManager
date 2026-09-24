@@ -36,7 +36,7 @@ internal/services/           бизнес-логика; GenericService[T] для
 internal/api/handlers/       gin-обработчики
 internal/api/routes.go       все маршруты
 internal/config/             загрузка config.yaml (пока не подключена в main)
-web/                         фронтенд: Vite + React + TypeScript (создаётся)
+web/                         фронтенд: Vite + React + TypeScript (экраны «Все задачи» и «День»)
 design/                      дизайн-система и макеты экранов (ведёт агент designer)
 ```
 
@@ -48,7 +48,7 @@ design/                      дизайн-система и макеты экр�
 |---|---|---|
 | POST | `/tasks/` | создать задачу |
 | GET | `/tasks/:id` | задача по id |
-| POST | `/tasks/update/:id` | обновить задачу |
+| POST | `/tasks/update/:id` | обновить задачу; `status`: 1 — вернуть в работу, 2 — выполнена |
 | GET | `/tasks/delete/:id` | удалить задачу |
 | POST | `/tasks/user/:user_id` | задачи пользователя, фильтр `{status, groupId, date}` в теле (необязателен) |
 | POST | `/days/` | создать день |
@@ -68,6 +68,10 @@ design/                      дизайн-система и макеты экр�
 - Запросы принимают camelCase (`userId`, `deadline`, ...), а **ответы отдают поля моделей как есть** (`TaskId`, `UserId`, `DeadLine`, `Priority`...) — у моделей нет json-тегов. Менять это можно только синхронно с фронтендом.
 - Даты — RFC3339.
 - Ошибки: `{"error": "..."}`.
+- Пустые списки отдаются как 200 `[]` (не 404 и не `null`).
+- `Task.GroupId = 0` означает «без группы».
+- Длительности (`TimeForExecution`, `Day.TimeForTasks`) хранятся в минутах; фронтенд показывает их как `ч:мм`.
+- `Day.PriorityOfTheDay` — сумма `Priority` невыполненных задач плана, считается при выдаче, в БД не хранится.
 - Удаление через GET — временно; при подключении фронтенда планируется перевести API под префикс `/api` и удаление на `DELETE`.
 
 ## Команды
@@ -80,7 +84,7 @@ DB_HOST=localhost DB_PORT=5432 DB_USER=postgres DB_PASSWORD=12345678 DB_NAME=tas
 docker-compose up --build            # всё приложение
 ```
 
-Фронтенд (после создания `web/`): `cd web && npm install && npm run dev` — Vite проксирует запросы к API на `localhost:8080`.
+Фронтенд: `cd web && npm install && npm run dev` — Vite проксирует запросы к API на `localhost:8080`.
 
 ## Как ведётся работа (агенты)
 
