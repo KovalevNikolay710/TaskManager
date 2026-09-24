@@ -1,0 +1,137 @@
+.form {
+  display: grid;
+  gap: var(--space-4);
+  width: 100%;
+  max-width: 360px;
+  text-align: left;
+}
+
+.wide {
+  max-width: none;
+}
+
+.label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.hint {
+  display: block;
+  margin-top: var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.hintError {
+  color: var(--color-danger);
+}
+
+/* ---------- Stepper ---------- */
+.stepper {
+  display: inline-flex;
+  align-items: center;
+  height: var(--size-touch);
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-md);
+}
+
+.stepperButton {
+  color: var(--color-text);
+}
+
+.stepperValue {
+  min-width: 48px;
+  text-align: center;
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- TimeInput ---------- */
+.timeField {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+.timeField .label,
+.timeField .hint {
+  margin: 0;
+}
+
+.timeInput {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: var(--size-touch);
+  padding: 0 var(--space-3);
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-md);
+}
+
+.timeInput:focus-within {
+  box-shadow: 0 0 0 2px var(--color-focus);
+}
+
+.timeInput input {
+  width: 64px;
+  border: 0;
+  background: none;
+  outline: none;
+  text-align: center;
+  font: inherit;
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.timeInput input::placeholder {
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-regular);
+}
+
+.timeInputError,
+.timeInputError:focus-within {
+  box-shadow: 0 0 0 2px var(--color-danger);
+}
+
+.unit {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+/* ---------- Пресеты ---------- */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+  background: var(--color-surface);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Зона нажатия 44px */
+.chip::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+
+.chip[aria-pressed='true'] {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  box-shadow: inset 0 0 0 1.5px var(--color-accent);
+}

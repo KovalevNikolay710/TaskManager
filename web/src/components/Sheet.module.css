@@ -1,0 +1,72 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  /* Подложка по system.md (Sheet); отдельного токена для неё нет */
+  background: rgba(10, 12, 20, 0.45);
+}
+
+.sheet {
+  width: 100%;
+  max-height: 90vh;
+  overflow: auto;
+  padding: var(--space-2) var(--space-4) calc(var(--space-6) + env(safe-area-inset-bottom));
+  background: var(--color-surface-raised);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  box-shadow: var(--shadow-lg);
+  animation: slide-up var(--duration-normal) var(--easing-standard);
+}
+
+.grip {
+  width: 36px;
+  height: 4px;
+  margin: 0 auto var(--space-3);
+  border-radius: var(--radius-full);
+  background: var(--color-border-strong);
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+}
+
+.title {
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  margin-top: var(--space-6);
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(var(--space-8));
+    opacity: 0;
+  }
+}
+
+@media (min-width: 960px) {
+  .backdrop {
+    align-items: center;
+  }
+
+  .sheet {
+    width: 420px;
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+  }
+
+  .grip {
+    display: none;
+  }
+}
