@@ -34,11 +34,13 @@ func (rep *DayRepositoryImpl) GetAllTasksForDay(dayID int64) ([]*models.Task, er
 
 func (rep *DayRepositoryImpl) GetAllUserDays(userID int64) ([]*models.Day, error) {
 	var days []*models.Day
-	query := rep.db.Where("user_id = ?", userID)
+
+	query := rep.db.Where("user_id = ?", userID).Preload("Tasks")
 
 	if err := query.Find(&days).Error; err != nil {
 		return nil, fmt.Errorf("ошибка при поиске дней в базе данных: %s", err)
 	}
+
 	return days, nil
 }
 

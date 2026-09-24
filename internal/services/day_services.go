@@ -46,7 +46,7 @@ func (serv *DayServiceImpl) CreateDay(input *models.DayCreateRequest) (createdDa
 		return nil, fmt.Errorf("не удалось заполнить список задач: %w", err)
 	}
 
-	createdDay, err = serv.DayRepository.Create(day)
+	createdDay, err = serv.DayRepository.Create(day, "Tasks")
 	if err != nil {
 		return nil, fmt.Errorf("не удалось создать день: %w", err)
 	}
@@ -54,34 +54,29 @@ func (serv *DayServiceImpl) CreateDay(input *models.DayCreateRequest) (createdDa
 	return createdDay, nil
 }
 
-func (serv *DayServiceImpl) UpdateDay(dayId int64, input *models.DayUpdateRequest) (updatedDay *models.Day, err error) {
+func (serv *DayServiceImpl) UpdateDay(dayId int64, input *models.DayUpdateRequest) (*models.Day, error) {
 	day, err := serv.DayRepository.FindByID(dayId)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка при поиске дня: %s", err)
+		return nil, fmt.Errorf("ошибка при поиске дня: %w", err)
 	}
 
-	dayChanged := false
-	if *input.AmountOfTasks != 0 && *input.AmountOfTasks != day.AmountOfTasks && *input.AmountOfTasks > 0 {
-		day.AmountOfTasks = *input.AmountOfTasks
-		dayChanged = true
-	}
-	if *input.TimeForTasks != 0 && *input.TimeForTasks != day.AmountOfTasks && *input.TimeForTasks > 0 {
-		day.AmountOfTasks = *input.AmountOfTasks
-		dayChanged = true
+	if input.AmountOfTasks != day.AmountOfTasks && input.AmountOfTasks > 0 {
+		day.AmountOfTasks = input.AmountOfTasks
 	}
 
-	if dayChanged {
-		updatedDay, err = serv.FillDayTaskListAndCalculatePriorty(updatedDay)
-		if err != nil {
-			return nil, fmt.Errorf("не удалось заполнить список задач: %w", err)
-		}
+	if input.TimeForTasks != day.TimeForTasks && input.TimeForTasks > 0 {
+		day.TimeForTasks = input.TimeForTasks
 	}
 
-	updatedDay, err = serv.DayRepository.Update(day)
+	day, err = serv.FillDayTaskListAndCalculatePriorty(day)
+	if err != nil {
+		return nil, fmt.Errorf("не удалось заполнить список задач: %w", err)
+	}
+
+	updatedDay, err := serv.DayRepository.Update(day, "Tasks")
 	if err != nil {
 		return nil, fmt.Errorf("не удалось обновить данные дня: %w", err)
 	}
-
 	return updatedDay, nil
 }
 

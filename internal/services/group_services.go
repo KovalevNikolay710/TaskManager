@@ -42,7 +42,7 @@ func (service *GroupServiceImpl) CreateGroup(input models.GroupCreateRequest) (c
 		Description:   input.Description,
 	}
 
-	createdGroup, err = service.GroupRepository.Create(group)
+	createdGroup, err = service.GroupRepository.Create(group, "Tasks")
 	if err != nil {
 		return nil, fmt.Errorf("не удалось создать группу: %w", err)
 	}
@@ -83,7 +83,7 @@ func (s *GroupServiceImpl) UpdateGroup(groupId int64, input models.GroupUpdateRe
 		group.Tasks = append(group.Tasks, input.Task)
 	}
 
-	updatedGroup, err = s.GroupRepository.Update(group)
+	updatedGroup, err = s.GroupRepository.Update(group, "Tasks")
 	if err != nil {
 		return nil, fmt.Errorf("не удалось обновить данные группы: %w", err)
 	}

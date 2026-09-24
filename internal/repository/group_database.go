@@ -21,6 +21,8 @@ func (rep *GroupRepositoryImpl) GetAllUserGroups(userID int64) ([]*models.Group,
 	var groups []*models.Group
 	query := rep.db.Where("user_id = ?", userID)
 
+	query = query.Preload("Tasks")
+
 	if err := query.Find(&groups).Error; err != nil {
 		return nil, fmt.Errorf("ошибка при поиске групп в базе данных: %s", err)
 	}
@@ -28,11 +30,12 @@ func (rep *GroupRepositoryImpl) GetAllUserGroups(userID int64) ([]*models.Group,
 }
 
 func (rep *GroupRepositoryImpl) GetAllTasksInGroup(groupId int64) ([]*models.Task, error) {
-	var tasks []*models.Task
-	query := rep.db.Where("group_id = ?", groupId)
+	var group models.Group
 
-	if err := query.Find(&tasks).Error; err != nil {
+	query := rep.db.Where("group_id = ?", groupId).Preload("Tasks")
+
+	if err := query.First(&group).Error; err != nil {
 		return nil, fmt.Errorf("ошибка при поиске задач группы в базе данных: %s", err)
 	}
-	return tasks, nil
+	return group.Tasks, nil
 }

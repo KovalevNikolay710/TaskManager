@@ -3,21 +3,21 @@ package models
 import "time"
 
 const (
-	StatusActive = iota
-	StatusCompleted
+	StatusActive    = 1
+	StatusCompleted = 2
 )
 
 type Task struct {
-	TaskId               int64 `gorm:"primaryKey;autoIncrement"`
-	UserId               int64 `gorm:"not null"`
-	GroupId              int64
+	TaskId               int64  `gorm:"primaryKey;autoIncrement"`
+	UserId               int64  `gorm:"not null"`
+	GroupId              int64  `gorm:"index;default:1"` // Указание индекса для ускорения запросов
 	GroupPriorty         uint64 `gorm:"default:1"`
 	DeadLine             time.Time
 	TimeForExecution     int `gorm:"not null"`
 	Priority             float64
 	NumberOfHoursUntilDL int
 	PercentOfCompleting  int
-	Status               uint16 `gorm:"not null"`
+	Status               uint16 `gorm:"not null; default:1"`
 	Name                 string
 	Description          string
 	CreatedAt            time.Time

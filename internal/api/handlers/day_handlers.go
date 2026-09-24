@@ -62,8 +62,7 @@ func (handler *DayHandler) UpdateDayHandler(context *gin.Context) {
 
 	var input models.DayUpdateRequest
 	if err := context.ShouldBindJSON(&input); err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
+		input = models.DayUpdateRequest{}
 	}
 
 	updatedDay, err := handler.dayService.UpdateDay(dayId, &input)
@@ -81,7 +80,7 @@ func (handler *DayHandler) DeleteDayHandler(context *gin.Context) {
 		return
 	}
 
-	if err := handler.dayService.GenericService.Delete(dayId); err != nil {
+	if err := handler.GenericService.Delete(dayId); err != nil {
 		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

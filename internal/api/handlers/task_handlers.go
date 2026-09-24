@@ -132,13 +132,16 @@ func (handler *TaskHandler) GetTasksByUserID(context *gin.Context) {
 	}
 
 	var filter models.TaskFilter
-	if err := context.ShouldBindQuery(&filter); err != nil {
-		handler.Logger.Error("Ошибка при привязке параметров фильтра задач",
+	if err := context.ShouldBindJSON(&filter); err != nil {
+		handler.Logger.Warn("Фильтр не предоставлен или ошибка при привязке",
 			slog.Int64("userId", userId),
 			slog.String("error", err.Error()))
-		context.JSON(http.StatusBadRequest, gin.H{"error": "Неправильные параметры фильтра для задач"})
-		return
+		filter = models.TaskFilter{}
 	}
+
+	handler.Logger.Info("Получен фильтр задач",
+		slog.Int64("userId", userId),
+		slog.Any("filter", filter))
 
 	tasks, err := handler.TaskService.GetTasksByUserID(userId, filter)
 	if err != nil {

@@ -34,14 +34,15 @@ func (r *TaskRepositoryImpl) FindByID(taskId int64) (*models.Task, error) {
 
 func (r *TaskRepositoryImpl) FindByUserID(userID int64, filter models.TaskFilter) ([]*models.Task, error) {
 	var tasks []*models.Task
+
 	query := r.db.Where("user_id = ?", userID)
 
 	if filter.Status != 0 {
 		query = query.Where("status = ?", filter.Status)
 	}
 
-	if filter.GroupId != 0 {
-		query = query.Where("groupId = ?", filter.GroupId)
+	if filter.Status != 0 {
+		query = query.Where("group_id = ?", filter.GroupId)
 	}
 
 	if err := query.Find(&tasks).Error; err != nil {
