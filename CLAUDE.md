@@ -79,9 +79,9 @@ design/                      дизайн-система и макеты экр�
 ```bash
 go build ./...                       # сборка бэкенда
 go vet ./...
-docker-compose up -d db              # только PostgreSQL (localhost:5432, postgres/12345678, task_manager_db)
-DB_HOST=localhost DB_PORT=5432 DB_USER=postgres DB_PASSWORD=12345678 DB_NAME=task_manager_db go run ./cmd/taskManager
-docker-compose up --build            # всё приложение
+docker compose up -d db              # только PostgreSQL (localhost:5434, postgres/12345678, task_manager_db)
+DB_HOST=localhost DB_PORT=5434 DB_USER=postgres DB_PASSWORD=12345678 DB_NAME=task_manager_db go run ./cmd/taskManager
+docker compose up --build            # всё приложение
 ```
 
 Фронтенд: `cd web && npm install && npm run dev` — Vite проксирует запросы к API на `localhost:8080`.

@@ -1,6 +1,6 @@
 module TaskManager
 
-go 1.24
+go 1.26
 
 require gorm.io/gorm v1.25.12
 

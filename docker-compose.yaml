@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   db:
     image: postgres:13-alpine
@@ -12,7 +10,7 @@ services:
     volumes:
       - db_data:/var/lib/postgresql/data
     ports:
-      - "5432:5432"
+      - "5434:5432"
     restart: always
     networks:
       - manager_network
