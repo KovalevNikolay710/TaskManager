@@ -121,6 +121,21 @@ func (serv TaskServiceImpl) UpdateTask(taskID int64, input models.TaskUpdateRequ
 		}
 	}
 
+	switch input.Status {
+	case models.StatusCompleted:
+		task.Status = models.StatusCompleted
+		task.PercentOfCompleting = 100
+	case models.StatusActive:
+		task.Status = models.StatusActive
+		// Возвращённая в работу задача не может оставаться выполненной на 100%:
+		// берём переданный процент (< 100) или сбрасываем в 0
+		if input.PercentOfCompleting > 0 && input.PercentOfCompleting < 100 {
+			task.PercentOfCompleting = input.PercentOfCompleting
+		} else if task.PercentOfCompleting >= 100 {
+			task.PercentOfCompleting = 0
+		}
+	}
+
 	if input.Description != "" {
 		task.Description = input.Description
 	}

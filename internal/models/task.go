@@ -36,7 +36,8 @@ type TaskCreateRequest struct {
 }
 
 type TaskUpdateRequest struct {
-	// Status              uint16        `json:"status"` пока не нужен, так как пока что не придумал как избегать просроченных дедлайнов
+	// Status: 1 — вернуть задачу в работу, 2 — отметить выполненной; 0 (не передан) — не менять
+	Status              uint16    `json:"status" binding:"omitempty,oneof=1 2"`
 	DeadLine            time.Time `json:"deadline"` // RFC3339
 	TimeForExecution    int       `json:"timeForExecution"`
 	PercentOfCompleting int       `json:"percentOfCompleting"`
