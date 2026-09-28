@@ -29,7 +29,7 @@
 | Прогресс | `GET /api/tasks/:taskId` | `Task.PercentOfCompleting` | `PercentSlider`, «40%» |
 | Дедлайн | то же | `Task.DeadLine` (RFC3339) | `DeadlineField`: дата и время в локальном поясе + расшифровка «завтра, 10:00 — через 20 ч». Просроченный: «просрочено на 3 ч», danger |
 | Время на выполнение | то же | `Task.TimeForExecution` (минуты) | `TimeInput`, «3:00» |
-| Группа | то же + группы | `Task.GroupId` ↔ `Group.GroupId` | `GroupPicker`, выбран чип группы или «Без группы» |
+| Группа | то же + группы | `Task.GroupId` ↔ `Group.GroupId` | `GroupPicker`: чипы с точкой цвета веса и «×N», выбранный чип — в цветах своей ступени; иначе «Без группы». «+ Новая группа» открывает `GroupForm` с `WeightScale` (как на «Новой задаче») |
 | Описание | то же | `Task.Description` | `Textarea`, placeholder «Детали, ссылки, что именно сдать» |
 | Служебная строка | то же | `Task.CreatedAt`, `Task.UpdatedAt` | «Создана 20 сентября, 09:12 · изменена вчера, 21:40» |
 

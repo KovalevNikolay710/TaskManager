@@ -17,7 +17,7 @@
   <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
   <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
-  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-grip" viewBox="0 0 24 24"><path d="M9 6h.01M15 6h.01M9 12h.01M15 12h.01M9 18h.01M15 18h.01" stroke-width="3"/></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12.5A1.5 1.5 0 0 0 8.5 21h7a1.5 1.5 0 0 0 1.5-1.5L18 7M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7"/></symbol>
   <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3zM12 10v4M12 17h.01"/></symbol>
   <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4.5L3 9M3 4v5h5M4 13a8 8 0 0 0 14.5 4.5L21 15M21 20v-5h-5"/></symbol>
@@ -47,75 +47,30 @@
         </div>
       </header>
 
-      <!-- ============ Данные ============ -->
+      <!-- ============ Данные / перетаскивание / размещение ============
+           Лесенка строится скриптом внизу страницы из массива GROUPS — так три режима
+           (покой, перетаскивание, размещение без перетаскивания) гарантированно согласованы. -->
       <section data-view="data" data-active>
-        <p class="page-intro">Вес группы умножает приоритет всех её задач: задача из группы ×3 при прочих равных встанет выше задачи из группы ×1.</p>
-
-        <ul class="group-list" aria-label="Группы по весу">
-          <li>
-            <button class="group-row" type="button" data-open="edit" aria-label="Учёба, вес 3, 4 задачи, 1 выполнена. Изменить">
-              <span class="weight-tile" aria-hidden="true">×3</span>
-              <span class="group-row__body">
-                <span class="group-row__name">Учёба</span>
-                <span class="group-row__meta">4 задачи · 1 выполнена</span>
-              </span>
-              <svg class="icon group-row__chevron"><use href="#i-right"/></svg>
-            </button>
-          </li>
-          <li>
-            <button class="group-row group-row--pending" type="button" aria-busy="true" aria-label="Работа, вес 2, 3 задачи, 1 выполнена. Сохраняется">
-              <span class="weight-tile" aria-hidden="true">×2</span>
-              <span class="group-row__body">
-                <span class="group-row__name">Работа</span>
-                <span class="group-row__meta">3 задачи · 1 выполнена</span>
-              </span>
-              <span class="spinner" style="margin-right: 10px; color: var(--color-text-muted)" aria-hidden="true"></span>
-            </button>
-          </li>
-          <li>
-            <button class="group-row" type="button" data-open="edit" aria-label="Дом, вес 1, 3 задачи. Изменить">
-              <span class="weight-tile" aria-hidden="true">×1</span>
-              <span class="group-row__body">
-                <span class="group-row__name">Дом</span>
-                <span class="group-row__meta">3 задачи</span>
-              </span>
-              <svg class="icon group-row__chevron"><use href="#i-right"/></svg>
-            </button>
-          </li>
-          <li>
-            <button class="group-row" type="button" data-open="edit" aria-label="Спорт, вес 1, нет задач. Изменить">
-              <span class="weight-tile" aria-hidden="true">×1</span>
-              <span class="group-row__body">
-                <span class="group-row__name">Спорт</span>
-                <span class="group-row__meta">Нет задач</span>
-              </span>
-              <svg class="icon group-row__chevron"><use href="#i-right"/></svg>
-            </button>
-          </li>
-        </ul>
-
-        <ul class="group-list" aria-label="Задачи без группы">
-          <li>
-            <div class="group-row group-row--static">
-              <span class="weight-tile weight-tile--base" aria-hidden="true">×1</span>
-              <span class="group-row__body">
-                <span class="group-row__name">Без группы</span>
-                <span class="group-row__meta">1 задача · вес всегда ×1</span>
-              </span>
-            </div>
-          </li>
-        </ul>
+        <p class="page-intro">Чем выше ступень, тем важнее задачи группы: вес ×N умножает их приоритет. Перетащите группу за <svg class="icon icon--xs" style="vertical-align:-2px"><use href="#i-grip"/></svg> на другую ступень или между двумя занятыми — группы выше сами поднимутся.</p>
+        <div class="place-banner" role="status" hidden>
+          <span>Куда поставить «Спорт»? Выберите ступень или место между группами.</span>
+          <button class="btn btn--ghost" type="button" data-cancel-place>Отмена</button>
+        </div>
+        <ol class="ladder" id="ladder" aria-label="Лесенка групп: сверху самые важные"></ol>
+        <p class="field__hint" style="padding: 0 var(--space-1)">«Без группы» всегда стоит на ×1 — это точка отсчёта.</p>
       </section>
 
       <!-- ============ Загрузка ============ -->
       <section data-view="loading" aria-busy="true" aria-label="Загрузка групп">
         <div class="skeleton" style="height:14px; width:90%; margin: 0 var(--space-1) var(--space-2)"></div>
         <div class="skeleton" style="height:14px; width:60%; margin: 0 var(--space-1) var(--space-4)"></div>
-        <ul class="group-list">
-          <li><div class="group-row"><div class="skeleton" style="width:40px;height:40px;border-radius:var(--radius-md)"></div><div style="flex:1;display:grid;gap:6px"><div class="skeleton" style="height:16px;width:40%"></div><div class="skeleton" style="height:12px;width:55%"></div></div></div></li>
-          <li><div class="group-row"><div class="skeleton" style="width:40px;height:40px;border-radius:var(--radius-md)"></div><div style="flex:1;display:grid;gap:6px"><div class="skeleton" style="height:16px;width:30%"></div><div class="skeleton" style="height:12px;width:50%"></div></div></div></li>
-          <li><div class="group-row"><div class="skeleton" style="width:40px;height:40px;border-radius:var(--radius-md)"></div><div style="flex:1;display:grid;gap:6px"><div class="skeleton" style="height:16px;width:35%"></div><div class="skeleton" style="height:12px;width:30%"></div></div></div></li>
-        </ul>
+        <div class="ladder" style="padding: var(--space-3)">
+          <div style="display:grid; gap: var(--space-3)">
+            <div style="display:flex;gap:var(--space-3);align-items:center"><div class="skeleton" style="width:48px;height:10px"></div><div class="skeleton" style="width:120px;height:44px;border-radius:var(--radius-md)"></div></div>
+            <div style="display:flex;gap:var(--space-3);align-items:center"><div class="skeleton" style="width:40px;height:10px"></div><div class="skeleton" style="width:100px;height:44px;border-radius:var(--radius-md)"></div><div class="skeleton" style="width:90px;height:44px;border-radius:var(--radius-md)"></div></div>
+            <div style="display:flex;gap:var(--space-3);align-items:center"><div class="skeleton" style="width:32px;height:10px"></div><div class="skeleton" style="width:110px;height:44px;border-radius:var(--radius-md)"></div></div>
+          </div>
+        </div>
       </section>
 
       <!-- ============ Пусто ============ -->
@@ -123,7 +78,7 @@
         <div class="state">
           <div class="state__icon"><svg class="icon"><use href="#i-folder"/></svg></div>
           <h2 class="state__title">Групп пока нет</h2>
-          <p class="state__text">Группы — это области жизни: учёба, работа, дом. У каждой свой вес, и он поднимает важные задачи выше.</p>
+          <p class="state__text">Группы — это области жизни: учёба, работа, дом, хобби. Их ставят на лесенку: чем выше ступень, тем важнее задачи группы.</p>
           <button class="btn btn--primary" type="button" data-open="create"><svg class="icon icon--sm"><use href="#i-plus"/></svg>Создать группу</button>
         </div>
       </section>
@@ -147,6 +102,12 @@
     <a class="bottom-nav__item" href="all-tasks.html" aria-current="page"><span class="bottom-nav__pill"><svg class="icon"><use href="#i-list"/></svg></span>Все задачи</a>
   </nav>
 
+  <!-- Toast после перемещения по лесенке -->
+  <div class="toast" role="status" data-toast hidden>
+    <span>«Спорт» теперь ×3. Поднялись: Учёба ×4, Английский ×5</span>
+    <button class="btn btn--ghost" type="button">Отменить</button>
+  </div>
+
   <!-- ============ Sheet: изменить группу ============ -->
   <div class="sheet-backdrop" data-sheet="edit">
     <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="edit-title">
@@ -160,15 +121,14 @@
           <label class="field__label" for="e-name">Название</label>
           <input class="input" id="e-name" type="text" maxlength="60" value="Учёба" autocomplete="off">
         </div>
-        <div class="field">
-          <span class="field__label" id="e-w">Вес в приоритете</span>
-          <div class="stepper" role="group" aria-labelledby="e-w">
-            <button class="btn btn--icon" type="button" aria-label="Меньше"><svg class="icon icon--sm"><use href="#i-minus"/></svg></button>
-            <output class="stepper__value" aria-live="polite">×4</output>
-            <button class="btn btn--icon" type="button" aria-label="Больше"><svg class="icon icon--sm"><use href="#i-plus"/></svg></button>
+          <div class="field weight-scale w-4" data-weight-scale>
+            <div class="weight-scale__head"><span class="field__label" id="e-w-l">Вес в приоритете</span><output class="weight-scale__value" id="e-w-v" aria-hidden="true">×4</output></div>
+            <div class="weight-scale__track" role="slider" tabindex="0" aria-labelledby="e-w-l" aria-describedby="e-w-h" aria-valuemin="1" aria-valuemax="10" aria-valuenow="4" aria-valuetext="×4">
+              <span class="weight-scale__bar w-1 weight-scale__bar--on" style="--n:1" data-n="1"><i class="weight-scale__mark"></i></span><span class="weight-scale__bar w-2 weight-scale__bar--on" style="--n:2" data-n="2"><i class="weight-scale__mark"></i></span><span class="weight-scale__bar w-3 weight-scale__bar--on" style="--n:3" data-n="3"></span><span class="weight-scale__bar w-4 weight-scale__bar--on weight-scale__bar--current" style="--n:4" data-n="4"><i class="weight-scale__mark"></i></span><span class="weight-scale__bar w-5" style="--n:5" data-n="5"></span><span class="weight-scale__bar w-6" style="--n:6" data-n="6"></span><span class="weight-scale__bar w-7" style="--n:7" data-n="7"></span><span class="weight-scale__bar w-8" style="--n:8" data-n="8"></span><span class="weight-scale__bar w-9" style="--n:9" data-n="9"></span><span class="weight-scale__bar w-10" style="--n:10" data-n="10"></span>
+            </div>
+            <div class="weight-scale__legend"><i></i>уже заняты: ×4 Английский · ×2 Работа, Хобби · ×1 Дом, Спорт</div>
+            <span class="field__hint" id="e-w-h">Было ×3. Учёба встанет на одну ступень с «Английским». Приоритет 3 активных задач группы пересчитается — они поднимутся в списке.</span>
           </div>
-          <span class="field__hint">Было ×3. Приоритет 3 активных задач группы пересчитается — они поднимутся в списке.</span>
-        </div>
       </form>
       <div class="sheet__actions">
         <button class="btn btn--secondary" type="button">Отмена</button>
@@ -201,15 +161,14 @@
           <input class="input input--error" id="c-name" type="text" maxlength="60" value="учёба" autocomplete="off" aria-invalid="true" aria-describedby="c-name-err" placeholder="Например, учёба">
           <span class="field__hint field__hint--error" id="c-name-err">Группа «Учёба» уже есть</span>
         </div>
-        <div class="field">
-          <span class="field__label" id="c-w">Вес в приоритете</span>
-          <div class="stepper" role="group" aria-labelledby="c-w">
-            <button class="btn btn--icon" type="button" aria-label="Меньше" disabled><svg class="icon icon--sm"><use href="#i-minus"/></svg></button>
-            <output class="stepper__value" aria-live="polite">×1</output>
-            <button class="btn btn--icon" type="button" aria-label="Больше"><svg class="icon icon--sm"><use href="#i-plus"/></svg></button>
+          <div class="field weight-scale w-1" data-weight-scale>
+            <div class="weight-scale__head"><span class="field__label" id="c-w-l">Вес в приоритете</span><output class="weight-scale__value" id="c-w-v" aria-hidden="true">×1</output></div>
+            <div class="weight-scale__track" role="slider" tabindex="0" aria-labelledby="c-w-l" aria-describedby="c-w-h" aria-valuemin="1" aria-valuemax="10" aria-valuenow="1" aria-valuetext="×1">
+              <span class="weight-scale__bar w-1 weight-scale__bar--on weight-scale__bar--current" style="--n:1" data-n="1"><i class="weight-scale__mark"></i></span><span class="weight-scale__bar w-2" style="--n:2" data-n="2"><i class="weight-scale__mark"></i></span><span class="weight-scale__bar w-3" style="--n:3" data-n="3"><i class="weight-scale__mark"></i></span><span class="weight-scale__bar w-4" style="--n:4" data-n="4"><i class="weight-scale__mark"></i></span><span class="weight-scale__bar w-5" style="--n:5" data-n="5"></span><span class="weight-scale__bar w-6" style="--n:6" data-n="6"></span><span class="weight-scale__bar w-7" style="--n:7" data-n="7"></span><span class="weight-scale__bar w-8" style="--n:8" data-n="8"></span><span class="weight-scale__bar w-9" style="--n:9" data-n="9"></span><span class="weight-scale__bar w-10" style="--n:10" data-n="10"></span>
+            </div>
+            <div class="weight-scale__legend"><i></i>уже заняты: ×4 Английский · ×3 Учёба · ×2 Работа, Хобби · ×1 Дом, Спорт</div>
+            <span class="field__hint" id="c-w-h">×1 — как у задач без группы. Чтобы поставить группу между другими, после создания перетащите её на лесенке.</span>
           </div>
-          <span class="field__hint">×1 — как у задач без группы. Чем больше вес, тем выше задачи группы. От ×1 до ×10.</span>
-        </div>
       </form>
       <div class="sheet__actions">
         <button class="btn btn--secondary" type="button">Отмена</button>
@@ -226,7 +185,7 @@
         <h2 class="sheet__title" id="del-title">Удалить группу «Учёба»?</h2>
         <button class="btn btn--icon" type="button" aria-label="Закрыть"><svg class="icon"><use href="#i-x"/></svg></button>
       </div>
-      <p id="del-text" style="margin:0; color: var(--color-text-muted)">4 задачи группы не удалятся — они перейдут в «Без группы», и их приоритет пересчитается с весом ×1, то есть станет в 3 раза ниже.</p>
+      <p id="del-text" style="margin:0; color: var(--color-text-muted)">4 задачи группы не удалятся — они перейдут в «Без группы», и их приоритет пересчитается с весом ×1, то есть станет в 3 раза ниже. Остальные группы останутся на своих ступенях.</p>
       <div class="sheet__actions">
         <button class="btn btn--secondary" type="button">Отмена</button>
         <button class="btn btn--danger" type="button">Удалить группу</button>
@@ -237,7 +196,10 @@
 
 <div class="mock-panel" aria-hidden="true">
   <span class="mock-panel__label">Макет · состояние</span>
-  <button data-set="data" aria-pressed="true">Данные</button>
+  <button data-set="data" data-mode="rest" aria-pressed="true">Данные</button>
+  <button data-set="data" data-mode="drag">Перетаскивание</button>
+  <button data-set="data" data-mode="place">Размещение (без drag)</button>
+  <button data-set="data" data-mode="done">После переноса</button>
   <button data-set="loading">Загрузка</button>
   <button data-set="empty">Пусто</button>
   <button data-set="error">Ошибка</button>
@@ -247,38 +209,167 @@
   <button data-theme-toggle>Тема</button>
 </div>
 <script>
-  (function () {
-    var views = document.querySelectorAll('[data-view]');
-    var buttons = document.querySelectorAll('.mock-panel [data-set]');
-    buttons.forEach(function (b) {
-      b.addEventListener('click', function () {
-        views.forEach(function (el) { el.toggleAttribute('data-active', el.dataset.view === b.dataset.set); });
-        buttons.forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
-      });
-    });
-    var sheets = document.querySelectorAll('[data-sheet]');
-    function openSheet(name) {
-      sheets.forEach(function (s) { s.style.display = s.dataset.sheet === name ? 'flex' : 'none'; });
-      document.querySelectorAll('.mock-panel [data-sheet-set]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.sheetSet === name); });
+(function () {
+  /* ---------- Данные: Group[] + счётчики задач (см. groups.md) ---------- */
+  var GROUPS = [
+    { id: 5, name: 'Английский', w: 4, meta: '2 задачи' },
+    { id: 1, name: 'Учёба', w: 3, meta: '4 задачи · 1 выполнена' },
+    { id: 2, name: 'Работа', w: 2, meta: '3 задачи · 1 выполнена' },
+    { id: 4, name: 'Хобби', w: 2, meta: '3 задачи' },
+    { id: 3, name: 'Дом', w: 1, meta: '4 задачи' },
+    { id: 6, name: 'Спорт', w: 1, meta: '2 задачи' }
+  ];
+  var NO_GROUP = { name: 'Без группы', meta: '1 задача · всегда ×1' };
+  var MOVING = 6; // «Спорт» — в режимах drag/place
+
+  /* Сдвиг при вставке между ступенями k и k+1 (алгоритм из groups.md):
+     новая группа встаёт на k+1, группы с k+1 поднимаются цепочкой до первой свободной ступени;
+     если вверх упираемся в ×10 — пробуем вниз; если и так некуда — вставка запрещена. */
+  function insertPlan(groups, movingId, k) {
+    var rest = groups.filter(function (g) { return g.id !== movingId; });
+    var occ = {}; rest.forEach(function (g) { occ[g.w] = true; }); occ[1] = true; // «Без группы» всегда на ×1
+    var s = k + 1; while (s <= 10 && occ[s]) s++;
+    if (s <= 10) return { target: k + 1, shift: rest.filter(function (g) { return g.w >= k + 1 && g.w < s; }).map(function (g) { return { g: g, to: g.w + 1 }; }) };
+    s = k; while (s >= 2 && occ[s]) s--;           // ×1 не освобождается — там «Без группы»
+    if (s >= 2) return { target: k, shift: rest.filter(function (g) { return g.w <= k && g.w > s; }).map(function (g) { return { g: g, to: g.w - 1 }; }) };
+    return null;
+  }
+
+  function groupHtml(g, opts) {
+    opts = opts || {};
+    var cls = 'ladder-group w-' + g.w + (opts.extra ? ' ' + opts.extra : '');
+    var shift = opts.shiftTo ? '<span class="ladder-group__shift">→ ×' + opts.shiftTo + '</span>' : '';
+    return '<li class="' + cls + '" style="list-style:none">' +
+      '<button class="ladder-group__main" type="button" data-open="edit" aria-label="' + g.name + ', вес ' + g.w + ', ' + g.meta + '. Изменить">' +
+        '<span class="ladder-group__name">' + g.name + '</span><span class="ladder-group__meta">' + g.meta + shift + '</span></button>' +
+      '<button class="ladder-group__handle" type="button" aria-label="Переместить «' + g.name + '» на другую ступень" data-move="' + g.id + '"><svg class="icon icon--sm"><use href="#i-grip"/></svg></button>' +
+    '</li>';
+  }
+
+  function render(mode) {
+    var ladder = document.getElementById('ladder');
+    ladder.className = 'ladder' + (mode === 'drag' ? ' ladder--dragging' : mode === 'place' ? ' ladder--placing' : '');
+    document.querySelector('.place-banner').hidden = mode !== 'place';
+    document.querySelector('[data-toast]').hidden = mode !== 'done';
+
+    var groups = GROUPS.map(function (g) { return Object.assign({}, g); });
+    var hotGap = 2; // перетаскивание над промежутком ×2|×3
+    var preview = mode === 'drag' ? insertPlan(groups, MOVING, hotGap) : null;
+    if (mode === 'done') { // результат вставки «Спорт» между ×2 и ×3
+      var p = insertPlan(groups, MOVING, 2);
+      p.shift.forEach(function (x) { groups.filter(function (g) { return g.id === x.g.id; })[0].w = x.to; });
+      groups.filter(function (g) { return g.id === MOVING; })[0].w = p.target;
     }
-    openSheet(null);
-    document.querySelectorAll('.mock-panel [data-sheet-set]').forEach(function (b) {
-      b.addEventListener('click', function () { openSheet(b.getAttribute('aria-pressed') === 'true' ? null : b.dataset.sheetSet); });
+    var shiftMap = {}; if (preview) preview.shift.forEach(function (x) { shiftMap[x.g.id] = x.to; });
+    var occupied = function (n, exceptMoving) {
+      return n === 1 || groups.some(function (g) { return g.w === n && !(exceptMoving && g.id === MOVING); });
+    };
+
+    var html = '';
+    for (var n = 10; n >= 1; n--) {
+      var here = groups.filter(function (g) { return g.w === n; });
+      var busy = here.length > 0 || n === 1;
+      var items = here.map(function (g) {
+        if (mode === 'drag' && g.id === MOVING) return groupHtml(g, { extra: 'ladder-group--ghost' });
+        if (mode === 'place' && g.id === MOVING) return groupHtml(g, { extra: 'ladder-group--moving' });
+        return groupHtml(g, { shiftTo: shiftMap[g.id] });
+      }).join('');
+      if (n === 1) items += '<li class="ladder-group ladder-group--static" style="list-style:none"><span class="ladder-group__main"><span class="ladder-group__name">' + NO_GROUP.name + '</span><span class="ladder-group__meta">' + NO_GROUP.meta + '</span></span></li>';
+      var place = mode === 'place' ?
+        (here.some(function (g) { return g.id === MOVING; }) ? '' : '<li style="list-style:none"><button class="ladder__place" type="button">' + (busy ? 'Сюда, рядом' : 'Поставить на ×' + n) + '</button></li>') : '';
+      html += '<li class="ladder__step w-' + n + (busy ? ' ladder__step--busy' : '') + '" style="--n:' + n + '">' +
+        '<div class="ladder__rail"><span class="ladder__tread"></span><span class="ladder__num">×' + n + '</span></div>' +
+        '<ul class="ladder__groups" style="margin:0" aria-label="Ступень ×' + n + '">' + items + place +
+          (!busy && !place ? '<li class="ladder__empty" style="list-style:none">свободно</li>' : '') + '</ul>' +
+      '</li>';
+      // промежуток между n-1 и n — цель, только если обе ступени заняты (иначе хватает пустой ступени)
+      if (n > 1 && occupied(n, true) && occupied(n - 1, true)) {
+        var plan = insertPlan(groups, MOVING, n - 1);
+        var moved = plan ? plan.shift.slice().sort(function (a, b) { return a.to - b.to; }).map(function (x) { return x.g.name + ' ×' + x.to; }).join(', ') : '';
+        var consequence = !plan ? 'нет свободной ступени' :
+          'встанет на ×' + plan.target + ', ' + (plan.shift[0] && plan.shift[0].to > plan.shift[0].g.w ? 'поднимутся: ' : 'опустятся: ') + moved;
+        var hot = mode === 'drag' && n - 1 === hotGap;
+        html += '<li class="ladder__gap' + (hot ? ' ladder__gap--hot' : '') + '">' +
+          '<span class="ladder__gap-line"></span>' +
+          (hot ? '<span class="ladder__gap-label">Вставить на ×' + plan.target + '</span>' : '') +
+          '<button class="ladder__gap-btn" type="button"' + (plan ? '' : ' disabled') + '>Между ×' + (n - 1) + ' и ×' + n + ': ' + consequence + '</button>' +
+        '</li>';
+      }
+    }
+    ladder.innerHTML = html;
+    if (mode === 'drag') {
+      // «поднятая» группа под пальцем — рядом с активным промежутком
+      var gap = ladder.querySelector('.ladder__gap--hot');
+      var lifted = document.createElement('div');
+      lifted.innerHTML = groupHtml(groups.filter(function (g) { return g.id === MOVING; })[0], { extra: 'ladder-group--lifted' });
+      lifted.firstChild.style.cssText = 'position:absolute; left: 96px; top: -26px; z-index: 3; list-style:none';
+      gap.appendChild(lifted.firstChild);
+    }
+  }
+
+  /* ---------- Панель состояний ---------- */
+  var views = document.querySelectorAll('[data-view]');
+  var buttons = document.querySelectorAll('.mock-panel [data-set]');
+  buttons.forEach(function (b) {
+    b.addEventListener('click', function () {
+      views.forEach(function (el) { el.toggleAttribute('data-active', el.dataset.view === b.dataset.set); });
+      buttons.forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
+      if (b.dataset.mode) render(b.dataset.mode);
     });
-    document.querySelectorAll('[data-open]').forEach(function (b) {
-      b.addEventListener('click', function () { openSheet(b.dataset.open); });
+  });
+  render('rest');
+
+  var sheets = document.querySelectorAll('[data-sheet]');
+  function openSheet(name) {
+    sheets.forEach(function (s) { s.style.display = s.dataset.sheet === name ? 'flex' : 'none'; });
+    document.querySelectorAll('.mock-panel [data-sheet-set]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.sheetSet === name); });
+  }
+  openSheet(null);
+  document.querySelectorAll('.mock-panel [data-sheet-set]').forEach(function (b) {
+    b.addEventListener('click', function () { openSheet(b.getAttribute('aria-pressed') === 'true' ? null : b.dataset.sheetSet); });
+  });
+  document.addEventListener('click', function (e) {
+    var o = e.target.closest('[data-open]'); if (o) openSheet(o.dataset.open);
+    if (e.target.closest('[data-move]')) document.querySelector('.mock-panel [data-mode="place"]').click();
+    if (e.target.closest('[data-cancel-place], .ladder__place, .ladder__gap-btn')) document.querySelector('.mock-panel [data-mode="' + (e.target.closest('[data-cancel-place]') ? 'rest' : 'done') + '"]').click();
+  });
+  sheets.forEach(function (s) {
+    s.addEventListener('click', function (e) {
+      if (e.target === s || e.target.closest('.sheet__head .btn, .sheet__actions .btn')) openSheet(null);
     });
-    sheets.forEach(function (s) {
-      s.addEventListener('click', function (e) {
-        if (e.target === s || e.target.closest('.sheet__head .btn, .sheet__actions .btn')) openSheet(null);
+  });
+  document.querySelector('[data-theme-toggle]').addEventListener('click', function () {
+    var root = document.documentElement;
+    var dark = root.dataset.theme === 'dark' || (!root.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches);
+    root.dataset.theme = dark ? 'light' : 'dark';
+  });
+
+  /* ---------- WeightScale: тап/перетаскивание по столбикам и клавиатура ---------- */
+  document.querySelectorAll('[data-weight-scale]').forEach(function (root) {
+    var track = root.querySelector('.weight-scale__track');
+    var out = root.querySelector('.weight-scale__value');
+    function set(v) {
+      v = Math.max(1, Math.min(10, v));
+      root.className = root.className.replace(/\bw-\d+\b/, 'w-' + v);
+      track.querySelectorAll('.weight-scale__bar').forEach(function (b, i) {
+        b.classList.toggle('weight-scale__bar--on', i + 1 <= v);
+        b.classList.toggle('weight-scale__bar--current', i + 1 === v);
       });
+      out.textContent = '×' + v;
+      track.setAttribute('aria-valuenow', v);
+      track.setAttribute('aria-valuetext', '×' + v);
+    }
+    function fromPointer(e) { var r = track.getBoundingClientRect(); set(Math.floor((e.clientX - r.left) / r.width * 10) + 1); }
+    track.addEventListener('pointerdown', function (e) { track.setPointerCapture(e.pointerId); fromPointer(e); });
+    track.addEventListener('pointermove', function (e) { if (track.hasPointerCapture(e.pointerId)) fromPointer(e); });
+    track.addEventListener('keydown', function (e) {
+      var v = +track.getAttribute('aria-valuenow');
+      var map = { ArrowLeft: v - 1, ArrowDown: v - 1, ArrowRight: v + 1, ArrowUp: v + 1, Home: 1, End: 10 };
+      if (e.key in map) { e.preventDefault(); set(map[e.key]); }
     });
-    document.querySelector('[data-theme-toggle]').addEventListener('click', function () {
-      var root = document.documentElement;
-      var dark = root.dataset.theme === 'dark' || (!root.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches);
-      root.dataset.theme = dark ? 'light' : 'dark';
-    });
-  })();
+  });
+
+})();
 </script>
 </body>
 </html>
