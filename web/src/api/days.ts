@@ -1,9 +1,9 @@
 import { request } from './client'
 import type { Day, DayCreateRequest, DayUpdateRequest } from './types'
 
-/** Tasks у дня может прийти как null — приводим к массиву в одном месте. */
+/** Tasks и Slots у дня могут прийти как null — приводим к массивам в одном месте. */
 function normalizeDay(day: Day): Day {
-  return { ...day, Tasks: day.Tasks ?? [] }
+  return { ...day, Tasks: day.Tasks ?? [], Slots: day.Slots ?? [] }
 }
 
 export async function fetchUserDays(userId: number): Promise<Day[]> {

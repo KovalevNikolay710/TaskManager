@@ -13,6 +13,25 @@
   border-radius: var(--radius-md);
   overflow: hidden;
   box-shadow: var(--shadow-sm);
+  transition:
+    opacity var(--duration-fast),
+    box-shadow var(--duration-fast);
+}
+
+/* Подсветка из диаграммы: остальные карточки приглушены, выбранная обведена цветом сектора */
+.taskListFocus .taskCard {
+  opacity: 0.45;
+}
+
+.taskListFocus .taskCardActive {
+  opacity: 1;
+  box-shadow:
+    0 0 0 2px var(--w, var(--color-accent)),
+    var(--shadow-md);
+}
+
+.oldPlan {
+  margin-bottom: var(--space-6);
 }
 
 .actions {
@@ -26,23 +45,21 @@
   width: 100%;
 }
 
-.skeletonStat {
+.skeletonChart {
   display: grid;
-  gap: var(--space-2);
-  padding: var(--space-3) var(--space-4);
+  justify-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+  padding: var(--space-4);
   background: var(--color-surface);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-sm);
 }
 
-.skeletonProgress {
+.skeletonLines {
   display: grid;
-  gap: 10px;
-  margin-bottom: var(--space-6);
-  padding: var(--space-3) var(--space-4) var(--space-4);
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-sm);
+  gap: var(--space-2);
+  width: 100%;
 }
 
 .skeletonCard {

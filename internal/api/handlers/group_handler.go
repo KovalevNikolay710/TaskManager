@@ -100,6 +100,25 @@ func (handler *GroupHandler) UpdateGroup(context *gin.Context) {
 	context.JSON(http.StatusOK, updatedGroup)
 }
 
+// ReorderGroups атомарно меняет веса нескольких групп (перенос по лесенке) и отдаёт все группы пользователя.
+func (handler *GroupHandler) ReorderGroups(context *gin.Context) {
+	var input models.GroupReorderRequest
+	if err := context.ShouldBindJSON(&input); err != nil {
+		respondBindingError(context, handler.Logger, err)
+		return
+	}
+
+	groups, err := handler.GroupService.ReorderGroups(input)
+	if err != nil {
+		respondError(context, handler.Logger, err, "Ошибка при изменении весов групп", slog.Int64("userId", input.UserId))
+		return
+	}
+	if groups == nil {
+		groups = []*models.Group{}
+	}
+	context.JSON(http.StatusOK, groups)
+}
+
 func (handler *GroupHandler) AddTaskToGroup(context *gin.Context) {
 	groupId, err := handler.getIdFromContext(context)
 	if err != nil {

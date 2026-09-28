@@ -1,6 +1,7 @@
 import { useId, type ReactNode } from 'react'
 import { useFlip } from '../hooks/useFlip'
 import { cx } from '../lib/cx'
+import { weightClass } from '../lib/weight'
 import styles from './GroupSection.module.css'
 import { Icon } from './Icon'
 
@@ -27,7 +28,7 @@ export function GroupSection({ name, weight, count, collapsible, collapsed, onTo
     <>
       <span className={styles.name}>{name}</span>
       {weight !== undefined && (
-        <span className={styles.weight} title={`Приоритет группы ${weight}`}>
+        <span className={cx(styles.weight, weightClass(weight))} title={`Приоритет группы ${weight}`}>
           ×{weight}
         </span>
       )}

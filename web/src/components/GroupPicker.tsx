@@ -2,6 +2,7 @@ import { useEffect, useRef, type KeyboardEvent } from 'react'
 import type { Group } from '../api/types'
 import { cx } from '../lib/cx'
 import { NO_GROUP_ID, sortGroups } from '../lib/groups'
+import { weightClass } from '../lib/weight'
 import { Button } from './Button'
 import styles from './Form.module.css'
 import { FieldHint } from './FormParts'
@@ -62,16 +63,22 @@ export function GroupPicker({ labelledBy, groups, loading, failed, onRetry, valu
             key={option.id}
             type="button"
             role="radio"
-            className={styles.chip}
+            className={cx(styles.chip, styles.chipWeighted, weightClass(option.weight ?? 1))}
             aria-checked={option.id === value}
+            aria-label={`${option.name}, вес ${option.weight ?? 1}`}
             tabIndex={index === selectedIndex ? 0 : -1}
             title={option.name.length > NAME_LIMIT ? option.name : undefined}
             disabled={disabled}
             onClick={() => onChange(option.id)}
             onKeyDown={(e) => onKeyDown(e, index)}
           >
+            <span className={cx(styles.chipDot, option.weight === undefined && styles.chipDotBase)} aria-hidden="true" />
             <span className={styles.chipName}>{shortName(option.name)}</span>
-            {option.weight !== undefined && <span className={styles.chipWeight}>×{option.weight}</span>}
+            {option.weight !== undefined && (
+              <span className={styles.chipWeight} aria-hidden="true">
+                ×{option.weight}
+              </span>
+            )}
           </button>
         ))}
         <button type="button" className={cx(styles.chip, styles.chipAdd)} disabled={disabled} onClick={onAdd}>
@@ -88,7 +95,7 @@ export function GroupPicker({ labelledBy, groups, loading, failed, onRetry, valu
         </FieldHint>
       )}
       <FieldHint>
-        Вес группы (×3) умножает приоритет задачи.{' '}
+        Цвет и ×N — вес группы: он умножает приоритет задачи.{' '}
         <button type="button" className={styles.link} onClick={onManage}>
           Управлять группами
         </button>

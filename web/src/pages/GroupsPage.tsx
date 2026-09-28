@@ -1,24 +1,24 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ApiError } from '../api/client'
 import type { Group, GroupUpdateRequest, Task } from '../api/types'
 import { AppShell } from '../components/AppShell'
 import { Button } from '../components/Button'
 import { ConfirmSheet } from '../components/ConfirmSheet'
-import { GroupList, GroupRow, StaticGroupRow } from '../components/GroupRow'
+import { GroupLadder, type LadderEntry, type LadderMove } from '../components/GroupLadder'
 import { GroupSheet, type GroupFormValues } from '../components/GroupSheet'
 import { Icon } from '../components/Icon'
 import { PageHeader } from '../components/PageHeader'
 import { Skeleton } from '../components/Skeleton'
 import { StateMessage } from '../components/StateMessage'
-import { useFlip } from '../hooks/useFlip'
 import { useGoBack } from '../hooks/useGoBack'
-import { useCreateGroup, useDeleteGroup, useUpdateGroup } from '../hooks/useGroupMutations'
+import { useCreateGroup, useDeleteGroup, useReorderGroups, useUpdateGroup } from '../hooks/useGroupMutations'
 import { useGroups } from '../hooks/useGroups'
 import { useTasks } from '../hooks/useTasks'
 import { useToast } from '../hooks/useToast'
 import { plural } from '../lib/format'
-import { sortGroups } from '../lib/groups'
-import { isDone } from '../lib/tasks'
+import { planChanges, type WeightShift } from '../lib/ladder'
+import { clampWeight } from '../lib/weight'
+import { isDone, normalizeForSearch } from '../lib/tasks'
 import styles from './GroupsPage.module.css'
 
 type Overlay = { kind: 'create' } | { kind: 'edit'; groupId: number } | { kind: 'delete'; groupId: number } | null
@@ -81,6 +81,20 @@ function errorText(error: unknown): string {
   return error instanceof Error ? error.message : 'Неизвестная ошибка'
 }
 
+/** «„Спорт“ теперь ×3. Поднялись: Учёба ×4, Английский ×5» */
+function moveText(changes: readonly WeightShift[], movedId: number, names: ReadonlyMap<number, string>): string {
+  const moved = changes.find((c) => c.id === movedId)
+  const others = changes.filter((c) => c.id !== movedId)
+  const head = moved ? `«${names.get(movedId)}» теперь ×${moved.to}.` : ''
+  const list = (items: WeightShift[]) => items.map((c) => `${names.get(c.id)} ×${c.to}`).join(', ')
+  const up = others.filter((c) => c.to > c.from)
+  const down = others.filter((c) => c.to < c.from)
+  return [head, up.length ? `Поднялись: ${list(up)}.` : '', down.length ? `Опустились: ${list(down)}.` : ''].filter(Boolean).join(' ').replace(/\.$/, '')
+}
+
+const HIGHLIGHT_MS = 2000
+const MOVE_TOAST_MS = 6000
+
 /** Экран «Группы» — design/screens/groups.md. */
 export function GroupsPage() {
   const goBack = useGoBack('/all-tasks')
@@ -90,42 +104,103 @@ export function GroupsPage() {
   const createGroup = useCreateGroup()
   const updateGroup = useUpdateGroup()
   const deleteGroup = useDeleteGroup()
-  const listRef = useFlip<HTMLUListElement>()
+  const reorderGroups = useReorderGroups()
 
   const [overlay, setOverlay] = useState<Overlay>(null)
   const [pendingIds, setPendingIds] = useState<ReadonlySet<number>>(new Set())
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [highlightedId, setHighlightedId] = useState<number | null>(null)
+
+  useEffect(() => {
+    if (highlightedId === null) return
+    const timer = window.setTimeout(() => setHighlightedId(null), HIGHLIGHT_MS)
+    return () => window.clearTimeout(timer)
+  }, [highlightedId])
 
   const groups = groupsQuery.data
   const tasks = tasksQuery.isError ? undefined : tasksQuery.data
-  const sorted = sortGroups(groups ?? [])
   const { byGroup, noGroup } = countTasks(groups ?? [], tasks)
   const countsOf = (groupId: number) => byGroup.get(groupId) ?? NO_COUNTS
   const activeCountOf = (groupId: number) => (tasks ?? []).filter((t) => t.GroupId === groupId && !isDone(t)).length
 
-  const setPending = (groupId: number, value: boolean) =>
+  const setPending = (groupIds: readonly number[], value: boolean) =>
     setPendingIds((prev) => {
       const next = new Set(prev)
-      if (value) next.add(groupId)
-      else next.delete(groupId)
+      for (const groupId of groupIds) {
+        if (value) next.add(groupId)
+        else next.delete(groupId)
+      }
       return next
     })
 
   const create = async ({ name, weight }: GroupFormValues) => {
-    await createGroup.mutateAsync({ name, groupPriority: weight })
+    const group = await createGroup.mutateAsync({ name, groupPriority: weight })
     setOverlay(null)
+    setHighlightedId(group.GroupId)
     showToast({ message: 'Группа создана' })
+  }
+
+  /**
+   * Применяет новые веса: одна группа на ступень — POST /groups/update/:id,
+   * вставка со сдвигом — POST /groups/reorder (атомарно). Группы уже на новых местах (оптимистично).
+   */
+  const applyWeights = async (changes: readonly WeightShift[]) => {
+    const ids = changes.map((c) => c.id)
+    setPending(ids, true)
+    try {
+      if (changes.length === 1) {
+        await updateGroup.mutateAsync({ groupId: changes[0].id, input: { groupPriority: changes[0].to } })
+      } else {
+        await reorderGroups.mutateAsync(changes.map((c) => ({ groupId: c.id, groupPriority: c.to })))
+      }
+    } finally {
+      setPending(ids, false)
+    }
+  }
+
+  const undo = async (changes: readonly WeightShift[]) => {
+    const back = changes.map((c) => ({ id: c.id, from: c.to, to: c.from }))
+    try {
+      await reorderGroups.mutateAsync(back.map((c) => ({ groupId: c.id, groupPriority: c.to })))
+      showToast({ message: 'Перенос отменён' })
+    } catch {
+      showToast({ message: 'Не удалось отменить перенос', action: { label: 'Повторить', onClick: () => void undo(changes) } })
+    }
+  }
+
+  const move = async (moveTo: LadderMove) => {
+    const group = groups?.find((g) => g.GroupId === moveTo.groupId)
+    if (!group) return
+    // from — настоящий вес (у старых групп он может быть больше 10), чтобы «Отменить» вернул его
+    const weightOf = (id: number) => groups?.find((g) => g.GroupId === id)?.GroupPriority ?? 1
+    const changes =
+      moveTo.kind === 'step'
+        ? [{ id: group.GroupId, from: group.GroupPriority, to: moveTo.step }]
+        : planChanges(group.GroupId, clampWeight(group.GroupPriority), moveTo.plan).map((c) => ({ ...c, from: weightOf(c.id) }))
+    const real = changes.filter((c) => c.from !== c.to)
+    if (real.length === 0) return
+    const names = new Map((groups ?? []).map((g) => [g.GroupId, g.Name]))
+    try {
+      await applyWeights(real)
+      showToast({
+        message: moveText(real, group.GroupId, names),
+        duration: MOVE_TOAST_MS,
+        action: { label: 'Отменить', onClick: () => void undo(real) },
+      })
+    } catch {
+      showToast({ message: 'Не удалось переставить группы', action: { label: 'Повторить', onClick: () => void move(moveTo) } })
+    }
   }
 
   /** Sheet закрывается сразу, строка в состоянии pending до ответа; ошибка — Toast с повтором. */
   const save = async (group: Group, input: GroupUpdateRequest) => {
-    setPending(group.GroupId, true)
+    setPending([group.GroupId], true)
     try {
       await updateGroup.mutateAsync({ groupId: group.GroupId, input })
     } catch {
       showToast({ message: 'Не удалось сохранить группу', action: { label: 'Повторить', onClick: () => void save(group, input) } })
     } finally {
-      setPending(group.GroupId, false)
+      setPending([group.GroupId], false)
     }
   }
 
@@ -140,7 +215,7 @@ export function GroupsPage() {
   const remove = async (group: Group) => {
     const moved = countsOf(group.GroupId).total
     setDeleteError(null)
-    setPending(group.GroupId, true)
+    setPending([group.GroupId], true)
     try {
       await deleteGroup.mutateAsync(group.GroupId)
       setOverlay(null)
@@ -154,7 +229,7 @@ export function GroupsPage() {
       if (error instanceof ApiError && error.status === 404) setOverlay(null)
       else setDeleteError(errorText(error))
     } finally {
-      setPending(group.GroupId, false)
+      setPending([group.GroupId], false)
     }
   }
 
@@ -188,58 +263,53 @@ export function GroupsPage() {
       return <GroupsSkeleton />
     }
 
-    const noGroupCard = noGroup && noGroup.total > 0 && (
-      <GroupList label="Задачи без группы">
-        <li>
-          <StaticGroupRow name="Без группы" meta={`${tasksWord(noGroup.total)} · вес всегда ×1`} />
-        </li>
-      </GroupList>
-    )
-
     if (groups.length === 0) {
       return (
-        <>
-          <StateMessage
-            icon="folder"
-            title="Групп пока нет"
-            text="Группы — это области жизни: учёба, работа, дом. У каждой свой вес, и он поднимает важные задачи выше."
-          >
-            <Button variant="primary" onClick={openCreate}>
-              <Icon name="plus" size="sm" />
-              Создать группу
-            </Button>
-          </StateMessage>
-          {noGroupCard}
-        </>
+        <StateMessage
+          icon="folder"
+          title="Групп пока нет"
+          text="Группы — это области жизни: учёба, работа, дом, хобби. Их ставят на лесенку: чем выше ступень, тем важнее задачи группы."
+        >
+          <Button variant="primary" onClick={openCreate}>
+            <Icon name="plus" size="sm" />
+            Создать группу
+          </Button>
+        </StateMessage>
       )
     }
+
+    const entries: LadderEntry[] = [...groups]
+      .sort((a, b) => normalizeForSearch(a.Name).localeCompare(normalizeForSearch(b.Name), 'ru'))
+      .map((group) => {
+        const counts = countsOf(group.GroupId)
+        const doneText = counts.done ? `, ${counts.done} ${plural(counts.done, ['выполнена', 'выполнены', 'выполнено'])}` : ''
+        const tasksText = counts.total ? tasksWord(counts.total) : 'нет задач'
+        const pending = pendingIds.has(group.GroupId)
+        return {
+          group,
+          weight: clampWeight(group.GroupPriority),
+          meta: countsText(counts),
+          label: `${group.Name}, вес ${group.GroupPriority}, ${tasksText}${doneText}. ${pending ? 'Сохраняется' : 'Изменить'}`,
+        }
+      })
+    const noGroupMeta = noGroup ? `${countsText(noGroup)} · всегда ×1` : 'всегда ×1'
 
     return (
       <>
         <p className={styles.intro}>
-          Вес группы умножает приоритет всех её задач: задача из группы ×3 при прочих равных встанет выше задачи из группы ×1.
+          Чем выше ступень, тем важнее задачи группы: вес ×N умножает их приоритет. Перетащите группу за{' '}
+          <Icon name="grip" size="xs" className={styles.introIcon} /> на другую ступень или между двумя занятыми — группы выше сами поднимутся.
         </p>
-        <GroupList label="Группы по весу" listRef={listRef}>
-          {sorted.map((group) => {
-            const counts = countsOf(group.GroupId)
-            const pending = pendingIds.has(group.GroupId)
-            const doneText = counts.done ? `, ${counts.done} ${plural(counts.done, ['выполнена', 'выполнены', 'выполнено'])}` : ''
-            const tasksText = counts.total ? tasksWord(counts.total) : 'нет задач'
-            return (
-              <li key={group.GroupId} data-flip-key={group.GroupId}>
-                <GroupRow
-                  name={group.Name}
-                  weight={group.GroupPriority}
-                  meta={countsText(counts)}
-                  label={`${group.Name}, вес ${group.GroupPriority}, ${tasksText}${doneText}. ${pending ? 'Сохраняется' : 'Изменить'}`}
-                  pending={pending}
-                  onOpen={() => setOverlay({ kind: 'edit', groupId: group.GroupId })}
-                />
-              </li>
-            )
-          })}
-        </GroupList>
-        {noGroupCard}
+        <GroupLadder
+          entries={entries}
+          noGroupMeta={noGroupMeta}
+          pendingIds={pendingIds}
+          locked={reorderGroups.isPending || updateGroup.isPending}
+          highlightedId={highlightedId}
+          onEdit={(group) => setOverlay({ kind: 'edit', groupId: group.GroupId })}
+          onMove={(m) => void move(m)}
+        />
+        <p className={styles.footnote}>«Без группы» всегда стоит на ×1 — это точка отсчёта.</p>
       </>
     )
   }
@@ -302,6 +372,13 @@ export function GroupsPage() {
   )
 }
 
+/** Три ряда лесенки: полоса-ступень и 1–2 карточки 44px. */
+const SKELETON_STEPS = [
+  { tread: 48, blocks: [120] },
+  { tread: 40, blocks: [100, 90] },
+  { tread: 32, blocks: [110] },
+]
+
 function GroupsSkeleton() {
   return (
     <div aria-busy="true" aria-label="Загрузка групп">
@@ -309,17 +386,16 @@ function GroupsSkeleton() {
         <Skeleton width="90%" height={14} />
         <Skeleton width="60%" height={14} />
       </div>
-      <GroupList label="Загрузка">
-        {['40%', '30%', '35%'].map((width) => (
-          <li key={width} className={styles.skeletonRow}>
-            <Skeleton width={40} height={40} />
-            <div className={styles.skeletonLines}>
-              <Skeleton width={width} height={16} />
-              <Skeleton width="50%" height={12} />
-            </div>
-          </li>
+      <div className={styles.skeletonLadder}>
+        {SKELETON_STEPS.map(({ tread, blocks }) => (
+          <div className={styles.skeletonStep} key={tread}>
+            <Skeleton width={tread} height={10} />
+            {blocks.map((width) => (
+              <Skeleton key={width} width={width} height={44} />
+            ))}
+          </div>
         ))}
-      </GroupList>
+      </div>
     </div>
   )
 }

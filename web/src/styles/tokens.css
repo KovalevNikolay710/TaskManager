@@ -44,6 +44,34 @@
   --color-priority-high-soft: #fdeae8;
   --color-priority-high-text: #a8231b;
 
+  /* ---------- Шкала веса группы ×1…×10 ----------
+   * Каждой ступени веса (Group.GroupPriority, множитель Pg) — свой цвет: от спокойного
+   * сине-серого (×1) через бирюзу и зелень к янтарю, красному и малиновому (×10).
+   * base  — графика: ступень лесенки, сектор диаграммы дня, точка чипа, полоска задачи
+   *         (≥ 3:1 на --color-surface; на --color-bg не используется);
+   * -soft — фон бейджа/плитки/выбранного чипа;
+   * -text — число «×N» и текст на -soft (≥ 5.8:1) и на surface (≥ 6.6:1).
+   * Цвет не единственный носитель смысла: рядом всегда есть «×N».
+   * Текст на сплошной base не кладём (у ×9–×10 он не проходит AA).
+   */
+  --color-weight-1: #6b84a3;  --color-weight-1-soft: #edf1f6;  --color-weight-1-text: #3d526b;
+  --color-weight-2: #3f8fb0;  --color-weight-2-soft: #e6f3f8;  --color-weight-2-text: #1f5d77;
+  --color-weight-3: #2b9a8f;  --color-weight-3-soft: #e3f4f2;  --color-weight-3-text: #17645c;
+  --color-weight-4: #3f9a52;  --color-weight-4-soft: #e7f4e9;  --color-weight-4-text: #236132;
+  --color-weight-5: #7a9412;  --color-weight-5-soft: #f0f4dc;  --color-weight-5-text: #4c5d05;
+  --color-weight-6: #b58600;  --color-weight-6-soft: #fbf1d6;  --color-weight-6-text: #6e5000;
+  --color-weight-7: #cf720c;  --color-weight-7-soft: #fdefdf;  --color-weight-7-text: #8f4a00;
+  --color-weight-8: #e0592b;  --color-weight-8-soft: #fde9e2;  --color-weight-8-text: #a33612;
+  --color-weight-9: #d4343f;  --color-weight-9-soft: #fce6e7;  --color-weight-9-text: #a11d27;
+  --color-weight-10: #b3246b; --color-weight-10-soft: #f9e3ee; --color-weight-10-text: #8c1350;
+
+  /* ---------- Диаграмма дня (DayChart) ----------
+   * done — сектор выполненной задачи (намеренно приглушён: ≈1.7:1, смысл дублирует список (зачёркивание, «Выполнено» в сводке)),
+   * free — сектор «Свободно» (= трек кольца).
+   */
+  --color-day-done: #c3c8d2;
+  --color-day-free: #eceef3;
+
   /* ---------- Типографика ---------- */
   --font-sans: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
@@ -92,6 +120,8 @@
   --size-bottom-nav: 64px;
   --size-side-nav: 240px;
   --layout-max-width: 720px;
+  --size-day-chart: 220px;    /* диаметр кольцевой диаграммы дня (мобильный; десктоп — 240px) */
+  --size-ladder-step: 44px;   /* минимальная высота ступени лесенки групп */
   --breakpoint-desktop: 960px; /* справочно: в @media переменные не работают, значение дублируется */
 
   /* ---------- Анимация ---------- */
@@ -135,6 +165,20 @@
     --color-priority-high-soft: #3d1f1f;
     --color-priority-high-text: #ff9a93;
 
+    --color-weight-1: #8199b8;  --color-weight-1-soft: #252c37;  --color-weight-1-text: #b9c7da;
+    --color-weight-2: #4fa9cc;  --color-weight-2-soft: #1c2e37;  --color-weight-2-text: #9fd6ec;
+    --color-weight-3: #3cbcae;  --color-weight-3-soft: #193230;  --color-weight-3-text: #8fe0d6;
+    --color-weight-4: #5cbd6e;  --color-weight-4-soft: #1c3222;  --color-weight-4-text: #a3e0ae;
+    --color-weight-5: #a3bf3a;  --color-weight-5-soft: #2a3117;  --color-weight-5-text: #cfe38a;
+    --color-weight-6: #d9a92b;  --color-weight-6-soft: #362c12;  --color-weight-6-text: #f2d27f;
+    --color-weight-7: #f0943a;  --color-weight-7-soft: #3a2715;  --color-weight-7-text: #ffc48a;
+    --color-weight-8: #f5764e;  --color-weight-8-soft: #3d2219;  --color-weight-8-text: #ffb49b;
+    --color-weight-9: #f55a62;  --color-weight-9-soft: #3d1d20;  --color-weight-9-text: #ffa3a8;
+    --color-weight-10: #e0579a; --color-weight-10-soft: #3a1a2a; --color-weight-10-text: #f7a8cc;
+
+    --color-day-done: #3d4350;
+    --color-day-free: #262a35;
+
     --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
     --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.45);
     --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
@@ -175,6 +219,20 @@
   --color-priority-high: #ff6259;
   --color-priority-high-soft: #3d1f1f;
   --color-priority-high-text: #ff9a93;
+
+  --color-weight-1: #8199b8;  --color-weight-1-soft: #252c37;  --color-weight-1-text: #b9c7da;
+  --color-weight-2: #4fa9cc;  --color-weight-2-soft: #1c2e37;  --color-weight-2-text: #9fd6ec;
+  --color-weight-3: #3cbcae;  --color-weight-3-soft: #193230;  --color-weight-3-text: #8fe0d6;
+  --color-weight-4: #5cbd6e;  --color-weight-4-soft: #1c3222;  --color-weight-4-text: #a3e0ae;
+  --color-weight-5: #a3bf3a;  --color-weight-5-soft: #2a3117;  --color-weight-5-text: #cfe38a;
+  --color-weight-6: #d9a92b;  --color-weight-6-soft: #362c12;  --color-weight-6-text: #f2d27f;
+  --color-weight-7: #f0943a;  --color-weight-7-soft: #3a2715;  --color-weight-7-text: #ffc48a;
+  --color-weight-8: #f5764e;  --color-weight-8-soft: #3d2219;  --color-weight-8-text: #ffb49b;
+  --color-weight-9: #f55a62;  --color-weight-9-soft: #3d1d20;  --color-weight-9-text: #ffa3a8;
+  --color-weight-10: #e0579a; --color-weight-10-soft: #3a1a2a; --color-weight-10-text: #f7a8cc;
+
+  --color-day-done: #3d4350;
+  --color-day-free: #262a35;
 
   --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
   --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.45);

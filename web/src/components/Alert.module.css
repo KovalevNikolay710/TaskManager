@@ -34,3 +34,16 @@
   color: var(--color-text-muted);
   overflow-wrap: anywhere;
 }
+
+/* Информационный вариант */
+.info {
+  background: var(--color-accent-soft);
+}
+
+.info .icon {
+  color: var(--color-accent);
+}
+
+.action {
+  margin-top: var(--space-2);
+}

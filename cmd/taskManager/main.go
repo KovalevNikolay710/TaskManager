@@ -26,13 +26,13 @@ func main() {
 	// Инициализация сервиса
 	taskService := services.NewTaskService(taskRepository, groupRepository, logger)
 	dayService := services.NewDayService(dayRepository, taskRepository, logger)
-	groupServices := services.NewGroupService(groupRepository, taskRepository, taskService)
+	groupServices := services.NewGroupService(groupRepository, taskRepository, taskService, logger)
 
 	// Создание роутера
 	router := gin.Default()
 
 	// Регистрация маршрутов
-	api.RegisterTaskRoutes(router, taskService, dayService, groupServices, logger, db)
+	api.RegisterTaskRoutes(router, taskService, dayService, groupServices, logger)
 	// Фронтенд встроен в бинарник; все прочие GET-пути отдаются SPA
 	api.RegisterFrontend(router, web.Dist(), logger)
 

@@ -4,6 +4,7 @@ import { cx } from '../lib/cx'
 import { describeDeadline } from '../lib/dates'
 import { durationToWords, formatDuration } from '../lib/format'
 import { isDone, normalizeForSearch, type PriorityLevel } from '../lib/tasks'
+import { weightClass } from '../lib/weight'
 import { Checkbox } from './Checkbox'
 import { Icon } from './Icon'
 import { PriorityChip } from './PriorityChip'
@@ -21,11 +22,16 @@ interface TaskRowProps {
   divider?: boolean
   /** Только что созданная задача: фон --color-accent-soft, гаснет за 1,5 с */
   highlighted?: boolean
+  /**
+   * Вариант «слот дня» (экран «День»): полоска — цвет сектора диаграммы по весу группы,
+   * справа от названия — время на сегодня, в мета-строке время подписано «всего».
+   */
+  slot?: { minutes: number; weight: number }
   onToggle: (task: Task) => void
   onOpen: (task: Task) => void
 }
 
-export function TaskRow({ task, level, groupName, query = '', pending = false, divider = false, highlighted = false, onToggle, onOpen }: TaskRowProps) {
+export function TaskRow({ task, level, groupName, query = '', pending = false, divider = false, highlighted = false, slot, onToggle, onOpen }: TaskRowProps) {
   const done = isDone(task)
   const nameId = `task-name-${task.TaskId}`
   const deadline = describeDeadline(task.DeadLine)
@@ -33,7 +39,15 @@ export function TaskRow({ task, level, groupName, query = '', pending = false, d
 
   return (
     <article
-      className={cx(styles.task, styles[level], done && styles.done, divider && styles.divider, highlighted && styles.highlighted)}
+      className={cx(
+        styles.task,
+        styles[level],
+        done && styles.done,
+        divider && styles.divider,
+        highlighted && styles.highlighted,
+        slot && styles.slot,
+        slot && weightClass(slot.weight),
+      )}
       onClick={() => onOpen(task)}
     >
       <Checkbox
@@ -44,18 +58,27 @@ export function TaskRow({ task, level, groupName, query = '', pending = false, d
         onChange={() => onToggle(task)}
       />
       <div className={styles.body}>
-        <p className={styles.name} id={nameId}>
-          <button
-            type="button"
-            className={styles.open}
-            onClick={(e) => {
-              e.stopPropagation()
-              onOpen(task)
-            }}
-          >
-            {highlight(task.Name, query)}
-          </button>
-        </p>
+        <div className={styles.top}>
+          <p className={styles.name} id={nameId}>
+            <button
+              type="button"
+              className={styles.open}
+              onClick={(e) => {
+                e.stopPropagation()
+                onOpen(task)
+              }}
+            >
+              {highlight(task.Name, query)}
+            </button>
+          </p>
+          {slot && (
+            <span className={styles.slotTime}>
+              <b aria-hidden="true">{formatDuration(slot.minutes)}</b>
+              <span aria-hidden="true"> сегодня</span>
+              <span className="visually-hidden">В плане на сегодня: {durationToWords(slot.minutes)}</span>
+            </span>
+          )}
+        </div>
         <div className={styles.meta}>
           <span className={styles.facts}>
             {groupName && !done && (
@@ -67,7 +90,10 @@ export function TaskRow({ task, level, groupName, query = '', pending = false, d
             {!done && (
               <span className={styles.fact}>
                 <Icon name="clock" size="xs" />
-                <span aria-hidden="true">{formatDuration(task.TimeForExecution)}</span>
+                <span aria-hidden="true">
+                  {slot ? 'всего ' : ''}
+                  {formatDuration(task.TimeForExecution)}
+                </span>
                 <span className="visually-hidden">Время на выполнение: {durationToWords(task.TimeForExecution)}</span>
               </span>
             )}

@@ -9,7 +9,7 @@ interface ActiveToast extends ToastOptions {
   id: number
 }
 
-/** Сообщения об ошибках фоновых действий: снизу над навигацией, 4 секунды. */
+/** Сообщения о фоновых действиях: снизу над навигацией, 4 секунды (или duration). */
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toast, setToast] = useState<ActiveToast | null>(null)
 
@@ -19,7 +19,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!toast) return
-    const timer = window.setTimeout(() => setToast(null), TOAST_DURATION_MS)
+    const timer = window.setTimeout(() => setToast(null), toast.duration ?? TOAST_DURATION_MS)
     return () => window.clearTimeout(timer)
   }, [toast])
 

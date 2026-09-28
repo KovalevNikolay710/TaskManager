@@ -28,27 +28,6 @@
   color: var(--color-danger);
 }
 
-/* ---------- Stepper ---------- */
-.stepper {
-  display: inline-flex;
-  align-items: center;
-  height: var(--size-touch);
-  background: var(--color-surface-sunken);
-  border-radius: var(--radius-md);
-}
-
-.stepperButton {
-  color: var(--color-text);
-}
-
-.stepperValue {
-  min-width: 48px;
-  text-align: center;
-  font-size: var(--text-lg);
-  font-weight: var(--font-weight-semibold);
-  font-variant-numeric: tabular-nums;
-}
-
 /* ---------- TimeInput ---------- */
 .timeField {
   display: grid;
