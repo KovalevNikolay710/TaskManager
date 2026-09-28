@@ -38,19 +38,28 @@ export interface Group {
   Tasks: Task[] | null
 }
 
+/** Задача в плане дня и выделенное ей время (таблица day_tasks). */
+export interface DayTask {
+  DayId: number
+  TaskId: number
+  /** Минуты на этот день; 0 — план составлен до распределения времени («Старый план») */
+  Minutes: number
+}
+
 export interface Day {
   DayId: number
   UserId: number
   /** RFC3339 */
   Date: string
-  /** Минуты */
+  /** Минуты, которые пользователь готов отдать задачам в этот день (100% диаграммы) */
   TimeForTasks: number
-  AmountOfTasks: number
   /** Снимок на сервере; экран «День» считает остаток сам по Tasks */
   PriorityOfTheDay: number
   Status: number
   UpdatedAt: string
   Tasks: Task[] | null
+  /** Время каждой задачи плана; у старых версий бэкенда поля нет */
+  Slots?: DayTask[] | null
 }
 
 // ---- Запросы: camelCase, как в *Request DTO ----
@@ -109,13 +118,18 @@ export interface DayCreateRequest {
   /** RFC3339 */
   date: string
   userId: number
-  /** Минуты */
+  /** Минуты, 15–960 */
   timeForTasks: number
-  amountOfTasks: number
 }
 
+/** Пересборка плана; без timeForTasks — с прежним временем дня. */
 export interface DayUpdateRequest {
-  /** Минуты */
+  /** Минуты, 15–960 */
   timeForTasks?: number
-  amountOfTasks?: number
+}
+
+/** Атомарная смена весов нескольких групп (перенос по лесенке). */
+export interface GroupReorderRequest {
+  userId: number
+  groups: Array<{ groupId: number; groupPriority: number }>
 }

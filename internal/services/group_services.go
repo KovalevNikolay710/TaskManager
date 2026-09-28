@@ -4,6 +4,7 @@ import (
 	"TaskManager/internal/models"
 	"TaskManager/internal/repository"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 )
@@ -20,13 +21,15 @@ type GroupServiceImpl struct {
 	GroupRepository *repository.GroupRepositoryImpl
 	TaskRepository  *repository.TaskRepositoryImpl
 	TaskService     *TaskServiceImpl
+	Logger          *slog.Logger
 }
 
-func NewGroupService(groupRepo *repository.GroupRepositoryImpl, taskRepo *repository.TaskRepositoryImpl, taskServ *TaskServiceImpl) *GroupServiceImpl {
+func NewGroupService(groupRepo *repository.GroupRepositoryImpl, taskRepo *repository.TaskRepositoryImpl, taskServ *TaskServiceImpl, logger *slog.Logger) *GroupServiceImpl {
 	return &GroupServiceImpl{
 		GroupRepository: groupRepo,
 		TaskRepository:  taskRepo,
 		TaskService:     taskServ,
+		Logger:          logger,
 	}
 }
 
@@ -105,15 +108,9 @@ func (s *GroupServiceImpl) UpdateGroup(groupId int64, input models.GroupUpdateRe
 	var tasks []*models.Task
 	if input.GroupPriority != nil && *input.GroupPriority != group.GroupPriority {
 		group.GroupPriority = *input.GroupPriority
-		// Задачи группы берём по Task.GroupId — это то, что видит пользователь
-		tasks, err = s.TaskRepository.FindByUserID(group.UserId, models.TaskFilter{GroupId: groupId})
+		tasks, err = s.reweighTasks(group, time.Now())
 		if err != nil {
-			return nil, fmt.Errorf("не удалось получить задачи группы: %w", err)
-		}
-		now := time.Now()
-		for _, task := range tasks {
-			task.GroupPriorty = group.GroupPriority
-			refreshTaskPriorty(task, now)
+			return nil, err
 		}
 	}
 
@@ -122,6 +119,74 @@ func (s *GroupServiceImpl) UpdateGroup(groupId int64, input models.GroupUpdateRe
 	}
 
 	return s.GetGroupByID(groupId)
+}
+
+// reweighTasks загружает задачи группы и пересчитывает их GroupPriorty и Priority под текущий вес группы.
+// Задачи группы берём по Task.GroupId — это то, что видит пользователь.
+func (s *GroupServiceImpl) reweighTasks(group *models.Group, now time.Time) ([]*models.Task, error) {
+	tasks, err := s.TaskRepository.FindByUserID(group.UserId, models.TaskFilter{GroupId: group.GroupId})
+	if err != nil {
+		return nil, fmt.Errorf("не удалось получить задачи группы %d: %w", group.GroupId, err)
+	}
+	for _, task := range tasks {
+		task.GroupPriorty = group.GroupPriority
+		refreshTaskPriorty(task, now)
+	}
+	return tasks, nil
+}
+
+// ReorderGroups атомарно меняет веса нескольких групп пользователя и пересчитывает их задачи.
+// Правило лесенки считает клиент; сервер принимает любой набор весов 1–10.
+// Возвращает полный список групп пользователя.
+func (s *GroupServiceImpl) ReorderGroups(input models.GroupReorderRequest) ([]*models.Group, error) {
+	ids := make([]int64, 0, len(input.Groups))
+	weights := make(map[int64]uint64, len(input.Groups))
+	for _, item := range input.Groups {
+		if _, ok := weights[item.GroupId]; ok {
+			return nil, newError(ErrKindInvalidInput, fmt.Sprintf("группа %d указана дважды", item.GroupId))
+		}
+		weights[item.GroupId] = item.GroupPriority
+		ids = append(ids, item.GroupId)
+	}
+
+	groups, err := s.GroupRepository.FindUserGroupsByIDs(input.UserId, ids)
+	if err != nil {
+		return nil, fmt.Errorf("не удалось получить группы: %w", err)
+	}
+	found := make(map[int64]*models.Group, len(groups))
+	for _, group := range groups {
+		found[group.GroupId] = group
+	}
+
+	now := time.Now()
+	changed := make([]*models.Group, 0, len(ids))
+	var tasks []*models.Task
+	for _, id := range ids {
+		group, ok := found[id]
+		if !ok {
+			return nil, newError(ErrKindNotFound, fmt.Sprintf("группа %d не найдена", id))
+		}
+		if group.GroupPriority == weights[id] {
+			continue
+		}
+		group.GroupPriority = weights[id]
+		groupTasks, err := s.reweighTasks(group, now)
+		if err != nil {
+			return nil, err
+		}
+		changed = append(changed, group)
+		tasks = append(tasks, groupTasks...)
+	}
+
+	if err := s.GroupRepository.UpdateWeightsWithTasks(changed, tasks); err != nil {
+		return nil, fmt.Errorf("не удалось изменить веса групп: %w", err)
+	}
+	s.Logger.Info("Веса групп изменены",
+		slog.Int64("userId", input.UserId),
+		slog.Int("groups", len(changed)),
+		slog.Int("tasks", len(tasks)))
+
+	return s.GetAllUserGroups(input.UserId)
 }
 
 // GetAllGroupTasks возвращает задачи группы (по group_tasks) или ErrGroupNotFound.

@@ -2,20 +2,18 @@ package api
 
 import (
 	"TaskManager/internal/api/handlers"
-	"TaskManager/internal/models"
 	"TaskManager/internal/services"
 	"log/slog"
 
 	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 )
 
-func RegisterTaskRoutes(router *gin.Engine, taskService *services.TaskServiceImpl, dayService *services.DayServiceImpl, groupsServices *services.GroupServiceImpl, logger *slog.Logger, db *gorm.DB) {
+func RegisterTaskRoutes(router *gin.Engine, taskService *services.TaskServiceImpl, dayService *services.DayServiceImpl, groupsServices *services.GroupServiceImpl, logger *slog.Logger) {
 	// Ошибки валидации называют поля так же, как их отправляет клиент (json-теги)
 	handlers.UseJSONFieldNames()
 
 	taskHandler := handlers.NewTaskHandler(taskService, logger)
-	dayHandler := handlers.NewDayHandler(dayService, services.NewGenericService[models.Day](db), logger)
+	dayHandler := handlers.NewDayHandler(dayService, logger)
 	groupHandler := handlers.NewGroupHandler(groupsServices, logger)
 
 	// Всё API живёт под /api, чтобы не пересекаться с маршрутами SPA (/day, /tasks/:id, ...)
@@ -44,6 +42,7 @@ func RegisterTaskRoutes(router *gin.Engine, taskService *services.TaskServiceImp
 		groupRoutes.POST("/", groupHandler.CreateGroup)
 		groupRoutes.GET("/:id", groupHandler.GetGroupByID)
 		groupRoutes.POST("/update/:id", groupHandler.UpdateGroup)
+		groupRoutes.POST("/reorder", groupHandler.ReorderGroups)
 		groupRoutes.POST("/add/:id", groupHandler.AddTaskToGroup)
 		groupRoutes.DELETE("/:id", groupHandler.DeleteGroup)
 		groupRoutes.GET("/tasks/:id", groupHandler.GetAllGroupTasks)

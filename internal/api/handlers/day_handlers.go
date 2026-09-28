@@ -4,6 +4,7 @@ import (
 	"TaskManager/internal/models"
 	"TaskManager/internal/services"
 	"errors"
+	"io"
 	"log/slog"
 	"net/http"
 	"strconv"
@@ -12,13 +13,12 @@ import (
 )
 
 type DayHandler struct {
-	dayService     *services.DayServiceImpl
-	GenericService *services.GenericService[models.Day]
-	Logger         *slog.Logger
+	dayService *services.DayServiceImpl
+	Logger     *slog.Logger
 }
 
-func NewDayHandler(dayService *services.DayServiceImpl, genServ *services.GenericService[models.Day], logger *slog.Logger) *DayHandler {
-	return &DayHandler{dayService: dayService, GenericService: genServ, Logger: logger}
+func NewDayHandler(dayService *services.DayServiceImpl, logger *slog.Logger) *DayHandler {
+	return &DayHandler{dayService: dayService, Logger: logger}
 }
 
 func (handler *DayHandler) CreateDayHandler(c *gin.Context) {
@@ -36,22 +36,14 @@ func (handler *DayHandler) CreateDayHandler(c *gin.Context) {
 	c.JSON(http.StatusCreated, createdDay)
 }
 
+// GetDayByIDHandler отдаёт сохранённый план дня: чтение план не пересобирает.
 func (handler *DayHandler) GetDayByIDHandler(context *gin.Context) {
 	dayId, err := handler.GetIdFromContext(context)
 	if err != nil {
 		return
 	}
 
-	day, err := handler.GenericService.GetByID(dayId)
-	if err != nil {
-		if errors.Is(err, services.ErrNotFound) {
-			err = services.ErrDayNotFound
-		}
-		respondError(context, handler.Logger, err, "Ошибка при получении дня", slog.Int64("dayId", dayId))
-		return
-	}
-
-	day, err = handler.dayService.FillDayTaskListAndCalculatePriorty(day)
+	day, err := handler.dayService.GetDayByID(dayId)
 	if err != nil {
 		respondError(context, handler.Logger, err, "Ошибка при получении дня", slog.Int64("dayId", dayId))
 		return
@@ -66,9 +58,11 @@ func (handler *DayHandler) UpdateDayHandler(context *gin.Context) {
 		return
 	}
 
+	// Пустое тело — пересборка с прежним временем дня
 	var input models.DayUpdateRequest
-	if err := context.ShouldBindJSON(&input); err != nil {
-		input = models.DayUpdateRequest{}
+	if err := context.ShouldBindJSON(&input); err != nil && !errors.Is(err, io.EOF) {
+		respondBindingError(context, handler.Logger, err)
+		return
 	}
 
 	updatedDay, err := handler.dayService.UpdateDay(dayId, &input)
@@ -86,10 +80,7 @@ func (handler *DayHandler) DeleteDayHandler(context *gin.Context) {
 		return
 	}
 
-	if err := handler.GenericService.Delete(dayId); err != nil {
-		if errors.Is(err, services.ErrNotFound) {
-			err = services.ErrDayNotFound
-		}
+	if err := handler.dayService.DeleteDay(dayId); err != nil {
 		respondError(context, handler.Logger, err, "Ошибка при удалении дня", slog.Int64("dayId", dayId))
 		return
 	}

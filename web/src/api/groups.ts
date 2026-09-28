@@ -1,5 +1,5 @@
 import { ApiError, request } from './client'
-import type { Group, GroupCreateRequest, GroupUpdateRequest } from './types'
+import type { Group, GroupCreateRequest, GroupReorderRequest, GroupUpdateRequest } from './types'
 
 export async function fetchUserGroups(userId: number): Promise<Group[]> {
   try {
@@ -21,4 +21,9 @@ export function updateGroup(groupId: number, input: GroupUpdateRequest): Promise
 
 export async function deleteGroup(groupId: number): Promise<void> {
   await request<unknown>(`/groups/${groupId}`, { method: 'DELETE' })
+}
+
+/** Меняет веса нескольких групп одной транзакцией; ответ — все группы пользователя. */
+export async function reorderGroups(input: GroupReorderRequest): Promise<Group[]> {
+  return (await request<Group[] | null>('/groups/reorder', { method: 'POST', body: input })) ?? []
 }

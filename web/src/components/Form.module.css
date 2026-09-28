@@ -192,6 +192,27 @@
   color: inherit;
 }
 
+/* Чип группы в цвете веса (.w-N): точка слева, выбранный — фон, обводка и текст ступени */
+.chipDot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: var(--radius-full);
+  background: var(--w);
+}
+
+/* «Без группы» = вес 1, но нейтрально, чтобы отличаться от настоящей группы ×1 */
+.chipDotBase {
+  background: var(--color-border-strong);
+}
+
+.chipWeighted[aria-checked='true'] {
+  background: var(--w-soft);
+  color: var(--w-text);
+  box-shadow: inset 0 0 0 1.5px var(--w);
+}
+
 .chipAdd {
   gap: 4px;
   box-shadow: none;
@@ -272,24 +293,3 @@
   color: var(--color-text-muted);
 }
 
-/* ---------- Stepper ---------- */
-.stepper {
-  display: inline-flex;
-  align-items: center;
-  justify-self: start;
-  height: var(--size-touch);
-  background: var(--color-surface-sunken);
-  border-radius: var(--radius-md);
-}
-
-.stepperButton {
-  color: var(--color-text);
-}
-
-.stepperValue {
-  min-width: 48px;
-  text-align: center;
-  font-size: var(--text-lg);
-  font-weight: var(--font-weight-semibold);
-  font-variant-numeric: tabular-nums;
-}

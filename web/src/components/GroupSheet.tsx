@@ -2,13 +2,14 @@ import { useId, useState, type FormEvent, type ReactNode } from 'react'
 import { ApiError } from '../api/client'
 import type { Group } from '../api/types'
 import { plural } from '../lib/format'
-import { GROUP_NAME_MAX, GROUP_WEIGHT_MAX, GROUP_WEIGHT_MIN, validateGroupName } from '../lib/groups'
+import { GROUP_NAME_MAX, validateGroupName } from '../lib/groups'
+import { clampWeight } from '../lib/weight'
 import { Alert } from './Alert'
 import { Button } from './Button'
 import styles from './Form.module.css'
 import { FieldHint, Input } from './FormParts'
 import { Sheet } from './Sheet'
-import { Stepper } from './Stepper'
+import { WeightScale } from './WeightScale'
 
 export interface GroupFormValues {
   name: string
@@ -28,25 +29,51 @@ interface GroupSheetProps {
   footer?: ReactNode
 }
 
-function weightHint(weight: number, mode: GroupSheetMode): string {
+/** «с группой «Работа»» / «с группами «Работа» и «Хобби»» — без склонения названий. */
+function sameStepText(names: readonly string[]): string {
+  const quoted = names.map((n) => `«${n}»`)
+  if (quoted.length === 1) return `с группой ${quoted[0]}`
+  return `с группами ${quoted.slice(0, -1).join(', ')} и ${quoted.at(-1)}`
+}
+
+function weightHint(weight: number, mode: GroupSheetMode, sameStep: readonly string[], name: string): string {
+  const neighbours = sameStep.length ? sameStepText(sameStep) : ''
   if (mode.kind === 'edit' && weight !== mode.group.GroupPriority) {
     const count = mode.activeTaskCount
     const was = `Было ×${mode.group.GroupPriority}.`
-    if (count === 0) return `${was} Активных задач в группе нет — пересчитывать нечего.`
+    const step = neighbours ? ` ${name || mode.group.Name} встанет на одну ступень ${neighbours}.` : ''
+    if (count === 0) return `${was}${step} Активных задач в группе нет — пересчитывать нечего.`
     const up = weight > mode.group.GroupPriority
     const move = count === 1 ? (up ? 'она поднимется' : 'она опустится') : up ? 'они поднимутся' : 'они опустятся'
     const tasks = plural(count, ['активной задачи', 'активных задач', 'активных задач'])
-    return `${was} Приоритет ${count} ${tasks} группы пересчитается — ${move} в списке.`
+    return `${was}${step} Приоритет ${count} ${tasks} группы пересчитается — ${move} в списке.`
   }
-  if (weight === 1) return `×1 — как у задач без группы. Чем больше вес, тем выше задачи группы. От ×${GROUP_WEIGHT_MIN} до ×${GROUP_WEIGHT_MAX}.`
-  return `Задачи группы будут в ${weight} ${plural(weight, ['раз', 'раза', 'раз'])} важнее задач без группы.`
+  const step = neighbours ? ` Встанет на одну ступень ${neighbours}.` : ''
+  if (weight === 1) {
+    const hint = mode.kind === 'create' ? ' Чтобы поставить группу между другими, после создания перетащите её на лесенке.' : ''
+    return `×1 — как у задач без группы.${hint}`
+  }
+  return `Задачи группы будут в ${weight} ${plural(weight, ['раз', 'раза', 'раз'])} важнее задач без группы.${step}`
 }
 
-/** Sheet с GroupForm: создание и изменение группы (название + вес ×1…×10). */
+/** Какие ступени заняты другими группами: вес → названия (по алфавиту). */
+function occupiedSteps(groups: readonly Group[], excludeId?: number): Map<number, string[]> {
+  const steps = new Map<number, string[]>()
+  for (const group of groups) {
+    if (group.GroupId === excludeId) continue
+    const weight = clampWeight(group.GroupPriority)
+    steps.set(weight, [...(steps.get(weight) ?? []), group.Name])
+  }
+  for (const names of steps.values()) names.sort((a, b) => a.localeCompare(b, 'ru'))
+  return steps
+}
+
+/** Sheet с GroupForm: создание и изменение группы (название + WeightScale ×1…×10). */
 export function GroupSheet({ mode, groups, onClose, onSubmit, footer }: GroupSheetProps) {
   const uid = useId()
   const nameId = `${uid}-name`
   const weightLabelId = `${uid}-weight`
+  const weightHintId = `${uid}-weight-hint`
   const editing = mode.kind === 'edit' ? mode.group : null
 
   const [name, setName] = useState(editing?.Name ?? '')
@@ -58,8 +85,7 @@ export function GroupSheet({ mode, groups, onClose, onSubmit, footer }: GroupShe
 
   const nameError = validateGroupName(name, groups, editing?.GroupId) ?? (conflict && name === conflict ? 'Группа с таким названием уже есть' : null)
   const showNameError = touched && nameError
-  // Вес существующей группы мог быть больше 10 (старые данные) — тогда верхняя граница равна ему
-  const maxWeight = Math.max(GROUP_WEIGHT_MAX, editing?.GroupPriority ?? 0)
+  const occupied = occupiedSteps(groups, editing?.GroupId)
   const changed = !editing || name.trim() !== editing.Name || weight !== editing.GroupPriority
 
   const submit = async (event?: FormEvent) => {
@@ -129,19 +155,16 @@ export function GroupSheet({ mode, groups, onClose, onSubmit, footer }: GroupShe
           )}
         </div>
         <div className={styles.field}>
-          <span className={styles.label} id={weightLabelId}>
-            Вес в приоритете
-          </span>
-          <Stepper
-            labelledBy={weightLabelId}
+          <WeightScale
+            labelId={weightLabelId}
+            hintId={weightHintId}
+            label="Вес в приоритете"
             value={weight}
-            min={GROUP_WEIGHT_MIN}
-            max={maxWeight}
             onChange={setWeight}
-            format={(v) => `×${v}`}
+            occupied={occupied}
             disabled={pending}
           />
-          <FieldHint>{weightHint(weight, mode)}</FieldHint>
+          <FieldHint id={weightHintId}>{weightHint(weight, mode, occupied.get(clampWeight(weight)) ?? [], name.trim())}</FieldHint>
         </div>
       </form>
     </Sheet>

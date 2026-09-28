@@ -42,3 +42,16 @@ button {
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
+
+/* Шкала веса группы ×1…×10: .w-N задаёт --w / --w-soft / --w-text, компоненты читают только их.
+   Класс выдаёт weightClass(n) из lib/weight.ts (глобальный, т. к. нужен разным CSS-модулям). */
+.w-1 { --w: var(--color-weight-1); --w-soft: var(--color-weight-1-soft); --w-text: var(--color-weight-1-text); }
+.w-2 { --w: var(--color-weight-2); --w-soft: var(--color-weight-2-soft); --w-text: var(--color-weight-2-text); }
+.w-3 { --w: var(--color-weight-3); --w-soft: var(--color-weight-3-soft); --w-text: var(--color-weight-3-text); }
+.w-4 { --w: var(--color-weight-4); --w-soft: var(--color-weight-4-soft); --w-text: var(--color-weight-4-text); }
+.w-5 { --w: var(--color-weight-5); --w-soft: var(--color-weight-5-soft); --w-text: var(--color-weight-5-text); }
+.w-6 { --w: var(--color-weight-6); --w-soft: var(--color-weight-6-soft); --w-text: var(--color-weight-6-text); }
+.w-7 { --w: var(--color-weight-7); --w-soft: var(--color-weight-7-soft); --w-text: var(--color-weight-7-text); }
+.w-8 { --w: var(--color-weight-8); --w-soft: var(--color-weight-8-soft); --w-text: var(--color-weight-8-text); }
+.w-9 { --w: var(--color-weight-9); --w-soft: var(--color-weight-9-soft); --w-text: var(--color-weight-9-text); }
+.w-10 { --w: var(--color-weight-10); --w-soft: var(--color-weight-10-soft); --w-text: var(--color-weight-10-text); }

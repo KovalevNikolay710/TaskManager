@@ -1,0 +1,192 @@
+/* DayChart — design/system.md, эталон .day-chart в design/components.css */
+.chart {
+  display: grid;
+  justify-items: center;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.figure {
+  position: relative;
+  width: var(--size-day-chart);
+  height: var(--size-day-chart);
+  margin: 0;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.track {
+  fill: none;
+  stroke: var(--color-day-free);
+}
+
+.sector {
+  fill: var(--w, var(--color-weight-1));
+  stroke: var(--color-surface);
+  stroke-width: 2;
+  stroke-linejoin: round;
+  cursor: pointer;
+  transform-origin: 120px 120px;
+  transition:
+    opacity var(--duration-fast),
+    transform var(--duration-normal) var(--easing-standard);
+}
+
+.sectorDone {
+  fill: var(--color-day-done);
+}
+
+.sectorFree {
+  fill: var(--color-day-free);
+  cursor: default;
+}
+
+.focused .sector {
+  opacity: 0.3;
+}
+
+.focused .sectorActive {
+  opacity: 1;
+  transform: scale(1.04);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .focused .sectorActive {
+    transform: none;
+  }
+}
+
+.center {
+  position: absolute;
+  inset: 22%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  pointer-events: none;
+}
+
+.value {
+  font-size: var(--text-2xl);
+  font-weight: var(--font-weight-semibold);
+  line-height: var(--line-height-tight);
+  font-variant-numeric: tabular-nums;
+}
+
+.valueSmall {
+  font-size: var(--text-xl);
+}
+
+.label {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.name {
+  max-width: 100%;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  line-height: var(--line-height-tight);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.summary {
+  display: grid;
+  gap: var(--space-1);
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--text-sm);
+}
+
+.summary li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 28px;
+}
+
+.summary b {
+  margin-left: auto;
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+}
+
+.muted {
+  color: var(--color-text-muted);
+}
+
+.muted .strong {
+  color: var(--color-text);
+}
+
+.swatch {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+/* «В работе» — мини-конус из цветов шкалы веса */
+.swatchPlan {
+  background: conic-gradient(var(--color-weight-3) 0 33%, var(--color-weight-7) 0 66%, var(--color-weight-1) 0);
+}
+
+.swatchDone {
+  background: var(--color-day-done);
+}
+
+.swatchFree {
+  background: var(--color-day-free);
+  box-shadow: inset 0 0 0 1px var(--color-border-strong);
+}
+
+.note {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+.note > :last-child:not(span) {
+  margin-left: auto;
+  min-height: 36px;
+  flex: none;
+}
+
+@media (min-width: 960px) {
+  .chart {
+    grid-template-columns: auto 1fr;
+    align-items: center;
+    justify-items: stretch;
+    gap: var(--space-8);
+    padding: var(--space-6);
+  }
+
+  .figure {
+    width: 240px;
+    height: 240px;
+  }
+
+  .note {
+    grid-column: 1 / -1;
+  }
+}

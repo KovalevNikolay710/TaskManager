@@ -40,11 +40,17 @@ func Connect() {
 		log.Fatalf("Не удалось подключиться к базе данных: %v", err)
 	}
 
+	// Своя модель для day_tasks: к связи «день — задача» добавлены минуты плана
+	if err := db.SetupJoinTable(&models.Day{}, "Tasks", &models.DayTask{}); err != nil {
+		log.Fatalf("Ошибка настройки таблицы day_tasks: %v", err)
+	}
+
 	// Автоматическая миграция схемы
 	err = db.AutoMigrate(
 		&models.Group{},
 		&models.Task{},
 		&models.Day{},
+		&models.DayTask{},
 	)
 
 	if err != nil {

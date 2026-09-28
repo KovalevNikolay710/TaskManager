@@ -26,3 +26,15 @@ type GroupUpdateRequest struct {
 	Description   *string `json:"description"`
 	GroupPriority *uint64 `json:"groupPriority" binding:"omitempty,min=1,max=10"`
 }
+
+// GroupReorderRequest — атомарная смена весов нескольких групп пользователя (перенос по лесенке).
+type GroupReorderRequest struct {
+	UserId int64         `json:"userId" binding:"required"`
+	Groups []GroupWeight `json:"groups" binding:"required,min=1,dive"`
+}
+
+// GroupWeight — новый вес одной группы.
+type GroupWeight struct {
+	GroupId       int64  `json:"groupId" binding:"required"`
+	GroupPriority uint64 `json:"groupPriority" binding:"required,min=1,max=10"` // вес группы: 1–10
+}

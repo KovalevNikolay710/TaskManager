@@ -1,33 +1,38 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import type { Day, Task } from '../api/types'
+import type { Day } from '../api/types'
+import { Alert } from '../components/Alert'
 import { AppHeader } from '../components/AppHeader'
 import { AppShell } from '../components/AppShell'
 import { Badge } from '../components/Badge'
 import { Button } from '../components/Button'
 import { buttonClassName } from '../components/buttonClassName'
 import { DateSwitcher } from '../components/DateSwitcher'
+import { DayChart, type ChartFocus } from '../components/DayChart'
 import { Icon } from '../components/Icon'
-import { PlanForm, type PlanFormValue } from '../components/PlanForm'
-import { ProgressBar } from '../components/ProgressBar'
+import { PlanForm } from '../components/PlanForm'
 import { SectionTitle } from '../components/SectionTitle'
 import { Sheet } from '../components/Sheet'
 import { Skeleton, SkeletonTaskRow } from '../components/Skeleton'
 import { StateMessage } from '../components/StateMessage'
-import { SummaryStat, SummaryStats } from '../components/SummaryStat'
 import { TaskRow } from '../components/TaskRow'
 import { useCreateDay, useDays, useUpdateDay } from '../hooks/useDays'
 import { useFlip } from '../hooks/useFlip'
 import { useGroups } from '../hooks/useGroups'
+import { useTasks } from '../hooks/useTasks'
 import { useToast } from '../hooks/useToast'
 import { useToggleTask } from '../hooks/useToggleTask'
+import { cx } from '../lib/cx'
+import { FREE_MIN_MINUTES, summarizeDay, tasksOutsidePlan, type DayPlanSummary } from '../lib/dayPlan'
 import { formatDayMonth, formatDayTitle, fromDateKey, toDateKey, todayKey, toLocalMidnightRFC3339, weekdayName } from '../lib/dates'
-import { durationToWords, formatDuration, formatPriority, plural } from '../lib/format'
-import { PLAN_AMOUNT_MAX, PLAN_AMOUNT_MIN, PLAN_DEFAULTS, validatePlanTime } from '../lib/plan'
-import { isDone, maxActivePriority, priorityLevel, sortTasks } from '../lib/tasks'
+import { formatDuration, plural } from '../lib/format'
+import { PLAN_DEFAULT_MINUTES, validatePlanTime } from '../lib/plan'
+import { isDone, maxActivePriority, priorityLevel } from '../lib/tasks'
+import { weightClass } from '../lib/weight'
 import styles from './DayPage.module.css'
 
-const ALL_TASKS_PATH = '/all-tasks'
+const NEW_TASK_PATH = '/tasks/new'
+const PLAN_HINT = 'От 0:15 до 16:00.'
 
 function dayKey(day: Day): string {
   return toDateKey(new Date(day.Date))
@@ -37,10 +42,16 @@ function errorMessage(error: unknown): string {
   return error instanceof Error ? error.message : 'Неизвестная ошибка'
 }
 
+function tasksWord(n: number): string {
+  return `${n} ${plural(n, ['задача', 'задачи', 'задач'])}`
+}
+
+/** Экран «Задачи на день» — design/screens/day.md. */
 export function DayPage() {
   const [params, setParams] = useSearchParams()
   const daysQuery = useDays()
   const groupsQuery = useGroups()
+  const tasksQuery = useTasks()
 
   const today = todayKey()
   const requestedKey = params.get('date')
@@ -52,9 +63,10 @@ export function DayPage() {
   const days = daysQuery.data
 
   // Текущий день ищем на клиенте; если на дату несколько Day — берём с наибольшим DayId
-  const day = (days ?? [])
-    .filter((d) => dayKey(d) === selectedKey)
-    .reduce<Day | undefined>((best, d) => (!best || d.DayId > best.DayId ? d : best), undefined)
+  const latest = (list: Day[]) => list.reduce<Day | undefined>((best, d) => (!best || d.DayId > best.DayId ? d : best), undefined)
+  const day = latest((days ?? []).filter((d) => dayKey(d) === selectedKey))
+  // Время по умолчанию для нового плана — последнее использованное
+  const lastMinutes = latest(days ?? [])?.TimeForTasks || PLAN_DEFAULT_MINUTES
 
   const dayKeys = [...new Set((days ?? []).map(dayKey))].sort()
   const prevKey = dayKeys.filter((k) => k < selectedKey).at(-1)
@@ -67,8 +79,8 @@ export function DayPage() {
   }
 
   const { title: dateTitle, relative } = formatDayTitle(selectedDate)
-  const doneCount = day?.Tasks?.filter(isDone).length ?? 0
-  const totalCount = day?.Tasks?.length ?? 0
+  const planTasks = day?.Tasks ?? []
+  const doneCount = planTasks.filter(isDone).length
 
   const renderContent = () => {
     if (!days) {
@@ -86,6 +98,7 @@ export function DayPage() {
               onClick={() => {
                 void daysQuery.refetch()
                 void groupsQuery.refetch()
+                void tasksQuery.refetch()
               }}
             >
               <Icon name="refresh" size="sm" />
@@ -96,6 +109,9 @@ export function DayPage() {
       }
       return <LoadingSkeleton />
     }
+
+    // Подсказка «не в плане» — только для сегодня и будущих дней и только если задачи загрузились
+    const outside = day && !isPast && tasksQuery.data && !tasksQuery.isError ? tasksOutsidePlan(day, tasksQuery.data) : 0
 
     return (
       <>
@@ -116,9 +132,9 @@ export function DayPage() {
           }}
         />
         {day ? (
-          <DayPlan key={day.DayId} day={day} isPast={isPast} isToday={isToday} groupNames={groupNames(groupsQuery.data)} />
+          <DayPlan key={day.DayId} day={day} isPast={isPast} isToday={isToday} outside={outside} groupNames={groupNames(groupsQuery.data)} />
         ) : (
-          <NoPlan key={selectedKey} dateKey={selectedKey} isPast={isPast} isToday={isToday} />
+          <NoPlan key={selectedKey} dateKey={selectedKey} isPast={isPast} isToday={isToday} defaultMinutes={lastMinutes} />
         )}
       </>
     )
@@ -126,7 +142,7 @@ export function DayPage() {
 
   return (
     <AppShell>
-      <AppHeader title="Задачи на день" subtitle={totalCount > 0 ? `Выполнено ${doneCount} из ${totalCount}` : undefined} />
+      <AppHeader title="Задачи на день" subtitle={planTasks.length > 0 ? `Выполнено ${doneCount} из ${planTasks.length}` : undefined} />
       {renderContent()}
     </AppShell>
   )
@@ -143,186 +159,193 @@ interface DayPlanProps {
   day: Day
   isPast: boolean
   isToday: boolean
+  /** Активных задач не в плане */
+  outside: number
   groupNames: Map<number, string>
 }
 
-function DayPlan({ day, isPast, isToday, groupNames }: DayPlanProps) {
+function DayPlan({ day, isPast, isToday, outside, groupNames }: DayPlanProps) {
   const navigate = useNavigate()
   const { showToast } = useToast()
   const { toggle, pendingIds } = useToggleTask()
   const updateDay = useUpdateDay()
   const listRef = useFlip<HTMLUListElement>()
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [hovered, setHovered] = useState<ChartFocus>(null)
+  const [pinned, setPinned] = useState<ChartFocus>(null)
 
-  const tasks = useMemo(() => sortTasks(day.Tasks ?? []), [day.Tasks])
-  const maxPriority = maxActivePriority(tasks)
-  const remainingPriority = tasks.reduce((sum, t) => (isDone(t) ? sum : sum + t.Priority), 0)
-  const usedMinutes = tasks.reduce((sum, t) => sum + t.TimeForExecution, 0)
-  const overMinutes = usedMinutes - day.TimeForTasks
-  const over = overMinutes > 0
+  const summary = summarizeDay(day)
+  const focus = pinned ?? hovered
+  const maxPriority = maxActivePriority(summary.items.map((i) => i.task))
 
-  const rebuild = (input: { timeForTasks?: number; amountOfTasks?: number }, onDone?: () => void) => {
-    updateDay.mutate(
-      { dayId: day.DayId, input },
-      {
-        onSuccess: () => onDone?.(),
-        onError: (error) => showToast({ message: errorMessage(error) }),
-      },
+  /** «Пересобрать» без Sheet: ошибка — Toast. */
+  const rebuild = () => {
+    updateDay.mutate({ dayId: day.DayId, input: {} }, { onError: (error) => showToast({ message: errorMessage(error) }) })
+  }
+
+  const rebuildButton = !isPast && (
+    <Button variant="secondary" loading={updateDay.isPending} onClick={rebuild}>
+      {!updateDay.isPending && <Icon name="refresh" size="sm" />}
+      {updateDay.isPending ? 'Составляем…' : 'Пересобрать'}
+    </Button>
+  )
+
+  if (summary.items.length === 0) {
+    return (
+      <StateMessage
+        icon="coffee"
+        compact
+        title={isToday ? 'Сегодня делать нечего' : 'В этот день делать нечего'}
+        text={`На ${formatDuration(day.TimeForTasks)} нет ни одной активной задачи с дедлайном позже этого дня. Добавьте задачу или хобби — и пересоберите план.`}
+      >
+        <div className={styles.actions}>
+          <Link to={NEW_TASK_PATH} className={buttonClassName('primary')}>
+            <Icon name="plus" size="sm" />
+            Новая задача
+          </Link>
+          {rebuildButton}
+        </div>
+      </StateMessage>
     )
   }
 
-  const stats = (
-    <SummaryStats>
-      <SummaryStat
-        value={tasks.length}
-        label={`${plural(tasks.length, ['задача', 'задачи', 'задач'])} в плане`}
-        note={tasks.length < day.AmountOfTasks ? `из ${day.AmountOfTasks} запрошенных` : undefined}
-      />
-      <SummaryStat value={formatDuration(day.TimeForTasks)} valueLabel={durationToWords(day.TimeForTasks)} label="время на задачи" />
-      <SummaryStat
-        value={remainingPriority > 0 ? formatPriority(remainingPriority) : '0'}
-        label="приоритет дня (осталось)"
-        title="Сумма приоритетов невыполненных задач плана"
-      />
-    </SummaryStats>
+  const editButton = (
+    <Button variant="ghost" onClick={() => setSheetOpen(true)}>
+      <Icon name="sliders" size="sm" />
+      Изменить план
+    </Button>
   )
 
-  if (tasks.length === 0) {
-    return (
+  let note = null
+  if (outside > 0) {
+    note = (
       <>
-        {stats}
-        <StateMessage
-          icon="coffee"
-          compact
-          title={isToday ? 'Сегодня делать нечего' : 'В этот день делать нечего'}
-          text="Нет активных задач с дедлайном позже этого дня. Добавьте задачу — и пересоберите план."
-        >
-          <div className={styles.actions}>
-            <Link to={ALL_TASKS_PATH} className={buttonClassName('primary')}>
-              <Icon name="list" size="sm" />
-              К задачам
-            </Link>
-            {!isPast && (
-              <Button variant="secondary" loading={updateDay.isPending} onClick={() => rebuild({})}>
-                {!updateDay.isPending && <Icon name="refresh" size="sm" />}
-                {updateDay.isPending ? 'Составляем…' : 'Пересобрать'}
-              </Button>
-            )}
-          </div>
-        </StateMessage>
+        <Icon name="info" size="sm" />
+        <span>Ещё {tasksWord(outside)} не в плане: не хватило времени (каждой нужно от 0:15) или они появились позже.</span>
+        {editButton}
+      </>
+    )
+  } else if (summary.freeMinutes >= FREE_MIN_MINUTES && summary.activeMinutes > 0) {
+    note = (
+      <>
+        <Icon name="info" size="sm" />
+        <span>Всё, что нужно сегодня, помещается. Свободные {formatDuration(summary.freeMinutes)} — на новое дело или отдых.</span>
       </>
     )
   }
 
+  const listFocus = !summary.oldPlan && typeof focus === 'number'
+
   return (
     <>
-      {stats}
-      <ProgressBar
-        label="Занято времени"
-        valueText={`${formatDuration(usedMinutes)} из ${formatDuration(day.TimeForTasks)}`}
-        value={usedMinutes}
-        max={day.TimeForTasks}
-        ariaValueText={`${durationToWords(usedMinutes)} из ${durationToWords(day.TimeForTasks)}${over ? ', перегруз' : ''}`}
-        overHint={
-          over
-            ? `План не помещается в выделенное время на ${formatDuration(overMinutes)}. Уменьшите число задач или добавьте время.`
-            : undefined
-        }
-      />
+      {summary.oldPlan ? (
+        <div className={styles.oldPlan}>
+          <Alert tone="info" title="План составлен по старым правилам" action={rebuildButton}>
+            Пересоберите его, чтобы время разделилось между задачами.
+          </Alert>
+        </div>
+      ) : (
+        <DayChart summary={summary} groupNames={groupNames} focus={focus} onHover={setHovered} pinned={pinned} onPin={setPinned} note={note} />
+      )}
 
-      <SectionTitle
-        title="По приоритету"
-        action={
-          !isPast && (
-            <Button variant="ghost" onClick={() => setSheetOpen(true)}>
-              <Icon name="sliders" size="sm" />
-              Изменить план
-            </Button>
+      <SectionTitle title="По приоритету" action={!isPast && editButton} />
+
+      <ul className={cx(styles.taskList, listFocus && styles.taskListFocus)} ref={listRef}>
+        {summary.items.map(({ task, minutes }) => {
+          const weight = task.GroupPriorty || 1
+          const setFocus = (id: ChartFocus) => {
+            if (!summary.oldPlan) setHovered(id)
+          }
+          return (
+            <li
+              key={task.TaskId}
+              className={cx(styles.taskCard, weightClass(weight), focus === task.TaskId && styles.taskCardActive)}
+              data-flip-key={task.TaskId}
+              onMouseEnter={() => setFocus(task.TaskId)}
+              onMouseLeave={() => setFocus(null)}
+              onFocus={() => setFocus(task.TaskId)}
+              onBlur={() => setFocus(null)}
+            >
+              <TaskRow
+                task={task}
+                level={priorityLevel(task.Priority, maxPriority)}
+                groupName={groupNames.get(task.GroupId)}
+                pending={pendingIds.has(task.TaskId)}
+                slot={summary.oldPlan ? undefined : { minutes, weight }}
+                onToggle={toggle}
+                onOpen={(t) => navigate(`/tasks/${t.TaskId}`)}
+              />
+            </li>
           )
-        }
-      />
-
-      <ul className={styles.taskList} ref={listRef}>
-        {tasks.map((task: Task) => (
-          <li key={task.TaskId} className={styles.taskCard} data-flip-key={task.TaskId}>
-            <TaskRow
-              task={task}
-              level={priorityLevel(task.Priority, maxPriority)}
-              groupName={groupNames.get(task.GroupId)}
-              pending={pendingIds.has(task.TaskId)}
-              onToggle={toggle}
-              onOpen={(t) => navigate(`/tasks/${t.TaskId}`)}
-            />
-          </li>
-        ))}
+        })}
       </ul>
 
-      {sheetOpen && (
-        <EditPlanSheet
-          day={day}
-          saving={updateDay.isPending}
-          onClose={() => setSheetOpen(false)}
-          onSubmit={(input) => rebuild(input, () => setSheetOpen(false))}
-        />
-      )}
+      {sheetOpen && <EditPlanSheet day={day} summary={summary} onClose={() => setSheetOpen(false)} />}
     </>
   )
 }
 
 // ---------- Sheet «Изменить план» ----------
 
-interface EditPlanSheetProps {
-  day: Day
-  saving: boolean
-  onClose: () => void
-  onSubmit: (input: { timeForTasks: number; amountOfTasks: number }) => void
-}
-
-function EditPlanSheet({ day, saving, onClose, onSubmit }: EditPlanSheetProps) {
+function EditPlanSheet({ day, summary, onClose }: { day: Day; summary: DayPlanSummary; onClose: () => void }) {
   const formId = 'edit-plan-form'
-  const [value, setValue] = useState<PlanFormValue>({
-    amount: Math.min(PLAN_AMOUNT_MAX, Math.max(PLAN_AMOUNT_MIN, day.AmountOfTasks)),
-    time: formatDuration(day.TimeForTasks),
-  })
-  const { minutes } = validatePlanTime(value.time)
+  const updateDay = useUpdateDay()
+  const [time, setTime] = useState(formatDuration(day.TimeForTasks))
+  const { minutes } = validatePlanTime(time, summary.doneMinutes)
+  const doneItems = summary.items.filter((i) => i.done)
+
+  const submit = () => {
+    if (minutes === null) return
+    updateDay.mutate({ dayId: day.DayId, input: { timeForTasks: minutes } }, { onSuccess: onClose })
+  }
+
+  const rest = formatDuration(Math.max(0, (minutes ?? day.TimeForTasks) - summary.doneMinutes))
+  const kept =
+    doneItems.length === 1
+      ? `«${doneItems[0].task.Name}» сохранит свои ${formatDuration(summary.doneMinutes)}.`
+      : `${doneItems.length} ${plural(doneItems.length, ['выполненная задача сохранит', 'выполненные задачи сохранят', 'выполненных задач сохранят'])} свои ${formatDuration(summary.doneMinutes)}.`
 
   return (
     <Sheet
       title={`План на ${formatDayMonth(new Date(day.Date))}`}
       onClose={onClose}
+      dismissible={!updateDay.isPending}
       actions={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose} disabled={updateDay.isPending}>
             Отмена
           </Button>
-          <Button variant="primary" type="submit" form={formId} loading={saving} disabled={minutes === null}>
-            {saving ? 'Составляем…' : 'Пересобрать план'}
+          <Button variant="primary" type="submit" form={formId} loading={updateDay.isPending} disabled={minutes === null}>
+            {updateDay.isPending ? 'Составляем…' : 'Пересобрать план'}
           </Button>
         </>
       }
     >
-      <PlanForm
-        id={formId}
-        wide
-        showAmountHint
-        value={value}
-        onChange={setValue}
-        onSubmit={() => minutes !== null && onSubmit({ timeForTasks: minutes, amountOfTasks: value.amount })}
-      />
+      <PlanForm id={formId} wide value={time} onChange={setTime} onSubmit={submit} hint={PLAN_HINT} doneMinutes={summary.doneMinutes}>
+        {doneItems.length > 0 && (
+          <Alert tone="info" title="Выполненное останется в плане">
+            {kept} Остальные {rest} разделим заново между активными задачами — с учётом нового прогресса и новых задач.
+          </Alert>
+        )}
+        {updateDay.isError && <Alert title="Не удалось пересобрать план">{errorMessage(updateDay.error)}</Alert>}
+      </PlanForm>
     </Sheet>
   )
 }
 
 // ---------- Плана нет ----------
 
-function NoPlan({ dateKey, isPast, isToday }: { dateKey: string; isPast: boolean; isToday: boolean }) {
-  const { showToast } = useToast()
+interface NoPlanProps {
+  dateKey: string
+  isPast: boolean
+  isToday: boolean
+  defaultMinutes: number
+}
+
+function NoPlan({ dateKey, isPast, isToday, defaultMinutes }: NoPlanProps) {
   const createDay = useCreateDay()
-  const [value, setValue] = useState<PlanFormValue>({
-    amount: PLAN_DEFAULTS.amount,
-    time: formatDuration(PLAN_DEFAULTS.minutes),
-  })
-  const { minutes } = validatePlanTime(value.time)
+  const [time, setTime] = useState(formatDuration(defaultMinutes))
+  const { minutes } = validatePlanTime(time)
   const date = fromDateKey(dateKey) ?? new Date()
 
   if (isPast) {
@@ -331,10 +354,7 @@ function NoPlan({ dateKey, isPast, isToday }: { dateKey: string; isPast: boolean
 
   const submit = () => {
     if (minutes === null) return
-    createDay.mutate(
-      { date: toLocalMidnightRFC3339(dateKey), timeForTasks: minutes, amountOfTasks: value.amount },
-      { onError: (error) => showToast({ message: errorMessage(error) }) },
-    )
+    createDay.mutate({ date: toLocalMidnightRFC3339(dateKey), timeForTasks: minutes })
   }
 
   return (
@@ -342,9 +362,10 @@ function NoPlan({ dateKey, isPast, isToday }: { dateKey: string; isPast: boolean
       icon="sun"
       compact
       title={isToday ? 'План на сегодня ещё не составлен' : `План на ${formatDayMonth(date)} ещё не составлен`}
-      text="Укажите, сколько задач и времени готовы взять, — мы выберем самые приоритетные."
+      text={`Сколько времени готовы отдать делам ${isToday ? 'сегодня' : 'в этот день'} — вместе с хобби? Мы разделим его между задачами по приоритету.`}
     >
-      <PlanForm value={value} onChange={setValue} onSubmit={submit}>
+      <PlanForm value={time} onChange={setTime} onSubmit={submit} hint={`${PLAN_HINT} Каждой задаче достанется не меньше 0:15.`}>
+        {createDay.isError && <Alert title="Не удалось составить план">{errorMessage(createDay.error)}</Alert>}
         <Button variant="primary" type="submit" className={styles.submit} loading={createDay.isPending} disabled={minutes === null}>
           {createDay.isPending ? 'Составляем…' : 'Составить план'}
         </Button>
@@ -358,17 +379,12 @@ function NoPlan({ dateKey, isPast, isToday }: { dateKey: string; isPast: boolean
 function LoadingSkeleton() {
   return (
     <div aria-busy="true" aria-label="Загрузка плана">
-      <SummaryStats>
-        {['40%', '40%', '55%'].map((width, index) => (
-          <div className={styles.skeletonStat} key={index}>
-            <Skeleton width={width} height={28} />
-            <Skeleton width="80%" height={12} />
-          </div>
-        ))}
-      </SummaryStats>
-      <div className={styles.skeletonProgress}>
-        <Skeleton width="60%" height={14} />
-        <Skeleton height={8} round />
+      <div className={styles.skeletonChart}>
+        <Skeleton width="var(--size-day-chart)" height="var(--size-day-chart)" round />
+        <div className={styles.skeletonLines}>
+          <Skeleton width="70%" height={14} />
+          <Skeleton width="55%" height={14} />
+        </div>
       </div>
       <div className={styles.taskList}>
         {[
