@@ -119,14 +119,16 @@
           <h2 class="form-card__title" id="c3">Группа</h2>
           <div class="field">
             <div class="chips" role="radiogroup" aria-labelledby="c3" id="group-chips">
-              <button class="chip" type="button" role="radio" aria-checked="false" data-group="3">Учёба<span class="chip__weight">×3</span></button>
-              <button class="chip" type="button" role="radio" aria-checked="false" data-group="2">Работа<span class="chip__weight">×2</span></button>
-              <button class="chip" type="button" role="radio" aria-checked="false" data-group="1">Дом<span class="chip__weight">×1</span></button>
-              <button class="chip" type="button" role="radio" aria-checked="false" data-group="1">Спорт<span class="chip__weight">×1</span></button>
-              <button class="chip" type="button" role="radio" aria-checked="false" data-group="0">Без группы</button>
+              <button class="chip chip--weight w-4" type="button" role="radio" aria-checked="false" data-group="4" aria-label="Английский, вес 4"><span class="chip__dot" aria-hidden="true"></span>Английский<span class="chip__weight" aria-hidden="true">×4</span></button>
+              <button class="chip chip--weight w-3" type="button" role="radio" aria-checked="false" data-group="3" aria-label="Учёба, вес 3"><span class="chip__dot" aria-hidden="true"></span>Учёба<span class="chip__weight" aria-hidden="true">×3</span></button>
+              <button class="chip chip--weight w-2" type="button" role="radio" aria-checked="false" data-group="2" aria-label="Работа, вес 2"><span class="chip__dot" aria-hidden="true"></span>Работа<span class="chip__weight" aria-hidden="true">×2</span></button>
+              <button class="chip chip--weight w-2" type="button" role="radio" aria-checked="false" data-group="2" aria-label="Хобби, вес 2"><span class="chip__dot" aria-hidden="true"></span>Хобби<span class="chip__weight" aria-hidden="true">×2</span></button>
+              <button class="chip chip--weight w-1" type="button" role="radio" aria-checked="false" data-group="1" aria-label="Дом, вес 1"><span class="chip__dot" aria-hidden="true"></span>Дом<span class="chip__weight" aria-hidden="true">×1</span></button>
+              <button class="chip chip--weight w-1" type="button" role="radio" aria-checked="false" data-group="1" aria-label="Спорт, вес 1"><span class="chip__dot" aria-hidden="true"></span>Спорт<span class="chip__weight" aria-hidden="true">×1</span></button>
+              <button class="chip chip--weight w-1" type="button" role="radio" aria-checked="false" data-group="0" aria-label="Без группы, вес 1"><span class="chip__dot" aria-hidden="true" style="background: var(--color-border-strong)"></span>Без группы</button>
               <button class="chip chip--add" type="button" data-open-sheet><svg class="icon"><use href="#i-plus"/></svg>Новая группа</button>
             </div>
-            <span class="field__hint">Вес группы (×3) умножает приоритет задачи. <a href="groups.html" style="color:var(--color-accent)">Управлять группами</a></span>
+            <span class="field__hint">Цвет и ×N — вес группы: он умножает приоритет задачи. <a href="groups.html" style="color:var(--color-accent)">Управлять группами</a></span>
           </div>
         </section>
 
@@ -180,14 +182,13 @@
           <label class="field__label" for="g-name">Название</label>
           <input class="input" id="g-name" type="text" maxlength="60" value="Английский" autocomplete="off" placeholder="Например, учёба">
         </div>
-        <div class="field">
-          <span class="field__label" id="g-w">Вес в приоритете</span>
-          <div class="stepper" role="group" aria-labelledby="g-w">
-            <button class="btn btn--icon" type="button" aria-label="Меньше"><svg class="icon icon--sm"><use href="#i-minus"/></svg></button>
-            <output class="stepper__value" aria-live="polite">×2</output>
-            <button class="btn btn--icon" type="button" aria-label="Больше"><svg class="icon icon--sm"><use href="#i-plus"/></svg></button>
+        <div class="field weight-scale w-2" data-weight-scale>
+          <div class="weight-scale__head"><span class="field__label" id="g-w-l">Вес в приоритете</span><output class="weight-scale__value" id="g-w-v" aria-hidden="true">×2</output></div>
+          <div class="weight-scale__track" role="slider" tabindex="0" aria-labelledby="g-w-l" aria-describedby="g-w-h" aria-valuemin="1" aria-valuemax="10" aria-valuenow="2" aria-valuetext="×2">
+            <span class="weight-scale__bar w-1 weight-scale__bar--on" style="--n:1" data-n="1"><i class="weight-scale__mark"></i></span><span class="weight-scale__bar w-2 weight-scale__bar--on weight-scale__bar--current" style="--n:2" data-n="2"><i class="weight-scale__mark"></i></span><span class="weight-scale__bar w-3" style="--n:3" data-n="3"><i class="weight-scale__mark"></i></span><span class="weight-scale__bar w-4" style="--n:4" data-n="4"><i class="weight-scale__mark"></i></span><span class="weight-scale__bar w-5" style="--n:5" data-n="5"></span><span class="weight-scale__bar w-6" style="--n:6" data-n="6"></span><span class="weight-scale__bar w-7" style="--n:7" data-n="7"></span><span class="weight-scale__bar w-8" style="--n:8" data-n="8"></span><span class="weight-scale__bar w-9" style="--n:9" data-n="9"></span><span class="weight-scale__bar w-10" style="--n:10" data-n="10"></span>
           </div>
-          <span class="field__hint">Задачи группы будут в 2 раза важнее задач без группы. От ×1 до ×10.</span>
+          <div class="weight-scale__legend"><i></i>уже заняты: ×4 Английский · ×3 Учёба · ×2 Работа, Хобби · ×1 Дом, Спорт</div>
+          <span class="field__hint" id="g-w-h">Задачи группы будут в 2 раза важнее задач без группы. Встанет на одну ступень с «Работой» и «Хобби».</span>
         </div>
       </form>
       <div class="sheet__actions">
@@ -224,7 +225,7 @@
       $('f-name').value = s.name; $('f-desc').value = s.desc;
       $('f-date').value = s.date; $('f-time').value = s.time; $('f-te').value = s.te;
       document.querySelectorAll('#group-chips [role="radio"]').forEach(function (c) {
-        c.setAttribute('aria-checked', c.firstChild.textContent === s.group);
+        c.setAttribute('aria-checked', c.textContent.replace(/×\d+$/, '') === s.group);
       });
       var err = state === 'errors';
       $('f-name').classList.toggle('input--error', err); $('f-name').setAttribute('aria-invalid', err);
@@ -269,7 +270,31 @@
       var dark = root.dataset.theme === 'dark' || (!root.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches);
       root.dataset.theme = dark ? 'light' : 'dark';
     });
-  })();
+    /* ---------- WeightScale: тап/перетаскивание по столбикам и клавиатура ---------- */
+  document.querySelectorAll('[data-weight-scale]').forEach(function (root) {
+    var track = root.querySelector('.weight-scale__track');
+    var out = root.querySelector('.weight-scale__value');
+    function set(v) {
+      v = Math.max(1, Math.min(10, v));
+      root.className = root.className.replace(/\bw-\d+\b/, 'w-' + v);
+      track.querySelectorAll('.weight-scale__bar').forEach(function (b, i) {
+        b.classList.toggle('weight-scale__bar--on', i + 1 <= v);
+        b.classList.toggle('weight-scale__bar--current', i + 1 === v);
+      });
+      out.textContent = '×' + v;
+      track.setAttribute('aria-valuenow', v);
+      track.setAttribute('aria-valuetext', '×' + v);
+    }
+    function fromPointer(e) { var r = track.getBoundingClientRect(); set(Math.floor((e.clientX - r.left) / r.width * 10) + 1); }
+    track.addEventListener('pointerdown', function (e) { track.setPointerCapture(e.pointerId); fromPointer(e); });
+    track.addEventListener('pointermove', function (e) { if (track.hasPointerCapture(e.pointerId)) fromPointer(e); });
+    track.addEventListener('keydown', function (e) {
+      var v = +track.getAttribute('aria-valuenow');
+      var map = { ArrowLeft: v - 1, ArrowDown: v - 1, ArrowRight: v + 1, ArrowUp: v + 1, Home: 1, End: 10 };
+      if (e.key in map) { e.preventDefault(); set(map[e.key]); }
+    });
+  });
+})();
 </script>
 </body>
 </html>
