@@ -1,8 +1,14 @@
+# syntax=docker/dockerfile:1
+
 # 1. Фронтенд: собираем web/dist
 FROM node:lts-alpine AS web
 WORKDIR /web
 COPY web/package.json web/package-lock.json ./
-RUN npm ci
+# Кеш npm переживает пересборки (скачанные пакеты не качаются заново),
+# а больше повторов и длиннее таймауты спасают от разовых сетевых сбоев
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline --no-audit --no-fund \
+      --fetch-retries=5 --fetch-retry-mintimeout=20000 --fetch-retry-maxtimeout=120000
 COPY web/ ./
 RUN npm run build
 
