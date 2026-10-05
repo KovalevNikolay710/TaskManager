@@ -51,6 +51,9 @@ func (rep *PushSubscriptionRepositoryImpl) FindUserIDs() ([]int64, error) {
 
 // Upsert сохраняет подписку по Endpoint: новую создаёт, у существующей обновляет пользователя,
 // ключи и UserAgent. Возвращает сохранённую строку и признак «создана».
+// UserId перезаписывается намеренно — «последний владелец побеждает»: авторизации пока нет,
+// и Endpoint принадлежит браузеру, а не пользователю. Если в браузере сменился пользователь,
+// напоминания должны идти новому. С появлением авторизации чужую подписку перехватывать нельзя.
 func (rep *PushSubscriptionRepositoryImpl) Upsert(sub *models.PushSubscription) (*models.PushSubscription, bool, error) {
 	created := false
 	var saved models.PushSubscription
@@ -230,4 +233,14 @@ func (rep *NotificationLogRepositoryImpl) TryRecord(entry *models.NotificationLo
 		return false, fmt.Errorf("ошибка при записи в журнал уведомлений: %w", result.Error)
 	}
 	return result.RowsAffected == 1, nil
+}
+
+// Forget удаляет запись журнала: напоминание не доставлено из-за сбоя отправки,
+// и следующая ежеминутная проверка должна попробовать снова.
+func (rep *NotificationLogRepositoryImpl) Forget(entry *models.NotificationLog) error {
+	if err := rep.db.Where("user_id = ? AND kind = ? AND task_id = ? AND key = ?",
+		entry.UserId, entry.Kind, entry.TaskId, entry.Key).Delete(&models.NotificationLog{}).Error; err != nil {
+		return fmt.Errorf("ошибка при удалении записи журнала уведомлений: %w", err)
+	}
+	return nil
 }

@@ -20,8 +20,14 @@ type ReminderServiceImpl struct {
 	SettingsRepo     *rep.NotificationSettingsRepositoryImpl
 	TaskRepo         *rep.TaskRepositoryImpl
 	DayRepo          *rep.DayRepositoryImpl
-	LogRepo          *rep.NotificationLogRepositoryImpl
+	LogRepo          notificationJournal
 	Logger           *slog.Logger
+}
+
+// notificationJournal — журнал отправленных напоминаний (в работе — NotificationLogRepositoryImpl).
+type notificationJournal interface {
+	TryRecord(entry *models.NotificationLog) (bool, error)
+	Forget(entry *models.NotificationLog) error
 }
 
 func NewReminderService(
@@ -177,31 +183,34 @@ func (serv *ReminderServiceImpl) checkUser(ctx context.Context, s models.Notific
 	// 3. Дедлайн скоро: окно и тихие часы — selectDeadlineTasks, повторы — журнал
 	due := selectDeadlineTasks(tasks, s, loc, now, shouldRemindDeadline)
 	var fresh []*models.Task
+	var entries []*models.NotificationLog
 	for _, task := range due {
-		recorded, err := serv.LogRepo.TryRecord(&models.NotificationLog{
+		entry := &models.NotificationLog{
 			UserId: s.UserId, Kind: models.NotificationKindDeadline, TaskId: task.TaskId,
 			Key: deadlineLogKey(task.DeadLine), SentAt: now,
-		})
+		}
+		recorded, err := serv.LogRepo.TryRecord(entry)
 		if err != nil {
 			return stats, err
 		}
 		if recorded {
 			fresh = append(fresh, task)
+			entries = append(entries, entry)
 		}
 	}
 	if len(fresh) >= deadlineSummaryFrom {
 		msg := deadlineSummaryMessage(fresh, s.DeadlineHoursBefore, now, loc)
 		latest := fresh[len(fresh)-1].DeadLine
 		opts := PushOptions{TTL: latest.Sub(now), Urgency: urgencyHigh, Topic: msg.Tag}
-		if serv.deliver(ctx, s.UserId, models.NotificationKindDeadline, msg, opts) {
+		if serv.deliver(ctx, s.UserId, msg, opts, entries...) {
 			stats.Summary++
 		}
 		return stats, nil
 	}
-	for _, task := range fresh {
+	for i, task := range fresh {
 		msg := deadlineMessage(task, now, loc)
 		opts := PushOptions{TTL: task.DeadLine.Sub(now), Urgency: urgencyHigh, Topic: msg.Tag}
-		if serv.deliver(ctx, s.UserId, models.NotificationKindDeadline, msg, opts) {
+		if serv.deliver(ctx, s.UserId, msg, opts, entries[i]) {
 			stats.Deadline++
 		}
 	}
@@ -245,30 +254,44 @@ func findPlanForDate(days []*models.Day, date time.Time, loc *time.Location) *mo
 }
 
 // sendOnce записывает напоминание в журнал и, если записи ещё не было, отправляет его.
-// Запись — до отправки: после перезапуска сервера повтора не будет. false — уже отправлялось.
+// Запись — до отправки: после перезапуска сервера повтора не будет. false — уже отправлялось
+// или не доставлено.
 func (serv *ReminderServiceImpl) sendOnce(ctx context.Context, userID int64, kind string, taskID int64, key string, msg PushMessage, opts PushOptions, now time.Time) (bool, error) {
-	recorded, err := serv.LogRepo.TryRecord(&models.NotificationLog{UserId: userID, Kind: kind, TaskId: taskID, Key: key, SentAt: now})
+	entry := &models.NotificationLog{UserId: userID, Kind: kind, TaskId: taskID, Key: key, SentAt: now}
+	recorded, err := serv.LogRepo.TryRecord(entry)
 	if err != nil {
 		return false, err
 	}
 	if !recorded {
 		return false, nil
 	}
-	return serv.deliver(ctx, userID, kind, msg, opts), nil
+	return serv.deliver(ctx, userID, msg, opts, entry), nil
 }
 
-// deliver отправляет уведомление на все устройства пользователя. Ошибку только логирует:
-// запись в журнале уже есть, повторять не будем.
-func (serv *ReminderServiceImpl) deliver(ctx context.Context, userID int64, kind string, msg PushMessage, opts PushOptions) bool {
+// deliver отправляет уведомление на все устройства пользователя; entries — его записи в журнале.
+// Если отправка сорвалась (SendToUser вернул ошибку: сеть, сбой push-сервиса, БД), записи удаляются,
+// и следующая ежеминутная проверка попробует снова — повторы ограничены TTL утра и вечера
+// и окном дедлайна. Записи остаются, если подписок нет или все они устарели (повторять некуда),
+// и если проверку прервала остановка сервера: запрос мог уже дойти до push-сервиса, повтор
+// после перезапуска дал бы дубль.
+func (serv *ReminderServiceImpl) deliver(ctx context.Context, userID int64, msg PushMessage, opts PushOptions, entries ...*models.NotificationLog) bool {
 	if opts.TTL <= 0 {
 		return false
 	}
 	sent, err := serv.PushService.SendToUser(ctx, userID, msg, opts)
-	if err != nil {
-		serv.Logger.Warn("Напоминание не доставлено",
-			slog.Int64("userId", userID), slog.String("kind", kind), slog.String("tag", msg.Tag),
-			slog.String("error", err.Error()))
+	if err == nil {
+		return sent > 0
+	}
+	serv.Logger.Warn("Напоминание не доставлено",
+		slog.Int64("userId", userID), slog.String("tag", msg.Tag), slog.String("error", err.Error()))
+	if ctx.Err() != nil {
 		return false
 	}
-	return sent > 0
+	for _, entry := range entries {
+		if err := serv.LogRepo.Forget(entry); err != nil {
+			serv.Logger.Error("Не удалось убрать недоставленное напоминание из журнала, повтора не будет",
+				slog.Int64("userId", userID), slog.String("kind", entry.Kind), slog.String("error", err.Error()))
+		}
+	}
+	return false
 }

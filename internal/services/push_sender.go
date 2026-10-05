@@ -32,7 +32,12 @@ type WebPushSender struct {
 }
 
 func NewWebPushSender() *WebPushSender {
-	return &WebPushSender{Client: &http.Client{Timeout: 30 * time.Second}}
+	return &WebPushSender{Client: &http.Client{
+		Timeout: 30 * time.Second,
+		// Редиректы не выполняем: адрес подписки проверен по списку push-сервисов,
+		// а редирект увёл бы запрос на произвольный адрес (SSRF). Ответ 3xx считается сбоем.
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse },
+	}}
 }
 
 func (sender *WebPushSender) Send(ctx context.Context, vapid VapidCredentials, sub *models.PushSubscription, payload []byte, opts PushOptions) (int, error) {

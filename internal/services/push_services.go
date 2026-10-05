@@ -9,10 +9,13 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"net/url"
+	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	webpush "github.com/SherClockHolmes/webpush-go"
 )
@@ -20,13 +23,49 @@ import (
 // DefaultVapidSubject — subject VAPID, если VAPID_SUBJECT не задан.
 const DefaultVapidSubject = "mailto:admin@localhost"
 
-// PushConfig — настройки push из окружения (VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT).
-// Пустые ключи — взять из БД или создать.
+// PushConfig — настройки push из окружения (VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT,
+// PUSH_ENDPOINT_HOSTS). Пустые ключи — взять из БД или создать.
 type PushConfig struct {
 	PublicKey  string
 	PrivateKey string
 	Subject    string
+	// ExtraEndpointHosts — домены push-сервисов сверх встроенных (pushServiceHosts)
+	ExtraEndpointHosts []string
 }
+
+// pushServiceHosts — домены push-сервисов браузеров. Сервер отправляет POST только на них:
+// иначе через адрес подписки можно заставить сервер ходить по любым адресам (SSRF).
+// Адрес подходит, если его хост совпадает с доменом или является его поддоменом.
+var pushServiceHosts = []string{
+	"fcm.googleapis.com",                // Chrome, Edge на Android, Opera
+	"updates.push.services.mozilla.com", // Firefox
+	"push.apple.com",                    // Safari: web.push.apple.com
+	"notify.windows.com",                // Edge на Windows: *.notify.windows.com
+}
+
+// ParseEndpointHosts разбирает PUSH_ENDPOINT_HOSTS: домены через запятую, регистр и точки по краям не важны.
+func ParseEndpointHosts(value string) []string {
+	var hosts []string
+	for _, host := range strings.Split(value, ",") {
+		host = strings.Trim(strings.ToLower(strings.TrimSpace(host)), ".")
+		if host != "" {
+			hosts = append(hosts, host)
+		}
+	}
+	return hosts
+}
+
+// pushSubscriptionStore — то, что сервису push нужно от хранилища подписок (в работе — PushSubscriptionRepositoryImpl).
+type pushSubscriptionStore interface {
+	FindByEndpoint(endpoint string) (*models.PushSubscription, error)
+	FindByUserID(userID int64) ([]*models.PushSubscription, error)
+	Upsert(sub *models.PushSubscription) (*models.PushSubscription, bool, error)
+	DeleteByEndpoint(userID int64, endpoint string) (bool, error)
+	DeleteByID(subscriptionID int64) error
+}
+
+// pushSendTimeout — сколько ждать один push-сервис: зависший сервис не должен держать всю проверку.
+const pushSendTimeout = 10 * time.Second
 
 // Длины ключей P-256 после base64url: публичный — несжатая точка (65 байт), приватный — 32 байта,
 // секрет подписки auth — 16 байт.
@@ -37,7 +76,7 @@ const (
 )
 
 type PushServiceImpl struct {
-	SubscriptionRepo *rep.PushSubscriptionRepositoryImpl
+	SubscriptionRepo pushSubscriptionStore
 	VapidRepo        *rep.VapidKeysRepositoryImpl
 	Sender           PushSender
 	Logger           *slog.Logger
@@ -47,7 +86,7 @@ type PushServiceImpl struct {
 	vapid  *VapidCredentials // загруженные ключи; nil — ещё не загружены (например, БД была недоступна)
 }
 
-func NewPushService(subRepo *rep.PushSubscriptionRepositoryImpl, vapidRepo *rep.VapidKeysRepositoryImpl, sender PushSender, config PushConfig, logger *slog.Logger) *PushServiceImpl {
+func NewPushService(subRepo pushSubscriptionStore, vapidRepo *rep.VapidKeysRepositoryImpl, sender PushSender, config PushConfig, logger *slog.Logger) *PushServiceImpl {
 	if strings.TrimSpace(config.Subject) == "" {
 		config.Subject = DefaultVapidSubject
 	}
@@ -142,13 +181,26 @@ func validateVapidKeys(public, private string) error {
 	return nil
 }
 
-// validateEndpoint — адрес push-сервиса: абсолютный https:// с хостом.
-func validateEndpoint(endpoint string) error {
+// validateEndpoint — адрес push-сервиса: https:// без логина и пароля, хост — домен (не IP)
+// из pushServiceHosts или extraHosts либо его поддомен, порт — только стандартный.
+func validateEndpoint(endpoint string, extraHosts []string) error {
 	parsed, err := url.Parse(endpoint)
-	if err != nil || parsed.Scheme != "https" || parsed.Host == "" {
+	if err != nil || parsed.Scheme != "https" || parsed.User != nil || parsed.Opaque != "" {
 		return ErrInvalidEndpoint
 	}
-	return nil
+	if port := parsed.Port(); port != "" && port != "443" {
+		return ErrInvalidEndpoint
+	}
+	host := strings.TrimSuffix(strings.ToLower(parsed.Hostname()), ".")
+	if host == "" || net.ParseIP(host) != nil {
+		return ErrInvalidEndpoint
+	}
+	for _, allowed := range slices.Concat(pushServiceHosts, extraHosts) {
+		if host == allowed || strings.HasSuffix(host, "."+allowed) {
+			return nil
+		}
+	}
+	return ErrInvalidEndpoint
 }
 
 // validateSubscriptionKeys — ключи шифрования подписки из subscription.toJSON().
@@ -173,7 +225,7 @@ func endpointHost(endpoint string) string {
 // Subscribe сохраняет подписку устройства (upsert по Endpoint). created — подписка новая.
 func (serv *PushServiceImpl) Subscribe(input models.PushSubscribeRequest) (*models.PushSubscriptionResponse, bool, error) {
 	endpoint := strings.TrimSpace(input.Endpoint)
-	if err := validateEndpoint(endpoint); err != nil {
+	if err := validateEndpoint(endpoint, serv.config.ExtraEndpointHosts); err != nil {
 		return nil, false, err
 	}
 	p256dh, auth := strings.TrimSpace(input.Keys.P256dh), strings.TrimSpace(input.Keys.Auth)
@@ -327,7 +379,9 @@ type deliveryResult struct {
 func deliver(ctx context.Context, sender PushSender, vapid VapidCredentials, subs []*models.PushSubscription, payload []byte, opts PushOptions, logger *slog.Logger) deliveryResult {
 	var result deliveryResult
 	for _, sub := range subs {
-		status, err := sender.Send(ctx, vapid, sub, payload, opts)
+		sendCtx, cancel := context.WithTimeout(ctx, pushSendTimeout)
+		status, err := sender.Send(sendCtx, vapid, sub, payload, opts)
+		cancel()
 		if err != nil {
 			logger.Warn("Ошибка отправки push",
 				slog.Int64("subscriptionId", sub.SubscriptionId), slog.String("error", err.Error()))
@@ -338,6 +392,12 @@ func deliver(ctx context.Context, sender PushSender, vapid VapidCredentials, sub
 		case pushDelivered:
 			result.Sent++
 		case pushGone:
+			if status == http.StatusForbidden {
+				logger.Warn("Push-сервис ответил 403: подписка сделана с другими VAPID-ключами или subject неверный — подписка будет удалена",
+					slog.Int64("subscriptionId", sub.SubscriptionId),
+					slog.String("pushService", endpointHost(sub.Endpoint)),
+					slog.String("hint", "проверьте, не сменились ли VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY и что VAPID_SUBJECT — mailto: или https://"))
+			}
 			result.Gone = append(result.Gone, sub)
 		default:
 			logger.Warn("Push-сервис отклонил уведомление",

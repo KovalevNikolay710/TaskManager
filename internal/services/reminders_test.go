@@ -498,3 +498,99 @@ func TestFindPlanForDate(t *testing.T) {
 		})
 	}
 }
+
+// Переходы на летнее и зимнее время: напоминания считаются по стенным часам пользователя,
+// TTL — по реальному времени. Берлин 2026: 29 марта 02:00 CET → 03:00 CEST, 25 октября 03:00 CEST → 02:00 CET.
+// Москва без перехода с 2011 года; 28 марта 2010 — последний весенний (02:00 MSK → 03:00 MSD).
+func TestDueDailyReminderDST(t *testing.T) {
+	berlin, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	moscow, err := time.LoadLocation("Europe/Moscow")
+	if err != nil {
+		t.Fatal(err)
+	}
+	utc := func(year int, month time.Month, day, hour, minute int) time.Time {
+		return time.Date(year, month, day, hour, minute, 0, 0, time.UTC)
+	}
+	tests := []struct {
+		name    string
+		loc     *time.Location
+		now     time.Time
+		clock   string
+		ttl     time.Duration
+		wantDue bool
+		wantAt  time.Time // нулевое — момент не проверяется
+		wantKey string
+	}{
+		{"Берлин, накануне перехода: 08:00 CET = 07:00 UTC", berlin, utc(2026, 3, 28, 7, 0), "08:00", morningTTL, true, utc(2026, 3, 28, 7, 0), "2026-03-28"},
+		{"Берлин, день перехода: 08:00 CEST = 06:00 UTC", berlin, utc(2026, 3, 29, 6, 0), "08:00", morningTTL, true, utc(2026, 3, 29, 6, 0), "2026-03-29"},
+		{"Берлин, день перехода: 07:59 CEST — ещё рано", berlin, utc(2026, 3, 29, 5, 59), "08:00", morningTTL, false, time.Time{}, ""},
+		{"Берлин, TTL через переход: 01:30 CET + 2 ч = 04:30 CEST", berlin, utc(2026, 3, 29, 2, 0), "01:30", eveningTTL, true, utc(2026, 3, 29, 0, 30), "2026-03-29"},
+		{"Берлин, TTL через переход истёк в 04:30 CEST", berlin, utc(2026, 3, 29, 2, 30), "01:30", eveningTTL, false, time.Time{}, ""},
+		{"Берлин, несуществующие 02:30 не теряются", berlin, utc(2026, 3, 29, 1, 45), "02:30", morningTTL, true, time.Time{}, "2026-03-29"},
+		{"Берлин, зимнее время: 08:00 CET = 07:00 UTC", berlin, utc(2026, 10, 25, 7, 0), "08:00", morningTTL, true, utc(2026, 10, 25, 7, 0), "2026-10-25"},
+		{"Берлин, неоднозначные 02:30 — одна дата", berlin, utc(2026, 10, 25, 2, 0), "02:30", morningTTL, true, time.Time{}, "2026-10-25"},
+		{"Москва 2026: 08:00 MSK = 05:00 UTC", moscow, utc(2026, 3, 29, 5, 0), "08:00", morningTTL, true, utc(2026, 3, 29, 5, 0), "2026-03-29"},
+		{"Москва 2010, день перехода: 08:00 MSD = 04:00 UTC", moscow, utc(2010, 3, 28, 4, 0), "08:00", morningTTL, true, utc(2010, 3, 28, 4, 0), "2010-03-28"},
+		{"Москва 2010, день перехода: 07:59 MSD — ещё рано", moscow, utc(2010, 3, 28, 3, 59), "08:00", morningTTL, false, time.Time{}, ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, due := dueDailyReminder(tt.now, tt.loc, tt.clock, tt.ttl)
+			if due != tt.wantDue {
+				t.Fatalf("пора = %v, ожидалось %v", due, tt.wantDue)
+			}
+			if !due {
+				return
+			}
+			if !tt.wantAt.IsZero() && !got.Equal(tt.wantAt) {
+				t.Errorf("момент %v, ожидалось %v", got.UTC(), tt.wantAt)
+			}
+			if key := dateKey(got, tt.loc); key != tt.wantKey {
+				t.Errorf("ключ %q, ожидалось %q", key, tt.wantKey)
+			}
+		})
+	}
+}
+
+func TestQuietHoursEndDST(t *testing.T) {
+	berlin, err := time.LoadLocation("Europe/Berlin")
+	if err != nil {
+		t.Fatal(err)
+	}
+	moscow, err := time.LoadLocation("Europe/Moscow")
+	if err != nil {
+		t.Fatal(err)
+	}
+	utc := func(month time.Month, day, hour, minute int) time.Time {
+		return time.Date(2026, month, day, hour, minute, 0, 0, time.UTC)
+	}
+	tests := []struct {
+		name      string
+		loc       *time.Location
+		now       time.Time
+		wantQuiet bool
+		wantEnd   time.Time
+	}{
+		{"Берлин, вечер перед переходом: 23:30 CET → до 07:00 CEST", berlin, utc(3, 28, 22, 30), true, utc(3, 29, 5, 0)},
+		{"Берлин, ночь перехода: 03:30 CEST → до 07:00 CEST", berlin, utc(3, 29, 1, 30), true, utc(3, 29, 5, 0)},
+		{"Берлин, 07:00 CEST — тихие часы кончились", berlin, utc(3, 29, 5, 0), false, time.Time{}},
+		{"Берлин, вечер перед зимним временем: 23:30 CEST → до 07:00 CET", berlin, utc(10, 24, 21, 30), true, utc(10, 25, 6, 0)},
+		{"Берлин, повторный час: 02:30 CET → до 07:00 CET", berlin, utc(10, 25, 1, 30), true, utc(10, 25, 6, 0)},
+		{"Москва: 23:30 MSK → до 07:00 MSK", moscow, utc(10, 5, 20, 30), true, utc(10, 6, 4, 0)},
+		{"Москва: 07:00 MSK — тихие часы кончились", moscow, utc(10, 6, 4, 0), false, time.Time{}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			end, quiet := quietHoursEnd(tt.now, tt.loc, "23:00", "07:00")
+			if quiet != tt.wantQuiet {
+				t.Fatalf("тихие часы = %v, ожидалось %v", quiet, tt.wantQuiet)
+			}
+			if quiet && !end.Equal(tt.wantEnd) {
+				t.Errorf("конец %v, ожидалось %v", end.UTC(), tt.wantEnd)
+			}
+		})
+	}
+}

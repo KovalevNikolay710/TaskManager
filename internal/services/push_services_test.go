@@ -9,6 +9,7 @@ import (
 	"log/slog"
 	"net/http"
 	"testing"
+	"time"
 	_ "time/tzdata" // time.LoadLocation в тестах не зависит от системной tzdata
 
 	webpush "github.com/SherClockHolmes/webpush-go"
@@ -228,18 +229,56 @@ func TestDeliver(t *testing.T) {
 }
 
 func TestValidateEndpoint(t *testing.T) {
-	tests := map[string]bool{
-		"https://fcm.googleapis.com/fcm/send/abc":              true,
-		"https://updates.push.services.mozilla.com/wpush/v2/x": true,
-		"http://fcm.googleapis.com/fcm/send/abc":               false,
-		"https:///nohost":                                      false,
-		"fcm.googleapis.com/fcm/send/abc":                      false,
-		"":                                                     false,
+	extra := ParseEndpointHosts(" Push.Example.org. , ,corp.test")
+	tests := []struct {
+		name     string
+		endpoint string
+		extra    []string
+		ok       bool
+	}{
+		{"FCM", "https://fcm.googleapis.com/fcm/send/abc", nil, true},
+		{"Firefox", "https://updates.push.services.mozilla.com/wpush/v2/x", nil, true},
+		{"Safari: поддомен push.apple.com", "https://web.push.apple.com/QGuQ", nil, true},
+		{"Windows: поддомен notify.windows.com", "https://wns2-par02p.notify.windows.com/w/?token=x", nil, true},
+		{"регистр и точка в конце хоста", "https://FCM.googleapis.com./fcm/send/abc", nil, true},
+		{"порт 443 явно", "https://fcm.googleapis.com:443/fcm/send/abc", nil, true},
+		{"http", "http://fcm.googleapis.com/fcm/send/abc", nil, false},
+		{"без хоста", "https:///nohost", nil, false},
+		{"без схемы", "fcm.googleapis.com/fcm/send/abc", nil, false},
+		{"пусто", "", nil, false},
+		{"чужой хост", "https://example.com/push", nil, false},
+		{"суффикс без точки — не поддомен", "https://evilfcm.googleapis.com/x", nil, false},
+		{"домен push-сервиса внутри чужого", "https://fcm.googleapis.com.evil.com/x", nil, false},
+		{"логин и пароль в адресе", "https://user:pass@fcm.googleapis.com/fcm/send/abc", nil, false},
+		{"только логин в адресе", "https://user@fcm.googleapis.com/fcm/send/abc", nil, false},
+		{"IPv4", "https://127.0.0.1/push", nil, false},
+		{"IPv6", "https://[::1]/push", nil, false},
+		{"нестандартный порт", "https://fcm.googleapis.com:8443/fcm/send/abc", nil, false},
+		{"хост из PUSH_ENDPOINT_HOSTS", "https://push.example.org/x", extra, true},
+		{"поддомен хоста из PUSH_ENDPOINT_HOSTS", "https://a.corp.test/x", extra, true},
+		{"IP не разрешается и через PUSH_ENDPOINT_HOSTS", "https://10.0.0.1/x", []string{"10.0.0.1"}, false},
 	}
-	for endpoint, ok := range tests {
-		if err := validateEndpoint(endpoint); (err == nil) != ok {
-			t.Errorf("%q: ошибка %v, ожидалось допустимо = %v", endpoint, err, ok)
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateEndpoint(tt.endpoint, tt.extra)
+			if (err == nil) != tt.ok {
+				t.Errorf("%q: ошибка %v, ожидалось допустимо = %v", tt.endpoint, err, tt.ok)
+			}
+			if err != nil && !errors.Is(err, ErrInvalidEndpoint) {
+				t.Errorf("ошибка %v, ожидалась ErrInvalidEndpoint", err)
+			}
+		})
+	}
+}
+
+func TestParseEndpointHosts(t *testing.T) {
+	got := ParseEndpointHosts(" Push.Example.org. , ,.corp.test,")
+	want := []string{"push.example.org", "corp.test"}
+	if len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
+		t.Errorf("получено %v, ожидалось %v", got, want)
+	}
+	if hosts := ParseEndpointHosts(""); len(hosts) != 0 {
+		t.Errorf("пустая переменная дала %v", hosts)
 	}
 }
 
@@ -272,5 +311,28 @@ func TestValidateKeys(t *testing.T) {
 		if err := validateSubscriptionKeys(keys[0], keys[1]); !errors.Is(err, ErrInvalidSubscriptionKeys) {
 			t.Errorf("%s: ошибка %v, ожидалась ErrInvalidSubscriptionKeys", name, err)
 		}
+	}
+}
+
+// deadlineSender запоминает, сколько времени у отправки было по контексту.
+type deadlineSender struct {
+	budget time.Duration
+	ok     bool
+}
+
+func (sender *deadlineSender) Send(ctx context.Context, _ VapidCredentials, _ *models.PushSubscription, _ []byte, _ PushOptions) (int, error) {
+	var deadline time.Time
+	deadline, sender.ok = ctx.Deadline()
+	sender.budget = time.Until(deadline)
+	return http.StatusCreated, nil
+}
+
+func TestDeliverLimitsEachSend(t *testing.T) {
+	sender := &deadlineSender{}
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	subs := []*models.PushSubscription{{SubscriptionId: 1, Endpoint: "https://fcm.googleapis.com/fcm/send/a"}}
+	deliver(context.Background(), sender, VapidCredentials{}, subs, []byte(`{}`), PushOptions{}, logger)
+	if !sender.ok || sender.budget <= 0 || sender.budget > pushSendTimeout {
+		t.Errorf("у отправки нет своего таймаута: есть = %v, осталось %v (ожидалось до %v)", sender.ok, sender.budget, pushSendTimeout)
 	}
 }

@@ -50,6 +50,8 @@ func main() {
 		PublicKey:  os.Getenv("VAPID_PUBLIC_KEY"),
 		PrivateKey: os.Getenv("VAPID_PRIVATE_KEY"),
 		Subject:    os.Getenv("VAPID_SUBJECT"),
+		// Домены push-сервисов сверх встроенных, через запятую
+		ExtraEndpointHosts: services.ParseEndpointHosts(os.Getenv("PUSH_ENDPOINT_HOSTS")),
 	}, logger)
 	if err := pushService.InitKeys(); err != nil {
 		logger.Error("Не удалось загрузить VAPID-ключи, повторим при первом запросе", slog.Err(err))
@@ -70,24 +72,36 @@ func main() {
 	var background sync.WaitGroup
 	background.Go(func() { reminderService.Run(ctx) })
 
-	// Запуск сервера
-	server := &http.Server{Addr: ":8080", Handler: router}
+	// Запуск сервера; ошибка запуска (например, порт занят) приходит через канал,
+	// чтобы остановить планировщик штатно, а не через log.Fatalf из горутины
+	server := &http.Server{Addr: ":8080", Handler: router, ReadHeaderTimeout: 10 * time.Second}
+	serverErr := make(chan error, 1)
 	go func() {
 		log.Println("Сервер запущен на порту :8080")
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			log.Fatalf("Ошибка запуска сервера: %v", err)
+			serverErr <- err
 		}
 	}()
 
-	<-ctx.Done()
+	exitCode := 0
+	select {
+	case <-ctx.Done():
+		logger.Info("Остановка сервера")
+	case err := <-serverErr:
+		logger.Error("Ошибка запуска сервера", slog.Err(err))
+		exitCode = 1
+	}
 	stop()
-	logger.Info("Остановка сервера")
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	if err := server.Shutdown(shutdownCtx); err != nil {
 		logger.Error("Ошибка при остановке сервера", slog.Err(err))
 	}
 	background.Wait()
+	cancel()
+	if exitCode != 0 {
+		os.Exit(exitCode)
+	}
 }
 
 // func main() {
