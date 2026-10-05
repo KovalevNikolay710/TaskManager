@@ -18,10 +18,12 @@ interface DeadlineFieldProps {
   disabled?: boolean
   now: Date
   dateRef?: Ref<HTMLInputElement>
+  /** Подпись «Дедлайн» только для скринридеров (в «Быстрой задаче» её заменяет иконка ряда) */
+  legendHidden?: boolean
 }
 
 /** DeadlineField: дата + время, пресеты и живая расшифровка «завтра, 10:00 — через 20 ч». */
-export function DeadlineField({ date, time, onChange, onBlur, error, presets = false, disabled = false, now, dateRef }: DeadlineFieldProps) {
+export function DeadlineField({ date, time, onChange, onBlur, error, presets = false, disabled = false, now, dateRef, legendHidden = false }: DeadlineFieldProps) {
   const hintId = useId()
   const deadline = combineDateTime(date, time)
   const described = deadline ? describeDeadlineInput(deadline, now) : null
@@ -32,7 +34,7 @@ export function DeadlineField({ date, time, onChange, onBlur, error, presets = f
 
   return (
     <fieldset className={styles.field} aria-describedby={hintId} onBlur={handleBlur} disabled={disabled}>
-      <legend className={styles.label}>Дедлайн</legend>
+      <legend className={legendHidden ? 'visually-hidden' : styles.label}>Дедлайн</legend>
       <div className={styles.row}>
         <Input
           ref={dateRef}
@@ -57,7 +59,7 @@ export function DeadlineField({ date, time, onChange, onBlur, error, presets = f
         <div className={styles.chips} role="group" aria-label="Быстрый выбор дедлайна">
           {deadlinePresets(now).map((preset) => (
             <button
-              key={preset.label}
+              key={preset.id}
               type="button"
               className={styles.chip}
               aria-pressed={preset.date === date && preset.time === time}

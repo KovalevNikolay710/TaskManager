@@ -18,6 +18,8 @@
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   box-shadow: var(--shadow-lg);
   animation: slide-up var(--duration-normal) var(--easing-standard);
+  /* tabindex="-1" нужен только для ловушки фокуса, рамка у самого диалога не нужна */
+  outline: none;
 }
 
 .grip {
@@ -54,6 +56,44 @@
   margin-top: var(--space-4);
 }
 
+/* ---------- Вариант «Быстрая задача» (sheet--quick) ---------- */
+.backdropTop {
+  padding-bottom: var(--keyboard-inset, 0px);
+}
+
+.quick {
+  /* Лист целиком над клавиатурой; если раскрыты два ряда, прокручивается внутри */
+  max-height: calc(100dvh - var(--space-6) - var(--keyboard-inset, 0px));
+  padding-top: var(--space-2);
+}
+
+/* Ручку можно смахнуть вниз: зона захвата больше видимой полоски */
+.gripSwipe {
+  position: relative;
+  touch-action: none;
+  cursor: grab;
+}
+
+.gripSwipe::before {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * var(--space-3)) -40%;
+}
+
+.headQuick {
+  gap: var(--space-1);
+  margin: 0 calc(-1 * var(--space-2)) var(--space-2) 0;
+}
+
+.headQuick .title {
+  flex: 1;
+  min-width: 0;
+}
+
+.closeQuick {
+  color: var(--color-text);
+}
+
 @keyframes slide-up {
   from {
     transform: translateY(var(--space-8));
@@ -64,6 +104,17 @@
 @media (min-width: 960px) {
   .backdrop {
     align-items: center;
+  }
+
+  /* «Быстрая задача» прижата к верху, чтобы не прыгала при раскрытии рядов */
+  .backdropTop {
+    align-items: flex-start;
+    padding-top: 12vh;
+  }
+
+  .sheet.quick {
+    width: var(--size-quick-sheet);
+    padding: var(--space-4) var(--space-6) var(--space-6);
   }
 
   .sheet {

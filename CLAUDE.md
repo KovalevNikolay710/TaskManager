@@ -101,6 +101,8 @@ docker compose up --build            # всё приложение: http://local
 Без собранного фронтенда Go собирается (в `web/dist` закоммичен `.gitkeep`), но сервер отдаёт только API.
 Docker-образ собирается в три stage: `node:lts-alpine` (фронтенд) → `golang` (бинарник) → `alpine`.
 Используйте `docker compose` (v2), а не `docker-compose` (v1).
+Ветку из worktree (`.claude/worktrees/<name>`) запускайте как тот же проект: `docker compose -p taskmanager up --build` из каталога worktree.
+Без `-p` проект называется по каталогу: имя `manager_db` (`container_name`) окажется занято, а БД была бы новой и пустой.
 
 PWA: манифест (`manifest.webmanifest`) и service worker (`sw.js`) генерирует `npm run build` (vite-plugin-pwa), в `npm run dev` SW не регистрируется.
 Установка на телефон и push работают только по HTTPS (исключение — `localhost`).

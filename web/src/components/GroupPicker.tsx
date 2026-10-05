@@ -1,14 +1,12 @@
 import { useEffect, useRef, type KeyboardEvent } from 'react'
 import type { Group } from '../api/types'
 import { cx } from '../lib/cx'
-import { NO_GROUP_ID, sortGroups } from '../lib/groups'
+import { GROUP_CHIP_NAME_LIMIT, NO_GROUP_ID, shortGroupName, sortGroups } from '../lib/groups'
 import { weightClass } from '../lib/weight'
 import { Button } from './Button'
 import styles from './Form.module.css'
 import { FieldHint } from './FormParts'
 import { Icon } from './Icon'
-
-const NAME_LIMIT = 24
 
 interface GroupPickerProps {
   labelledBy: string
@@ -24,10 +22,6 @@ interface GroupPickerProps {
   disabled?: boolean
   /** Меняется, когда нужно перевести фокус на выбранный чип (после создания группы) */
   focusRequest?: number
-}
-
-function shortName(name: string): string {
-  return name.length > NAME_LIMIT ? `${name.slice(0, NAME_LIMIT - 1)}…` : name
 }
 
 /** GroupPicker: чипы групп с одиночным выбором (radiogroup, стрелки ←/→) и «+ Новая группа». */
@@ -67,13 +61,13 @@ export function GroupPicker({ labelledBy, groups, loading, failed, onRetry, valu
             aria-checked={option.id === value}
             aria-label={`${option.name}, вес ${option.weight ?? 1}`}
             tabIndex={index === selectedIndex ? 0 : -1}
-            title={option.name.length > NAME_LIMIT ? option.name : undefined}
+            title={option.name.length > GROUP_CHIP_NAME_LIMIT ? option.name : undefined}
             disabled={disabled}
             onClick={() => onChange(option.id)}
             onKeyDown={(e) => onKeyDown(e, index)}
           >
             <span className={cx(styles.chipDot, option.weight === undefined && styles.chipDotBase)} aria-hidden="true" />
-            <span className={styles.chipName}>{shortName(option.name)}</span>
+            <span className={styles.chipName}>{shortGroupName(option.name)}</span>
             {option.weight !== undefined && (
               <span className={styles.chipWeight} aria-hidden="true">
                 ×{option.weight}

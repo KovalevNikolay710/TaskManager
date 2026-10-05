@@ -1,3 +1,14 @@
+/* «Новая задача» в шапке — только на десктопе (на мобильном — Fab) */
+.newTask {
+  display: none;
+}
+
+@media (min-width: 960px) {
+  .newTask {
+    display: inline-flex;
+  }
+}
+
 .taskList {
   position: relative;
   display: flex;

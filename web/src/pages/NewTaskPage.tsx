@@ -1,6 +1,6 @@
 import { useQueryClient } from '@tanstack/react-query'
 import { useEffect, useId, useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { ApiError } from '../api/client'
 import { ActionBar } from '../components/ActionBar'
 import { Alert } from '../components/Alert'
@@ -24,10 +24,11 @@ import { useCreateTask } from '../hooks/useTaskMutations'
 import { useTasks } from '../hooks/useTasks'
 import { useToast } from '../hooks/useToast'
 import { combineDateTime, describeDeadline, toLocalRFC3339 } from '../lib/dates'
-import { parseDuration } from '../lib/format'
+import { formatDuration, parseDuration } from '../lib/format'
 import { requestTaskHighlight } from '../lib/highlight'
 import { futurePlaceText } from '../lib/ordinal'
 import { calculatePriority, groupLabel, groupWeight, hoursUntil, priorityFactorRows, queuePlace } from '../lib/priority'
+import { parseNewTaskSearch, type NewTaskPrefill } from '../lib/quickAdd'
 import { readLastGroupId, writeLastGroupId } from '../lib/storage'
 import {
   DEADLINE_TOO_CLOSE,
@@ -47,8 +48,17 @@ const PARENT_PATH = '/all-tasks'
 
 type Overlay = { kind: 'group' } | { kind: 'leave'; then: () => void } | null
 
-function emptyValues(): TaskFormValues {
-  return { name: '', description: '', date: '', time: '', duration: '', percent: 0, groupId: readLastGroupId() }
+/** Начальные значения: пусто или перенесённое из «Быстрой задачи» (?name=…&date=…&time=…&te=…&groupId=…). */
+function initialValues(prefill: NewTaskPrefill): TaskFormValues {
+  return {
+    name: prefill.name ?? '',
+    description: '',
+    date: prefill.date ?? '',
+    time: prefill.time ?? '',
+    duration: prefill.minutes !== undefined ? formatDuration(prefill.minutes) : '',
+    percent: 0,
+    groupId: prefill.groupId ?? readLastGroupId(),
+  }
 }
 
 function isBlank(values: TaskFormValues): boolean {
@@ -71,13 +81,17 @@ export function NewTaskPage() {
   const queryClient = useQueryClient()
   const { showToast } = useToast()
   const now = useNow()
+  const [searchParams] = useSearchParams()
+  const [prefill] = useState(() => parseNewTaskSearch(searchParams))
+  // Перенесённое из «Быстрой задачи» — уже введённые данные: при уходе спрашиваем
+  const prefilled = Object.keys(prefill).length > 0
 
   const groupsQuery = useGroups()
   const tasksQuery = useTasks()
   const createTask = useCreateTask()
   const createGroup = useCreateGroup()
 
-  const [values, setValues] = useState(emptyValues)
+  const [values, setValues] = useState(() => initialValues(prefill))
   const [touched, setTouched] = useState<ReadonlySet<TaskField>>(new Set())
   const [serverDeadlineError, setServerDeadlineError] = useState<string | null>(null)
   const [alert, setAlert] = useState<{ title: string; text: string } | null>(null)
@@ -92,7 +106,7 @@ export function NewTaskPage() {
   // Последняя группа могла быть удалена — тогда «Без группы»
   const groupId = groups && values.groupId !== 0 && !groups.some((g) => g.GroupId === values.groupId) ? 0 : values.groupId
   const submitting = createTask.isPending
-  const blank = isBlank(values)
+  const blank = isBlank(values) && !prefilled
 
   const errors: Partial<Record<TaskField, string>> = {
     name: validateTaskName(values.name),
@@ -243,7 +257,8 @@ export function NewTaskPage() {
               type="text"
               maxLength={TASK_NAME_MAX}
               autoComplete="off"
-              autoFocus
+              // Название пришло из «Быстрой задачи» — фокус сразу в «Описание»
+              autoFocus={!prefill.name}
               placeholder="Например, подготовить отчёт по ТИПИС"
               value={values.name}
               disabled={submitting}
@@ -267,6 +282,7 @@ export function NewTaskPage() {
               rows={3}
               maxLength={TASK_DESCRIPTION_MAX}
               placeholder="Детали, ссылки, что именно сдать"
+              autoFocus={Boolean(prefill.name)}
               value={values.description}
               disabled={submitting}
               onChange={(e) => update({ description: e.target.value })}

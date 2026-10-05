@@ -1,12 +1,14 @@
-import { Link } from 'react-router-dom'
 import styles from './Fab.module.css'
 import { Icon } from './Icon'
 
-/** Кнопка «Добавить задачу» на мобильном (на десктопе скрыта — вместо неё кнопка в шапке). */
-export function Fab({ to }: { to: string }) {
+/**
+ * Кнопка «Добавить задачу» на мобильном (на десктопе скрыта — вместо неё кнопка в шапке).
+ * Открывает «Быструю задачу» (QuickAddSheet), а не переходит на /tasks/new.
+ */
+export function Fab({ onClick }: { onClick: () => void }) {
   return (
-    <Link to={to} className={styles.fab} aria-label="Добавить задачу">
+    <button type="button" className={styles.fab} aria-label="Добавить задачу" aria-haspopup="dialog" onClick={onClick}>
       <Icon name="plus" />
-    </Link>
+    </button>
   )
 }

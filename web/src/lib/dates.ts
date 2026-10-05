@@ -108,6 +108,16 @@ export function describeDeadline(deadline: string, now = new Date()): { text: st
 
 const WEEKDAYS_SHORT = ['вс', 'пн', 'вт', 'ср', 'чт', 'пт', 'сб']
 
+/** Полная дата со временем: «чт, 8 октября, 18:00» (подсказка у чипов «Через 3 дня» / «Через неделю»). */
+export function formatWeekdayDateTime(date: Date): string {
+  return `${WEEKDAYS_SHORT[date.getDay()]}, ${formatDayMonth(date)}, ${timeOfDay(date)}`
+}
+
+/** Короткая дата со временем: «пт, 9 окт, 12:00» (подпись чипа «Другое…» со своим сроком). */
+export function formatShortDateTime(date: Date): string {
+  return `${WEEKDAYS_SHORT[date.getDay()]}, ${date.getDate()} ${MONTHS_SHORT[date.getMonth()]}, ${timeOfDay(date)}`
+}
+
 /** «HH:MM» локального времени. */
 export function toTimeKey(date: Date): string {
   return timeOfDay(date)
@@ -150,7 +160,7 @@ export function describeDeadlineInput(date: Date, now = new Date()): { text: str
   if (label.tone === 'overdue') return label
   const diff = date.getTime() - now.getTime()
   if (label.text.startsWith('через')) {
-    return { text: `${label.text} — ${WEEKDAYS_SHORT[date.getDay()]}, ${formatDayMonth(date)}, ${timeOfDay(date)}`, tone: label.tone }
+    return { text: `${label.text} — ${formatWeekdayDateTime(date)}`, tone: label.tone }
   }
   const withTime = label.text.includes(':') ? label.text : `${label.text}, ${timeOfDay(date)}`
   return { text: `${withTime} — через ${formatSpan(diff)}`, tone: label.tone }

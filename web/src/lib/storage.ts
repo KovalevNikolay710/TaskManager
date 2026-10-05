@@ -17,6 +17,14 @@ export function writeStorage(key: string, value: string): void {
   }
 }
 
+export function removeStorage(key: string): void {
+  try {
+    window.localStorage.removeItem(key)
+  } catch {
+    // Хранилище недоступно — не страшно
+  }
+}
+
 const LAST_GROUP_KEY = 'tm.lastGroupId'
 
 /** Группа, в которую последний раз создавали задачу (0 — без группы). */

@@ -44,5 +44,16 @@ export function useCollapsedGroups(expandOnMount?: number) {
     })
   }, [])
 
-  return { collapsed, toggleGroup }
+  /** Раскрыть группу, если она свёрнута (там появилась новая задача) */
+  const expandGroup = useCallback((groupId: number) => {
+    setCollapsed((prev) => {
+      if (!prev.has(groupId)) return prev
+      const next = new Set(prev)
+      next.delete(groupId)
+      writeCollapsed(next)
+      return next
+    })
+  }, [])
+
+  return { collapsed, toggleGroup, expandGroup }
 }

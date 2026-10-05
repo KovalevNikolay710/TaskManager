@@ -1,16 +1,17 @@
 import { useState } from 'react'
-import { Link, useNavigate, useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import type { Day } from '../api/types'
 import { Alert } from '../components/Alert'
 import { AppHeader } from '../components/AppHeader'
 import { AppShell } from '../components/AppShell'
 import { Badge } from '../components/Badge'
 import { Button } from '../components/Button'
-import { buttonClassName } from '../components/buttonClassName'
 import { DateSwitcher } from '../components/DateSwitcher'
 import { DayChart, type ChartFocus } from '../components/DayChart'
+import { Fab } from '../components/Fab'
 import { Icon } from '../components/Icon'
 import { PlanForm } from '../components/PlanForm'
+import { QuickAddSheet } from '../components/QuickAddSheet'
 import { SectionTitle } from '../components/SectionTitle'
 import { Sheet } from '../components/Sheet'
 import { Skeleton, SkeletonTaskRow } from '../components/Skeleton'
@@ -19,6 +20,7 @@ import { TaskRow } from '../components/TaskRow'
 import { useCreateDay, useDays, useUpdateDay } from '../hooks/useDays'
 import { useFlip } from '../hooks/useFlip'
 import { useGroups } from '../hooks/useGroups'
+import { useQuickAdd } from '../hooks/useQuickAdd'
 import { useTasks } from '../hooks/useTasks'
 import { useToast } from '../hooks/useToast'
 import { useToggleTask } from '../hooks/useToggleTask'
@@ -27,11 +29,11 @@ import { FREE_MIN_MINUTES, summarizeDay, tasksOutsidePlan, type DayPlanSummary }
 import { formatDayMonth, formatDayTitle, fromDateKey, toDateKey, todayKey, toLocalMidnightRFC3339, weekdayName } from '../lib/dates'
 import { formatDuration, plural } from '../lib/format'
 import { PLAN_DEFAULT_MINUTES, validatePlanTime } from '../lib/plan'
+import { createdTasksMessage } from '../lib/quickAdd'
 import { isDone, maxActivePriority, priorityLevel } from '../lib/tasks'
 import { weightClass } from '../lib/weight'
 import styles from './DayPage.module.css'
 
-const NEW_TASK_PATH = '/tasks/new'
 const PLAN_HINT = 'От 0:15 до 16:00.'
 
 function dayKey(day: Day): string {
@@ -49,6 +51,7 @@ function tasksWord(n: number): string {
 /** Экран «Задачи на день» — design/screens/day.md. */
 export function DayPage() {
   const [params, setParams] = useSearchParams()
+  const { showToast } = useToast()
   const daysQuery = useDays()
   const groupsQuery = useGroups()
   const tasksQuery = useTasks()
@@ -73,6 +76,19 @@ export function DayPage() {
   const nextKey = dayKeys.find((k) => k > selectedKey) ?? (isPast ? today : undefined)
 
   const goTo = (key: string) => setParams(key === today ? {} : { date: key })
+
+  // Sheet «Изменить план» открывается и из Toast «В план» после «Быстрой задачи»
+  const [editOpen, setEditOpen] = useState(false)
+  const quickAdd = useQuickAdd({
+    onFinished: (created) => {
+      // «В план» — только если план на выбранную дату (сегодня или будущую) уже есть
+      const canPlan = Boolean(day) && !isPast
+      showToast({
+        message: createdTasksMessage(created.length),
+        action: canPlan ? { label: 'В план', onClick: () => setEditOpen(true) } : undefined,
+      })
+    },
+  })
   const arrowDate = (key: string | undefined) => {
     const date = key ? fromDateKey(key) : null
     return date ? `: ${formatDayMonth(date)}` : ''
@@ -132,7 +148,17 @@ export function DayPage() {
           }}
         />
         {day ? (
-          <DayPlan key={day.DayId} day={day} isPast={isPast} isToday={isToday} outside={outside} groupNames={groupNames(groupsQuery.data)} />
+          <DayPlan
+            key={day.DayId}
+            day={day}
+            isPast={isPast}
+            isToday={isToday}
+            outside={outside}
+            groupNames={groupNames(groupsQuery.data)}
+            editOpen={editOpen}
+            onEditOpenChange={setEditOpen}
+            onNewTask={quickAdd.open}
+          />
         ) : (
           <NoPlan key={selectedKey} dateKey={selectedKey} isPast={isPast} isToday={isToday} defaultMinutes={lastMinutes} />
         )}
@@ -141,9 +167,19 @@ export function DayPage() {
   }
 
   return (
-    <AppShell>
-      <AppHeader title="Задачи на день" subtitle={planTasks.length > 0 ? `Выполнено ${doneCount} из ${planTasks.length}` : undefined} />
+    <AppShell floating={<Fab onClick={quickAdd.open} />}>
+      <AppHeader
+        title="Задачи на день"
+        subtitle={planTasks.length > 0 ? `Выполнено ${doneCount} из ${planTasks.length}` : undefined}
+        actions={
+          <Button variant="primary" className={styles.newTask} aria-haspopup="dialog" aria-keyshortcuts="N" onClick={quickAdd.open}>
+            <Icon name="plus" size="sm" />
+            Новая задача
+          </Button>
+        }
+      />
       {renderContent()}
+      {quickAdd.sheet && <QuickAddSheet {...quickAdd.sheet} />}
     </AppShell>
   )
 }
@@ -162,15 +198,19 @@ interface DayPlanProps {
   /** Активных задач не в плане */
   outside: number
   groupNames: Map<number, string>
+  /** Открыт Sheet «Изменить план» */
+  editOpen: boolean
+  onEditOpenChange: (open: boolean) => void
+  /** «Новая задача» в пустом плане — «Быстрая задача» */
+  onNewTask: () => void
 }
 
-function DayPlan({ day, isPast, isToday, outside, groupNames }: DayPlanProps) {
+function DayPlan({ day, isPast, isToday, outside, groupNames, editOpen, onEditOpenChange, onNewTask }: DayPlanProps) {
   const navigate = useNavigate()
   const { showToast } = useToast()
   const { toggle, pendingIds } = useToggleTask()
   const updateDay = useUpdateDay()
   const listRef = useFlip<HTMLUListElement>()
-  const [sheetOpen, setSheetOpen] = useState(false)
   const [hovered, setHovered] = useState<ChartFocus>(null)
   const [pinned, setPinned] = useState<ChartFocus>(null)
 
@@ -190,27 +230,32 @@ function DayPlan({ day, isPast, isToday, outside, groupNames }: DayPlanProps) {
     </Button>
   )
 
+  const editSheet = editOpen && <EditPlanSheet day={day} summary={summary} onClose={() => onEditOpenChange(false)} />
+
   if (summary.items.length === 0) {
     return (
-      <StateMessage
-        icon="coffee"
-        compact
-        title={isToday ? 'Сегодня делать нечего' : 'В этот день делать нечего'}
-        text={`На ${formatDuration(day.TimeForTasks)} нет ни одной активной задачи с дедлайном позже этого дня. Добавьте задачу или хобби — и пересоберите план.`}
-      >
-        <div className={styles.actions}>
-          <Link to={NEW_TASK_PATH} className={buttonClassName('primary')}>
-            <Icon name="plus" size="sm" />
-            Новая задача
-          </Link>
-          {rebuildButton}
-        </div>
-      </StateMessage>
+      <>
+        <StateMessage
+          icon="coffee"
+          compact
+          title={isToday ? 'Сегодня делать нечего' : 'В этот день делать нечего'}
+          text={`На ${formatDuration(day.TimeForTasks)} нет ни одной активной задачи с дедлайном позже этого дня. Добавьте задачу или хобби — и пересоберите план.`}
+        >
+          <div className={styles.actions}>
+            <Button variant="primary" aria-haspopup="dialog" onClick={onNewTask}>
+              <Icon name="plus" size="sm" />
+              Новая задача
+            </Button>
+            {rebuildButton}
+          </div>
+        </StateMessage>
+        {editSheet}
+      </>
     )
   }
 
   const editButton = (
-    <Button variant="ghost" onClick={() => setSheetOpen(true)}>
+    <Button variant="ghost" onClick={() => onEditOpenChange(true)}>
       <Icon name="sliders" size="sm" />
       Изменить план
     </Button>
@@ -280,7 +325,7 @@ function DayPlan({ day, isPast, isToday, outside, groupNames }: DayPlanProps) {
         })}
       </ul>
 
-      {sheetOpen && <EditPlanSheet day={day} summary={summary} onClose={() => setSheetOpen(false)} />}
+      {editSheet}
     </>
   )
 }
