@@ -57,6 +57,10 @@ describe('base64UrlToUint8Array', () => {
     expect(bytes[0]).toBe(4)
   })
 
+  it.each([[''], ['A'], ['!!!'], ['AQ ID'], ['AQID===']])('невалидная строка «%s» — ошибка', (value) => {
+    expect(() => base64UrlToUint8Array(value)).toThrow()
+  })
+
   it('обычный base64 с паддингом тоже понимает', () => {
     expect([...base64UrlToUint8Array('AQIDBA==')]).toEqual([1, 2, 3, 4])
   })

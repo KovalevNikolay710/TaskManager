@@ -38,9 +38,17 @@ export function isPushSupported(globals: object): boolean {
   return typeof nav === 'object' && nav !== null && 'serviceWorker' in nav && 'PushManager' in globals && 'Notification' in globals
 }
 
-/** base64url (без паддинга) → байты; так VAPID-ключ передаётся в applicationServerKey. */
+const BASE64_RE = /^[A-Za-z0-9+/_-]+={0,2}$/
+
+/**
+ * base64url (без паддинга) → байты; так VAPID-ключ передаётся в applicationServerKey.
+ * Пустая строка и не base64 — ошибка (а не пустой или искажённый ключ).
+ */
 export function base64UrlToUint8Array(value: string): Uint8Array<ArrayBuffer> {
-  const base64 = value.trim().replace(/-/g, '+').replace(/_/g, '/')
+  const trimmed = value.trim()
+  const unpadded = trimmed.replace(/=+$/, '')
+  if (!BASE64_RE.test(trimmed) || unpadded.length % 4 === 1) throw new Error('Неверная строка base64url')
+  const base64 = unpadded.replace(/-/g, '+').replace(/_/g, '/')
   const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4)
   const binary = atob(padded)
   const bytes = new Uint8Array(binary.length)

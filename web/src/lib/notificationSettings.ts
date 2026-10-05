@@ -26,12 +26,15 @@ export interface QuietHoursHint {
 }
 
 export const QUIET_SAME_ERROR = 'Начало и конец не могут совпадать'
+export const QUIET_NEUTRAL_HINT = 'Укажите начало и конец в формате ЧЧ:ММ'
 
 /**
  * Подсказка под «С [..] до [..]»: «Через полночь: до 07:00 следующего дня», если начало позже конца,
  * «С 13:00 до 15:00 того же дня» — иначе; совпадение — ошибка. Строки «ЧЧ:ММ» сравниваются лексикографически.
  */
 export function quietHoursHint(from: string, to: string): QuietHoursHint {
+  // Неполное или неверное время сравнивать бессмысленно — нейтральная подсказка
+  if (!isValidTime(from) || !isValidTime(to)) return { text: QUIET_NEUTRAL_HINT, error: false }
   if (from === to) return { text: QUIET_SAME_ERROR, error: true }
   if (from > to) return { text: `Через полночь: до ${to} следующего дня`, error: false }
   return { text: `С ${from} до ${to} того же дня`, error: false }

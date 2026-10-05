@@ -69,20 +69,19 @@ self.addEventListener('notificationclick', (event) => {
 
 async function openApp(path: string): Promise<void> {
   const target = new URL(path, self.location.origin).href
-  const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
-  const sameOrigin = windows.filter((client) => new URL(client.url).origin === self.location.origin)
-  // Окно, которым управляет этот service worker, умеет navigate(); остальные — только focus()
-  const client = sameOrigin.find((c) => c.focused) ?? sameOrigin[0]
-  if (!client) {
-    await self.clients.openWindow(target)
-    return
-  }
-  const focused = await client.focus()
-  if (focused.url === target) return
   try {
-    await focused.navigate(target)
+    const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    const sameOrigin = windows.filter((client) => new URL(client.url).origin === self.location.origin)
+    // Окно, которым управляет этот service worker, умеет navigate(); остальные — только focus()
+    const client = sameOrigin.find((c) => c.focused) ?? sameOrigin[0]
+    if (!client) {
+      await self.clients.openWindow(target)
+      return
+    }
+    const focused = await client.focus()
+    if (focused.url !== target) await focused.navigate(target)
   } catch {
-    // окно не под этим service worker (например, открыто до его установки) — открываем новое
+    // окно не под этим service worker (открыто до его установки), закрылось или не дало фокус — открываем новое
     await self.clients.openWindow(target)
   }
 }

@@ -34,6 +34,10 @@ export function safeAppPath(raw: unknown, origin: string): string {
   }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
 function text(value: unknown, max: number): string {
   return typeof value === 'string' ? value.trim().slice(0, max) : ''
 }
@@ -50,8 +54,8 @@ export function parsePushPayload(raw: string | null | undefined, origin: string)
   } catch {
     return FALLBACK_PUSH_MESSAGE
   }
-  if (!data || typeof data !== 'object' || Array.isArray(data)) return FALLBACK_PUSH_MESSAGE
-  const record = data as Record<string, unknown>
+  if (!isRecord(data)) return FALLBACK_PUSH_MESSAGE
+  const record = data
   const title = text(record.title, MAX_TITLE)
   if (!title) return FALLBACK_PUSH_MESSAGE
   const tag = text(record.tag, MAX_TITLE)

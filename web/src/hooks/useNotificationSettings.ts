@@ -31,9 +31,12 @@ export function useSaveNotificationSettings(): (patch: NotificationSettingsUpdat
   const queryClient = useQueryClient()
   const { showToast } = useToast()
   const key = queryKeys.notificationSettings
+  const isLastSave = () => queryClient.isMutating({ mutationKey: SAVE_MUTATION_KEY }) <= 1
 
   const { mutate } = useMutation({
     mutationKey: SAVE_MUTATION_KEY,
+    // Изменения уходят на сервер строго по очереди: две правки одного поля не придут в обратном порядке
+    scope: { id: 'notificationSettings' },
     mutationFn: ({ patch }: SaveVariables) => updateNotificationSettings(CURRENT_USER_ID, patch),
     onMutate: async ({ patch }) => {
       await queryClient.cancelQueries({ queryKey: key })
@@ -57,12 +60,16 @@ export function useSaveNotificationSettings(): (patch: NotificationSettingsUpdat
         action: { label: 'Повторить', onClick: () => mutate({ patch }) },
       })
     },
-    onSuccess: (settings) => {
-      // Пока в пути другие изменения, ответ о них не знает — оставляем оптимистичные значения.
+    onSuccess: async (settings) => {
+      // Фоновый запрос (возврат на вкладку), начатый до ответа, принёс бы старые значения — отменяем
+      await queryClient.cancelQueries({ queryKey: key })
+      // Пока в очереди другие изменения, ответ о них не знает — оставляем оптимистичные значения.
       // Своя мутация в onSuccess ещё считается выполняющейся, поэтому сравниваем с 1.
-      if (queryClient.isMutating({ mutationKey: SAVE_MUTATION_KEY }) <= 1) {
-        queryClient.setQueryData<NotificationSettings>(key, settings)
-      }
+      if (isLastSave()) queryClient.setQueryData<NotificationSettings>(key, settings)
+    },
+    onSettled: () => {
+      // Очередь изменений пуста — сверяемся с сервером (после ошибки и отката — особенно)
+      if (isLastSave()) void queryClient.invalidateQueries({ queryKey: key })
     },
   })
 

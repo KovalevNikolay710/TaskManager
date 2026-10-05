@@ -141,7 +141,20 @@ interface PushItemProps {
 function PushItem({ state, onEnable, onDisable, onRetry, onRecheck }: PushItemProps) {
   const id = useId()
   const { kind } = state
-  const checked = kind === 'on' || kind === 'pending'
+  // Во время запроса разрешения aria-checked=false + aria-busy: «включено» — только по факту
+  const checked = kind === 'on'
+  const switchRef = useRef<HTMLButtonElement>(null)
+
+  // «Повторить» и «Проверить снова» исчезают вместе со своим Alert — фокус возвращается на Switch,
+  // если он потерялся (ушёл на body), а не остался там, куда его перевёл пользователь
+  const prevKindRef = useRef(kind)
+  useEffect(() => {
+    const prev = prevKindRef.current
+    prevKindRef.current = kind
+    if (prev === kind || (prev !== 'error' && prev !== 'denied')) return
+    const active = document.activeElement
+    if (!active || active === document.body) switchRef.current?.focus()
+  }, [kind])
 
   function onChange(next: boolean) {
     if (!next) onDisable()
@@ -160,6 +173,7 @@ function PushItem({ state, onEnable, onDisable, onRetry, onRecheck }: PushItemPr
         subOk={kind === 'on'}
         control={
           <Switch
+            ref={switchRef}
             checked={checked}
             onChange={onChange}
             labelledBy={`${id}-l`}

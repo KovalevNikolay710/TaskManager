@@ -9,6 +9,9 @@ describe('safeAppPath', () => {
     ['/tasks/42', '/tasks/42'],
     ['/all-tasks?quick=1#top', '/all-tasks?quick=1#top'],
     ['/profile/../day', '/day'],
+    // закодированный слэш остаётся частью пути, на другой хост не уводит
+    ['/%2F', '/%2F'],
+    ['/%2F%2Fevil.example.com', '/%2F%2Fevil.example.com'],
   ])('%s → %s', (raw, expected) => {
     expect(safeAppPath(raw, origin)).toBe(expected)
   })
@@ -17,6 +20,8 @@ describe('safeAppPath', () => {
     ['https://evil.example.com/day'],
     ['//evil.example.com/day'],
     ['/\\evil.example.com'],
+    ['/\t/evil.example.com'],
+    ['/\n/evil.example.com'],
     ['javascript:alert(1)'],
     ['day'],
     [''],

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { NotificationSettings } from '../api/types'
 import {
+  QUIET_NEUTRAL_HINT,
   QUIET_SAME_ERROR,
   applySettingsPatch,
   deadlineHoursLabel,
@@ -58,6 +59,21 @@ describe('quietHoursHint', () => {
   it('начало раньше конца — того же дня', () => {
     expect(quietHoursHint('13:00', '15:00')).toEqual({ text: 'С 13:00 до 15:00 того же дня', error: false })
     expect(quietHoursHint('00:00', '07:00')).toEqual({ text: 'С 00:00 до 07:00 того же дня', error: false })
+  })
+
+  it('границы суток', () => {
+    expect(quietHoursHint('23:59', '00:00')).toEqual({ text: 'Через полночь: до 00:00 следующего дня', error: false })
+    expect(quietHoursHint('00:00', '23:59')).toEqual({ text: 'С 00:00 до 23:59 того же дня', error: false })
+  })
+
+  it.each([
+    ['', '07:00'],
+    ['23:00', ''],
+    ['', ''],
+    ['8:00', '07:00'],
+    ['23:00', '24:00'],
+  ])('неверное время «%s» / «%s» — нейтральная подсказка, не ошибка', (from, to) => {
+    expect(quietHoursHint(from, to)).toEqual({ text: QUIET_NEUTRAL_HINT, error: false })
   })
 
   it('совпадают — ошибка', () => {

@@ -64,7 +64,15 @@
   cursor: progress;
 }
 
+.pending .track {
+  background: var(--color-accent);
+  box-shadow: none;
+}
+
+/* Бегунок уже в положении «вкл.» — пользователь видит, что его действие принято */
 .pending .thumb {
+  transform: translateX(20px);
+  background: var(--color-text-inverse);
   animation: pulse 1.2s ease-in-out infinite;
 }
 

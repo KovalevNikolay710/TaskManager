@@ -1,4 +1,4 @@
-import { request } from './client'
+import { ApiError, request } from './client'
 import type { PushKey, PushSubscribeRequest, PushSubscriptionInfo, PushTestRequest, PushTestResponse, PushUnsubscribeRequest } from './types'
 
 /** Публичный VAPID-ключ сервера (applicationServerKey для pushManager.subscribe). */
@@ -11,8 +11,14 @@ export function subscribePush(input: PushSubscribeRequest): Promise<PushSubscrip
   return request<PushSubscriptionInfo>('/push/subscribe', { method: 'POST', body: input })
 }
 
+/** Удалить подписку на сервере. 404 — её там уже нет, это и нужно: не ошибка. */
 export async function unsubscribePush(input: PushUnsubscribeRequest): Promise<void> {
-  await request<unknown>('/push/subscribe', { method: 'DELETE', body: input })
+  try {
+    await request<unknown>('/push/subscribe', { method: 'DELETE', body: input })
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 404) return
+    throw error
+  }
 }
 
 /** Тестовое уведомление. 404 — подписки нет на сервере, 410 — push-сервис её отклонил (удалена). */
