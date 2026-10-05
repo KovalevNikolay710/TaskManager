@@ -10,7 +10,10 @@ export interface ChipOption {
   ariaLabel?: string
   title?: string
   className?: string
-  /** Чип «Другое…»: раскрывает поле под рядом (aria-expanded + aria-controls) */
+  /**
+   * Чип «Другое…»: раскрывает поле под рядом. aria-expanded у role="radio" не поддерживается,
+   * поэтому связь — только aria-controls (блок поля всегда в DOM, скрыт через hidden), раскрытие — data-expanded для вида
+   */
   expands?: { expanded: boolean; controls: string }
 }
 
@@ -98,8 +101,8 @@ export function ChipRow({ label, icon, options, value, onSelect, disabled = fals
             className={cx(formStyles.chip, styles.chip, option.expands && styles.other, option.className)}
             aria-checked={option.key === value}
             aria-label={option.ariaLabel}
-            aria-expanded={option.expands?.expanded}
             aria-controls={option.expands?.controls}
+            data-expanded={option.expands?.expanded || undefined}
             title={option.title}
             tabIndex={index === selectedIndex ? 0 : -1}
             disabled={disabled}

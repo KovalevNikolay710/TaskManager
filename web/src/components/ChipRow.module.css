@@ -52,7 +52,7 @@
 }
 
 /* «Другое…» раскрыто — обводка акцентом, даже если значение ещё не выбрано */
-.other[aria-expanded='true'] {
+.other[data-expanded] {
   box-shadow: inset 0 0 0 1.5px var(--color-accent);
 }
 

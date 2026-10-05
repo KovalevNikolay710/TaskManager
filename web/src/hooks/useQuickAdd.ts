@@ -4,7 +4,7 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import type { Task, TaskCreateRequest } from '../api/types'
 import type { QuickAddSheetProps } from '../components/QuickAddSheet'
 import { NO_GROUP_ID } from '../lib/groups'
-import { QUICK_PARAM, clearQuickDraft } from '../lib/quickAdd'
+import { QUICK_PARAM, clearQuickDraft, readQuickDraft, saveQuickDraft, type QuickAddValues } from '../lib/quickAdd'
 import { writeLastGroupId } from '../lib/storage'
 import { queryKeys } from './queryKeys'
 import { useCreateTask } from './useTaskMutations'
@@ -21,6 +21,9 @@ interface UseQuickAddOptions {
 interface QuickAddHistoryState {
   quickAdd?: boolean
 }
+
+/** Если «Назад» за столько мс не закрыл лист (предыдущей записи нет), убираем параметр сами */
+const BACK_FALLBACK_MS = 300
 
 /** Поле, в котором клавиша N — это ввод текста, а не команда. */
 function isTypingTarget(target: EventTarget | null): boolean {
@@ -45,8 +48,10 @@ export function useQuickAdd({ onCreated, onFinished }: UseQuickAddOptions) {
 
   // Сессия листа: сколько задач создано, пока он открыт, и сколько запросов ещё в пути.
   // Лист можно закрыть во время отправки — тогда итог покажем, когда запрос завершится.
-  const session = useRef({ open: false, pending: 0, created: [] as Task[], discarded: false })
+  // generation растёт при каждом открытии: так видно, открыт ли ещё тот лист, из которого ушёл запрос.
+  const session = useRef({ open: false, generation: 0, pending: 0, created: [] as Task[], discarded: false })
   const closing = useRef(false)
+  const backFallback = useRef<number | undefined>(undefined)
   const callbacks = useRef({ onCreated, onFinished })
   useEffect(() => {
     callbacks.current = { onCreated, onFinished }
@@ -64,14 +69,17 @@ export function useQuickAdd({ onCreated, onFinished }: UseQuickAddOptions) {
     const s = session.current
     if (isOpen && !s.open) {
       s.open = true
+      s.generation += 1
       s.discarded = false
       if (s.pending === 0) s.created = []
     } else if (!isOpen && s.open) {
       s.open = false
       closing.current = false
+      window.clearTimeout(backFallback.current)
       finish()
     }
   }, [isOpen, finish])
+  useEffect(() => () => window.clearTimeout(backFallback.current), [])
 
   const open = useCallback(() => {
     if (isOpen) return
@@ -84,6 +92,11 @@ export function useQuickAdd({ onCreated, onFinished }: UseQuickAddOptions) {
       { state: { quickAdd: true } satisfies QuickAddHistoryState },
     )
   }, [isOpen, setParams])
+  // Актуальный open для отложенных действий (кнопка в Toast), а не тот, что был в замыкании при отправке
+  const openRef = useRef(open)
+  useEffect(() => {
+    openRef.current = open
+  })
 
   const removeParam = useCallback(() => {
     setParams(
@@ -100,8 +113,16 @@ export function useQuickAdd({ onCreated, onFinished }: UseQuickAddOptions) {
   const close = useCallback(() => {
     if (closing.current) return
     closing.current = true
-    if (pushed) navigate(-1)
-    else removeParam()
+    if (!pushed) {
+      removeParam()
+      return
+    }
+    navigate(-1)
+    // Страховка: записи, на которую возвращаться, нет — лист закрываем заменой адреса
+    window.clearTimeout(backFallback.current)
+    backFallback.current = window.setTimeout(() => {
+      if (session.current.open) removeParam()
+    }, BACK_FALLBACK_MS)
   }, [pushed, navigate, removeParam])
 
   /** Уйти с экрана из листа («Подробнее», «Открыть»): запись ?quick=1 заменяется новым экраном. */
@@ -119,8 +140,9 @@ export function useQuickAdd({ onCreated, onFinished }: UseQuickAddOptions) {
   )
 
   const create = useCallback(
-    async (input: Omit<TaskCreateRequest, 'userId'>) => {
+    async (input: Omit<TaskCreateRequest, 'userId'>, values: QuickAddValues) => {
       const s = session.current
+      const generation = s.generation
       s.pending += 1
       try {
         const task = await createTask.mutateAsync(input)
@@ -136,9 +158,16 @@ export function useQuickAdd({ onCreated, onFinished }: UseQuickAddOptions) {
         }
         return task
       } catch (error) {
-        // Лист уже закрыт: ошибку некому показать, кроме Toast; введённое осталось в черновике
-        if (!s.open && !s.discarded) {
-          showToast({ message: 'Не удалось добавить задачу', action: { label: 'Повторить', onClick: open } })
+        // На время отправки лист черновик не держит (иначе закрыл — открыл — отправил ещё раз).
+        // Не получилось — возвращаем введённое в черновик, если там уже нет чего-то нового
+        if (!s.discarded && !readQuickDraft(new Date())) saveQuickDraft(values, new Date())
+        // Лист, из которого ушёл запрос, уже закрыт: ошибку некому показать, кроме Toast
+        const sheetGone = !s.open || s.generation !== generation
+        if (sheetGone && !s.discarded) {
+          showToast({
+            message: 'Не удалось добавить задачу',
+            action: s.open ? undefined : { label: 'Повторить', onClick: () => openRef.current() },
+          })
         }
         throw error
       } finally {
@@ -146,7 +175,7 @@ export function useQuickAdd({ onCreated, onFinished }: UseQuickAddOptions) {
         finish()
       }
     },
-    [createTask, queryClient, showToast, open, finish],
+    [createTask, queryClient, showToast, finish],
   )
 
   // Клавиша N (десктоп): code, а не key — чтобы работала и в русской раскладке

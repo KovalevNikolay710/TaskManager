@@ -18,6 +18,8 @@
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
   box-shadow: var(--shadow-lg);
   animation: slide-up var(--duration-normal) var(--easing-standard);
+  /* tabindex="-1" нужен только для ловушки фокуса, рамка у самого диалога не нужна */
+  outline: none;
 }
 
 .grip {

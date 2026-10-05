@@ -1,19 +1,24 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { formatShortDateTime, formatWeekdayDateTime } from './dates'
 import {
   QUICK_DEFAULT_MINUTES,
+  QUICK_DRAFT_KEY,
   QUICK_DRAFT_TTL_MS,
   buildNewTaskSearch,
   classifyQuickAddError,
+  clearQuickDraft,
   createdTasksMessage,
   initialQuickValues,
   parseNewTaskSearch,
   parseQuickDraft,
   quickPlaceText,
   quickTimeLabel,
+  readQuickDraft,
   resolveQuickDeadline,
   resolveQuickMinutes,
+  saveQuickDraft,
   toQuickDraft,
+  truncateText,
   type QuickAddDraft,
   type QuickAddValues,
 } from './quickAdd'
@@ -59,6 +64,11 @@ describe('resolveQuickDeadline / resolveQuickMinutes', () => {
     expect(resolveQuickMinutes({ kind: 'custom', text: '0:04' })).toBeNull()
     expect(resolveQuickMinutes({ kind: 'custom', text: 'abc' })).toBeNull()
   })
+
+  it('границы своего времени: 0:05 и 99:59 допустимы', () => {
+    expect(resolveQuickMinutes({ kind: 'custom', text: '0:05' })).toBe(5)
+    expect(resolveQuickMinutes({ kind: 'custom', text: '99:59' })).toBe(5999)
+  })
 })
 
 describe('parseQuickDraft', () => {
@@ -81,6 +91,22 @@ describe('parseQuickDraft', () => {
     expect(parseQuickDraft(JSON.stringify({ ...draft(), minutes: '30' }), now)).toBeNull()
     expect(parseQuickDraft(JSON.stringify({ ...draft(), deadline: { presetId: 'someday' } }), now)).toBeNull()
     expect(parseQuickDraft(JSON.stringify({ ...draft(), savedAt: undefined }), now)).toBeNull()
+  })
+
+  it('черновик «из будущего» дальше 5 минут отклоняется', () => {
+    expect(parseQuickDraft(JSON.stringify(draft({ savedAt: now.getTime() + 4 * 60_000 })), now)).not.toBeNull()
+    expect(parseQuickDraft(JSON.stringify(draft({ savedAt: now.getTime() + 6 * 60_000 })), now)).toBeNull()
+  })
+
+  it('неверная группа заменяется на «без группы», черновик остаётся', () => {
+    for (const groupId of [-1, 1.5, Number.MAX_SAFE_INTEGER + 2]) {
+      expect(parseQuickDraft(JSON.stringify(draft({ groupId })), now)?.groupId).toBe(0)
+    }
+    expect(parseQuickDraft(JSON.stringify({ ...draft(), groupId: '3' }), now)?.groupId).toBe(0)
+  })
+
+  it('слишком длинное название обрезается до 200 символов', () => {
+    expect(parseQuickDraft(JSON.stringify(draft({ name: 'а'.repeat(250) })), now)?.name).toHaveLength(200)
   })
 
   it('свой срок в черновике', () => {
@@ -182,6 +208,21 @@ describe('buildNewTaskSearch / parseNewTaskSearch', () => {
     expect(parseNewTaskSearch(new URLSearchParams('te=6000')).minutes).toBeUndefined()
   })
 
+  it('время — строго ЧЧ:ММ от 00:00 до 23:59', () => {
+    expect(parseNewTaskSearch(new URLSearchParams('time=24:00')).time).toBeUndefined()
+    expect(parseNewTaskSearch(new URLSearchParams('time=9:30')).time).toBeUndefined()
+    expect(parseNewTaskSearch(new URLSearchParams('time=23:59')).time).toBe('23:59')
+  })
+
+  it('te и groupId — только целые без знака, ведущих нулей и экспоненты', () => {
+    expect(parseNewTaskSearch(new URLSearchParams('te=0030')).minutes).toBeUndefined()
+    expect(parseNewTaskSearch(new URLSearchParams('te=-5')).minutes).toBeUndefined()
+    expect(parseNewTaskSearch(new URLSearchParams('groupId=1e3')).groupId).toBeUndefined()
+    expect(parseNewTaskSearch(new URLSearchParams('groupId=007')).groupId).toBeUndefined()
+    expect(parseNewTaskSearch(new URLSearchParams(`groupId=${'9'.repeat(40)}`)).groupId).toBeUndefined()
+    expect(parseNewTaskSearch(new URLSearchParams('groupId=0')).groupId).toBe(0)
+  })
+
   it('слишком длинное название обрезается до 200 символов', () => {
     expect(parseNewTaskSearch(new URLSearchParams({ name: 'а'.repeat(250) })).name).toHaveLength(200)
   })
@@ -197,8 +238,10 @@ describe('classifyQuickAddError', () => {
   })
 
   it('срок стал слишком близким — ошибка под рядом срока', () => {
-    expect(classifyQuickAddError(400, 'Дедлайн должен быть не раньше чем через час')).toEqual({ kind: 'deadline' })
-    expect(classifyQuickAddError(500, 'неверная дата')).toEqual({ kind: 'deadline' })
+    // Текст ErrInvalidDeadline из internal/services/errors.go
+    expect(classifyQuickAddError(400, 'неверный дедлайн: он должен быть не раньше чем через час')).toEqual({ kind: 'deadline' })
+    expect(classifyQuickAddError(500, 'Дедлайн уже прошёл')).toEqual({ kind: 'deadline' })
+    expect(classifyQuickAddError(400, 'неверная дата')).toEqual({ kind: 'alert', title: 'Сервер не принял данные', text: 'неверная дата' })
     expect(classifyQuickAddError(404, 'дедлайн')).toEqual({ kind: 'alert', title: 'Не удалось добавить задачу', text: 'дедлайн' })
   })
 
@@ -225,5 +268,64 @@ describe('тексты', () => {
   it('даты для чипов срока', () => {
     expect(formatWeekdayDateTime(new Date('2026-10-08T18:00:00'))).toBe('чт, 8 октября, 18:00')
     expect(formatShortDateTime(new Date('2026-10-09T12:00:00'))).toBe('пт, 9 окт, 12:00')
+  })
+})
+
+describe('truncateText', () => {
+  it('короткий текст не меняется', () => {
+    expect(truncateText('Задача', 200)).toBe('Задача')
+  })
+
+  it('не разрывает суррогатную пару на границе', () => {
+    // «😀» — две единицы UTF-16: на границе 4 он целиком не помещается и отбрасывается
+    expect(truncateText('abc😀d', 4)).toBe('abc')
+    expect(truncateText('abc😀d', 5)).toBe('abc😀')
+  })
+})
+
+describe('readQuickDraft / saveQuickDraft / clearQuickDraft', () => {
+  const values: QuickAddValues = { name: 'Купить билеты', deadline: { kind: 'preset', id: 'tomorrow' }, minutes: { kind: 'preset', minutes: 30 }, groupId: 2 }
+
+  function stubStorage() {
+    const store = new Map<string, string>()
+    vi.stubGlobal('window', {
+      localStorage: {
+        getItem: (key: string) => store.get(key) ?? null,
+        setItem: (key: string, value: string) => void store.set(key, value),
+        removeItem: (key: string) => void store.delete(key),
+      },
+    })
+    return store
+  }
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('записывает, читает и удаляет черновик', () => {
+    const store = stubStorage()
+    saveQuickDraft(values, now)
+    expect(JSON.parse(store.get(QUICK_DRAFT_KEY)!)).toMatchObject({ name: 'Купить билеты', deadline: { presetId: 'tomorrow' } })
+    expect(readQuickDraft(now)?.name).toBe('Купить билеты')
+    clearQuickDraft()
+    expect(store.has(QUICK_DRAFT_KEY)).toBe(false)
+    expect(readQuickDraft(now)).toBeNull()
+  })
+
+  it('пустое название удаляет черновик, а не пишет пустой', () => {
+    const store = stubStorage()
+    saveQuickDraft(values, now)
+    saveQuickDraft({ ...values, name: '   ' }, now)
+    expect(store.has(QUICK_DRAFT_KEY)).toBe(false)
+  })
+
+  it('недоступное хранилище не роняет лист', () => {
+    const broken = () => {
+      throw new Error('SecurityError')
+    }
+    vi.stubGlobal('window', { localStorage: { getItem: broken, setItem: broken, removeItem: broken } })
+    expect(() => saveQuickDraft(values, now)).not.toThrow()
+    expect(readQuickDraft(now)).toBeNull()
+    expect(() => clearQuickDraft()).not.toThrow()
   })
 })

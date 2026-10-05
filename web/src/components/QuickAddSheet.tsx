@@ -9,7 +9,7 @@ import { useOnline } from '../hooks/useOnline'
 import { useTasks } from '../hooks/useTasks'
 import { cx } from '../lib/cx'
 import { combineDateTime, formatShortDateTime, formatWeekdayDateTime, toLocalRFC3339 } from '../lib/dates'
-import { durationToWords, formatDuration } from '../lib/format'
+import { durationToWords, formatDuration, formatPriority } from '../lib/format'
 import { NO_GROUP_ID, shortGroupName, sortGroups } from '../lib/groups'
 import { futurePlaceText } from '../lib/ordinal'
 import { calculatePriority, groupWeight, hoursUntil, queuePlace } from '../lib/priority'
@@ -25,6 +25,7 @@ import {
   readQuickDraft,
   resolveQuickDeadline,
   resolveQuickMinutes,
+  clearQuickDraft,
   saveQuickDraft,
   type QuickAddValues,
 } from '../lib/quickAdd'
@@ -49,7 +50,11 @@ import { TimeInput } from './TimeInput'
 export interface QuickAddSheetProps {
   onClose: () => void
   /** Создать задачу; ошибка — ApiError (status 0 — сеть) */
-  onCreate: (input: Omit<TaskCreateRequest, 'userId'>) => Promise<Task>
+  /**
+   * Создать задачу; ошибка — ApiError (status 0 — сеть). values — выбранное в листе:
+   * на время запроса черновика нет, при ошибке хост возвращает введённое в черновик
+   */
+  onCreate: (input: Omit<TaskCreateRequest, 'userId'>, values: QuickAddValues) => Promise<Task>
   /** «Подробнее»: полная форма с перенесёнными значениями (query-строка для /tasks/new) */
   onMore: (search: string) => void
   /** «Открыть» в строке успеха */
@@ -64,6 +69,7 @@ type Banner =
 const OTHER = 'other'
 const DEADLINE_PRESET_TITLES: ReadonlySet<DeadlinePresetId> = new Set(['in3days', 'inWeek'])
 const DRAFT_DEBOUNCE_MS = 300
+const PREVIEW_EMPTY = 'Укажите срок и время — покажем место в очереди'
 
 /** Кнопки, нажатие на которые не должно уводить фокус из названия (иначе на телефоне закроется клавиатура). */
 const keepFocus = (event: SyntheticEvent) => event.preventDefault()
@@ -106,6 +112,8 @@ export function QuickAddSheet({ onClose, onCreate, onMore, onOpenTask }: QuickAd
   const lastCustomTime = useRef<string | null>(null)
   /** После «Подробнее» черновик не пишем: данные ушли в адрес полной формы */
   const skipDraft = useRef(false)
+  /** Синхронный флаг отправки: от двойного Enter до перерисовки и от записи черновика во время запроса */
+  const submittingRef = useRef(false)
   const valuesRef = useRef(values)
 
   // Выбранный чип исчез, пока лист открыт («Сегодня, 21:00» после 20:00) — берём срок по умолчанию
@@ -121,13 +129,14 @@ export function QuickAddSheet({ onClose, onCreate, onMore, onOpenTask }: QuickAd
   // Черновик: при вводе (с задержкой) и при закрытии листа
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      if (!skipDraft.current) saveQuickDraft(values, new Date())
+      if (!skipDraft.current && !submittingRef.current) saveQuickDraft(values, new Date())
     }, DRAFT_DEBOUNCE_MS)
     return () => window.clearTimeout(timer)
   }, [values])
   useEffect(
     () => () => {
-      if (!skipDraft.current) saveQuickDraft(valuesRef.current, new Date())
+      // Закрыли во время отправки — черновик не пишем: иначе при следующем открытии задача уйдёт второй раз
+      if (!skipDraft.current && !submittingRef.current) saveQuickDraft(valuesRef.current, new Date())
     },
     [],
   )
@@ -179,10 +188,12 @@ export function QuickAddSheet({ onClose, onCreate, onMore, onOpenTask }: QuickAd
       if (click) pendingFocus.current = 'name'
       return
     }
-    // Повторное «Другое…» сворачивает раскрытие, если значение валидно
-    if (deadline.kind === 'custom' && deadlineOpen && !deadlineError) {
-      setDeadlineOpen(false)
-      if (click) pendingFocus.current = 'name'
+    // Повторное нажатие на «Другое…» сворачивает раскрытие, если значение валидно (стрелки его не трогают)
+    if (deadline.kind === 'custom' && deadlineOpen) {
+      if (click && !deadlineError) {
+        setDeadlineOpen(false)
+        pendingFocus.current = 'name'
+      }
       return
     }
     if (deadline.kind === 'preset') {
@@ -202,9 +213,11 @@ export function QuickAddSheet({ onClose, onCreate, onMore, onOpenTask }: QuickAd
       if (click) pendingFocus.current = 'name'
       return
     }
-    if (values.minutes.kind === 'custom' && timeOpen && !timeError) {
-      setTimeOpen(false)
-      if (click) pendingFocus.current = 'name'
+    if (values.minutes.kind === 'custom' && timeOpen) {
+      if (click && !timeError) {
+        setTimeOpen(false)
+        pendingFocus.current = 'name'
+      }
       return
     }
     if (values.minutes.kind === 'preset') {
@@ -224,18 +237,24 @@ export function QuickAddSheet({ onClose, onCreate, onMore, onOpenTask }: QuickAd
 
   const submit = async (event?: FormEvent) => {
     event?.preventDefault()
-    if (!canSubmit || !deadlineDate || minutes === null) return
+    if (submittingRef.current || !canSubmit || !deadlineDate || minutes === null) return
+    submittingRef.current = true
     setSubmitting(true)
     setBanner((prev) => (prev?.kind === 'error' ? null : prev))
+    // Пока запрос в пути, черновика нет: закрыть и снова открыть лист — не повод отправить задачу ещё раз
+    clearQuickDraft()
     try {
-      const task = await onCreate({
-        name: values.name.trim(),
-        description: '',
-        deadline: toLocalRFC3339(deadlineDate),
-        timeForExecution: minutes,
-        percentOfCompleting: 0,
-        groupId,
-      })
+      const task = await onCreate(
+        {
+          name: values.name.trim(),
+          description: '',
+          deadline: toLocalRFC3339(deadlineDate),
+          timeForExecution: minutes,
+          percentOfCompleting: 0,
+          groupId,
+        },
+        values,
+      )
       // Кэш задач уже содержит новую (useCreateTask), место считаем среди остальных активных
       const tasks = queryClient.getQueryData<Task[]>(queryKeys.tasks)
       setBanner({
@@ -257,6 +276,7 @@ export function QuickAddSheet({ onClose, onCreate, onMore, onOpenTask }: QuickAd
         setBanner({ kind: 'error', title: failure.title, text: failure.text })
       }
     } finally {
+      submittingRef.current = false
       setSubmitting(false)
       nameRef.current?.focus({ preventScroll: true })
     }
@@ -337,22 +357,43 @@ export function QuickAddSheet({ onClose, onCreate, onMore, onOpenTask }: QuickAd
   ]
 
   // ---------- Предпросмотр ----------
-  const renderPreview = () => {
-    if (!deadlineDate || minutes === null) return <span>Укажите срок и время — покажем место в очереди</span>
-    const priority = calculatePriority({ groupWeight: groupWeight(groupId, groups), minutes, hours: hoursUntil(deadlineDate, now), percent: 0 })
-    const tasks = tasksQuery.data
-    const queue = tasks ? queuePlace(priority, tasks) : null
-    const level = priorityLevel(priority, Math.max(maxActivePriority(tasks ?? []), priority))
-    return (
-      <>
-        <PriorityChip priority={priority} level={level} />
-        {queue && <span>{futurePlaceText(queue.place, queue.total)}</span>}
-      </>
-    )
-  }
+  const tasks = tasksQuery.data
+  // deadlineDate — новый объект на каждый рендер, поэтому в зависимостях его время
+  const deadlineMs = deadlineDate?.getTime() ?? null
+  const preview = useMemo(() => {
+    if (deadlineMs === null || minutes === null) return null
+    const hours = hoursUntil(new Date(deadlineMs), now)
+    const priority = calculatePriority({ groupWeight: groupWeight(groupId, groups), minutes, hours, percent: 0 })
+    return {
+      priority,
+      level: priorityLevel(priority, Math.max(maxActivePriority(tasks ?? []), priority)),
+      queue: tasks ? queuePlace(priority, tasks) : null,
+    }
+  }, [deadlineMs, minutes, groupId, groups, tasks, now])
+  const previewText = preview
+    ? `Приоритет ${formatPriority(preview.priority)}${preview.queue ? `, ${futurePlaceText(preview.queue.place, preview.queue.total)}` : ''}`
+    : PREVIEW_EMPTY
+
+  // Объявляем предпросмотр только в ответ на выбор пользователя, а не на ежеминутный пересчёт
+  const [announcement, setAnnouncement] = useState('')
+  const previewTextRef = useRef(previewText)
+  const announcedOnce = useRef(false)
+  useEffect(() => {
+    previewTextRef.current = previewText
+  })
+  useEffect(() => {
+    if (!announcedOnce.current) {
+      announcedOnce.current = true
+      return
+    }
+    setAnnouncement(previewTextRef.current)
+  }, [values.deadline, values.minutes, groupId])
 
   // ---------- Плашка: офлайн > ошибка > успех ----------
-  const renderBanner = () => {
+  // Офлайн и успех — в постоянной live-области role="status" (меняется только содержимое),
+  // ошибка — Alert с role="alert", он объявляется при появлении
+  const showError = online && banner?.kind === 'error'
+  const renderStatus = () => {
     if (!online) {
       return (
         <Notice icon="wifiOff" title="Нет сети." className={styles.banner}>
@@ -360,20 +401,10 @@ export function QuickAddSheet({ onClose, onCreate, onMore, onOpenTask }: QuickAd
         </Notice>
       )
     }
-    if (banner?.kind === 'error') {
-      return (
-        <div className={styles.banner}>
-          {/* Фокус не забираем: иначе на телефоне закроется клавиатура; role="alert" объявит сам */}
-          <Alert title={banner.title} autoFocus={false}>
-            {banner.text}
-          </Alert>
-        </div>
-      )
-    }
     if (banner?.kind === 'success') {
       const { task, place, lostGroup } = banner
       return (
-        <div className={styles.status} role="status">
+        <div className={styles.status}>
           <Icon name="checkCircle" size="sm" className={styles.statusIcon} />
           <span className={styles.statusText}>
             <b>{place ? quickPlaceText(place.place, place.total) : 'Добавлена'}</b> — «{task.Name}»
@@ -400,7 +431,15 @@ export function QuickAddSheet({ onClose, onCreate, onMore, onOpenTask }: QuickAd
         </Button>
       }
     >
-      {renderBanner()}
+      <div role="status">{!showError && renderStatus()}</div>
+      {showError && banner?.kind === 'error' && (
+        <div className={styles.banner}>
+          {/* Фокус не забираем: иначе на телефоне закроется клавиатура; role="alert" объявит сам */}
+          <Alert title={banner.title} autoFocus={false}>
+            {banner.text}
+          </Alert>
+        </div>
+      )}
 
       <form className={styles.form} noValidate aria-label="Новая задача" onSubmit={(e) => void submit(e)}>
         <label className="visually-hidden" htmlFor={nameId}>
@@ -441,8 +480,8 @@ export function QuickAddSheet({ onClose, onCreate, onMore, onOpenTask }: QuickAd
             </FieldHint>
           </div>
         )}
-        {showDeadlineExtra && deadline.kind === 'custom' && (
-          <div className={cx(styles.extra, styles.deadlineExtra)} id={deadlineExtraId}>
+        <div className={cx(styles.extra, styles.deadlineExtra)} id={deadlineExtraId} hidden={!showDeadlineExtra}>
+          {showDeadlineExtra && deadline.kind === 'custom' && (
             <DeadlineField
               date={deadline.date}
               time={deadline.time}
@@ -455,8 +494,8 @@ export function QuickAddSheet({ onClose, onCreate, onMore, onOpenTask }: QuickAd
                 update({ deadline: { kind: 'custom', date, time } })
               }}
             />
-          </div>
-        )}
+          )}
+        </div>
 
         <ChipRow
           label="Время на выполнение"
@@ -466,8 +505,8 @@ export function QuickAddSheet({ onClose, onCreate, onMore, onOpenTask }: QuickAd
           onSelect={selectTime}
           disabled={submitting}
         />
-        {showTimeExtra && values.minutes.kind === 'custom' && (
-          <div className={styles.extra} id={timeExtraId}>
+        <div className={styles.extra} id={timeExtraId} hidden={!showTimeExtra}>
+          {showTimeExtra && values.minutes.kind === 'custom' && (
             <TimeInput
               label="Время на выполнение"
               labelHidden
@@ -477,13 +516,13 @@ export function QuickAddSheet({ onClose, onCreate, onMore, onOpenTask }: QuickAd
               hint="От 0:05 до 99:59, например 1:30"
               onChange={(text) => update({ minutes: { kind: 'custom', text } })}
             />
-          </div>
-        )}
+          )}
+        </div>
 
-        {groupOpen && (
-          <>
+        {/* Ряд групп в DOM всегда: на него ссылается aria-controls у GroupToggle */}
+        <div id={groupRowId} className={styles.groupRow} hidden={!groupOpen}>
+          {groupOpen && (
             <ChipRow
-              id={groupRowId}
               label="Группа"
               icon="folder"
               options={groupsFailed ? groupOptions.slice(-1) : groupOptions}
@@ -491,21 +530,31 @@ export function QuickAddSheet({ onClose, onCreate, onMore, onOpenTask }: QuickAd
               disabled={submitting}
               onSelect={selectGroup}
             />
-            {groupsFailed && (
-              <div className={styles.extra}>
-                <FieldHint tone="error">
-                  Не удалось загрузить группы{' '}
-                  <Button variant="ghost" onPointerDown={keepFocus} onMouseDown={keepFocus} onClick={() => void groupsQuery.refetch()}>
-                    Повторить
-                  </Button>
-                </FieldHint>
-              </div>
-            )}
-          </>
-        )}
+          )}
+          {groupOpen && groupsFailed && (
+            <div className={styles.extra}>
+              <FieldHint tone="error">
+                Не удалось загрузить группы{' '}
+                <Button variant="ghost" onPointerDown={keepFocus} onMouseDown={keepFocus} onClick={() => void groupsQuery.refetch()}>
+                  Повторить
+                </Button>
+              </FieldHint>
+            </div>
+          )}
+        </div>
 
-        <p className={styles.preview} aria-live="polite">
-          {renderPreview()}
+        <p className={styles.preview}>
+          {preview ? (
+            <>
+              <PriorityChip priority={preview.priority} level={preview.level} />
+              {preview.queue && <span>{futurePlaceText(preview.queue.place, preview.queue.total)}</span>}
+            </>
+          ) : (
+            <span>{PREVIEW_EMPTY}</span>
+          )}
+          <span className="visually-hidden" aria-live="polite">
+            {announcement}
+          </span>
           <span className={styles.kbdHint}>
             · <kbd className={styles.kbd}>Enter</kbd> добавить · <kbd className={styles.kbd}>Esc</kbd> закрыть
           </span>

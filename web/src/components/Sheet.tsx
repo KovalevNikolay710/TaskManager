@@ -37,6 +37,8 @@ const SWIPE_CLOSE_PX = 80
 const SWIPE_CLOSE_VELOCITY = 0.5
 /** Быстрый жест засчитывается, если ручку протащили хотя бы на столько (иначе это тап) */
 const SWIPE_MIN_PX = 16
+/** Через столько мс после смахивания лист возвращается на место, если он всё ещё открыт */
+const SWIPE_RESET_MS = 400
 
 /**
  * Модальная панель: снизу на мобильном, диалог по центру на десктопе.
@@ -57,6 +59,7 @@ export function Sheet({
   const titleId = useId()
   const dialogRef = useRef<HTMLDivElement>(null)
   const swipeRef = useRef<{ y: number; t: number; dy: number } | null>(null)
+  const swipeResetTimer = useRef<number | undefined>(undefined)
   const quick = variant === 'quick'
   const keyboardInset = useKeyboardInset(quick)
   const onCloseRef = useRef(onClose)
@@ -83,6 +86,8 @@ export function Sheet({
 
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
+        // Esc, которым отменяют ввод в IME, лист не закрывает
+        if (event.isComposing) return
         event.preventDefault()
         if (dismissibleRef.current) onCloseRef.current()
         return
@@ -92,7 +97,11 @@ export function Sheet({
       if (items.length === 0) return
       const first = items[0]
       const last = items[items.length - 1]
-      if (event.shiftKey && document.activeElement === first) {
+      // Фокус вне диалога (например, ушёл на body после скрытия элемента) — возвращаем внутрь
+      if (!dialog.contains(document.activeElement)) {
+        event.preventDefault()
+        ;(event.shiftKey ? last : first).focus()
+      } else if (event.shiftKey && document.activeElement === first) {
         event.preventDefault()
         last.focus()
       } else if (!event.shiftKey && document.activeElement === last) {
@@ -131,10 +140,22 @@ export function Sheet({
     swipeRef.current = null
     if (!swipe) return
     const velocity = swipe.dy / Math.max(1, event.timeStamp - swipe.t)
-    // Закрываем — лист остаётся там, куда его утащили, до размонтирования; иначе возвращается на место
-    if (swipe.dy > SWIPE_CLOSE_PX || (swipe.dy > SWIPE_MIN_PX && velocity > SWIPE_CLOSE_VELOCITY)) close()
-    else setOffset(0)
+    if (swipe.dy > SWIPE_CLOSE_PX || (swipe.dy > SWIPE_MIN_PX && velocity > SWIPE_CLOSE_VELOCITY)) {
+      // Лист остаётся там, куда его утащили, до размонтирования. Если закрытие не случилось
+      // (например, уже закрывается или нельзя закрыть) — возвращаем его на место
+      close()
+      window.clearTimeout(swipeResetTimer.current)
+      swipeResetTimer.current = window.setTimeout(() => setOffset(0), SWIPE_RESET_MS)
+    } else {
+      setOffset(0)
+    }
   }
+  // Жест прерван системой — это не смахивание: просто вернуть лист на место
+  const onGripCancel = () => {
+    swipeRef.current = null
+    setOffset(0)
+  }
+  useEffect(() => () => window.clearTimeout(swipeResetTimer.current), [])
 
   return createPortal(
     <div
@@ -151,6 +172,8 @@ export function Sheet({
         aria-modal="true"
         aria-labelledby={titleId}
         aria-describedby={describedBy}
+        // Чтобы фокус можно было вернуть в сам диалог, а клик по его фону не уводил фокус наружу
+        tabIndex={-1}
         ref={dialogRef}
       >
         <div
@@ -159,7 +182,7 @@ export function Sheet({
           onPointerDown={onGripDown}
           onPointerMove={onGripMove}
           onPointerUp={onGripUp}
-          onPointerCancel={onGripUp}
+          onPointerCancel={onGripCancel}
         />
         <div className={cx(styles.head, quick && styles.headQuick)}>
           <h2 className={styles.title} id={titleId}>
