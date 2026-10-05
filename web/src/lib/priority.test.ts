@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { Task } from '../api/types'
 import { calculatePriority, hoursUntil, queuePlace } from './priority'
 
-// Эталонные случаи те же, что в Go-тесте calculateTaskPriorty (internal/services).
+// Эталонные случаи совпадают с TestCalculateTaskPriorty в internal/services/task_priority_test.go.
 describe('calculatePriority', () => {
   it.each([
     { groupWeight: 3, minutes: 120, hours: 10, percent: 0, expected: 36 },
@@ -31,9 +31,9 @@ describe('hoursUntil', () => {
     expect(hoursUntil(new Date('2026-10-05T21:29:00'), now)).toBe(0)
   })
 
-  it('для прошедшего дедлайна отбрасывает к нулю, а не вниз', () => {
-    // Math.trunc даёт -0; для Tl это равно нулю
-    expect(hoursUntil(new Date('2026-10-05T19:45:00'), now)).toBeCloseTo(0, 9)
+  it('усечение к нулю: −15 мин → −0 (а не −1)', () => {
+    // Math.trunc отрицательной дроби даёт -0; фиксируем фактическое поведение
+    expect(Object.is(hoursUntil(new Date('2026-10-05T19:45:00'), now), -0)).toBe(true)
     expect(hoursUntil(new Date('2026-10-05T17:30:00'), now)).toBe(-3)
   })
 })

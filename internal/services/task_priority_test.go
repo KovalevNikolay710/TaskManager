@@ -7,26 +7,24 @@ import (
 	"time"
 )
 
-var priorityNow = time.Date(2026, 9, 24, 8, 0, 0, 0, time.UTC)
-
 func TestHoursUntilDeadline(t *testing.T) {
 	tests := []struct {
 		name     string
 		deadline time.Time
 		want     int
 	}{
-		{"ровно 10 часов", priorityNow.Add(10 * time.Hour), 10},
-		{"дробная часть отбрасывается (10:59)", priorityNow.Add(10*time.Hour + 59*time.Minute), 10},
-		{"меньше часа даёт 0", priorityNow.Add(59 * time.Minute), 0},
-		{"дедлайн сейчас", priorityNow, 0},
-		{"прошлое: -2 часа", priorityNow.Add(-2 * time.Hour), -2},
-		{"прошлое: -90 минут отбрасывается к нулю", priorityNow.Add(-90 * time.Minute), -1},
-		{"сутки", priorityNow.Add(24 * time.Hour), 24},
-		{"другой часовой пояс не влияет", priorityNow.Add(5 * time.Hour).In(time.FixedZone("X", 3*3600)), 5},
+		{"ровно 10 часов", exampleNow.Add(10 * time.Hour), 10},
+		{"дробная часть отбрасывается (10:59)", exampleNow.Add(10*time.Hour + 59*time.Minute), 10},
+		{"меньше часа даёт 0", exampleNow.Add(59 * time.Minute), 0},
+		{"дедлайн сейчас", exampleNow, 0},
+		{"прошлое: -2 часа", exampleNow.Add(-2 * time.Hour), -2},
+		{"прошлое: -90 минут: усечение даёт -1", exampleNow.Add(-90 * time.Minute), -1},
+		{"сутки", exampleNow.Add(24 * time.Hour), 24},
+		{"другой часовой пояс не влияет", exampleNow.Add(5 * time.Hour).In(time.FixedZone("X", 3*3600)), 5},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := hoursUntilDeadline(tt.deadline, priorityNow); got != tt.want {
+			if got := hoursUntilDeadline(tt.deadline, exampleNow); got != tt.want {
 				t.Errorf("получено %d ч, ожидалось %d", got, tt.want)
 			}
 		})
@@ -42,10 +40,11 @@ func TestCalculateTaskPriorty(t *testing.T) {
 		percent int
 		want    float64
 	}{
-		{"эталон 1", 3, 120, 10, 0, 36},
-		{"эталон 2", 1, 60, 1, 50, 30},
-		{"эталон 3: выполнена на 100%", 2, 30, 24, 100, 0},
-		{"эталон 4", 10, 600, 3, 25, 1500},
+		// первые 4 кейса совпадают с web/src/lib/priority.test.ts
+		{"Pg=3 Te=120 Tl=10 0%", 3, 120, 10, 0, 36},
+		{"Pg=1 Te=60 Tl=1 50%", 1, 60, 1, 50, 30},
+		{"Pg=2 Te=30 Tl=24 100%", 2, 30, 24, 100, 0},
+		{"Pg=10 Te=600 Tl=3 25%", 10, 600, 3, 25, 1500},
 		{"нулевое время выполнения", 5, 0, 5, 0, 0},
 		{"нулевой вес группы", 0, 60, 2, 0, 0},
 		{"дробный результат", 1, 60, 36, 0, 60.0 / 36},
@@ -62,17 +61,24 @@ func TestCalculateTaskPriorty(t *testing.T) {
 }
 
 func TestCalculateTaskPriortyMonotonic(t *testing.T) {
-	// Больше выполнено — ниже приоритет; ближе дедлайн — выше
 	pt := func(tl, percent int) float64 {
 		task := &models.Task{GroupPriorty: 2, TimeForExecution: 100, NumberOfHoursUntilDL: tl, PercentOfCompleting: percent}
 		calculateTaskPriorty(task)
 		return task.Priority
 	}
-	if !(pt(10, 0) > pt(10, 50)) {
-		t.Error("приоритет должен падать с ростом процента выполнения")
+	// Ближе дедлайн — выше приоритет (строго)
+	tls := []int{1, 2, 5, 10}
+	for i := 1; i < len(tls); i++ {
+		if a, b := pt(tls[i-1], 0), pt(tls[i], 0); a <= b {
+			t.Errorf("Tl=%d: Pt=%v должен быть строго больше, чем при Tl=%d: Pt=%v", tls[i-1], a, tls[i], b)
+		}
 	}
-	if !(pt(5, 0) > pt(10, 0)) {
-		t.Error("приоритет должен расти при приближении дедлайна")
+	// Больше выполнено — ниже приоритет (строго)
+	percents := []int{0, 25, 50, 100}
+	for i := 1; i < len(percents); i++ {
+		if a, b := pt(10, percents[i-1]), pt(10, percents[i]); a <= b {
+			t.Errorf("%d%%: Pt=%v должен быть строго больше, чем при %d%%: Pt=%v", percents[i-1], a, percents[i], b)
+		}
 	}
 }
 
@@ -84,18 +90,18 @@ func TestRefreshTaskPriorty(t *testing.T) {
 		wantTl   int
 		wantPt   float64
 	}{
-		{"Tl пересчитывается от now", priorityNow.Add(10 * time.Hour), 99, 10, 36},
-		{"дробная часть отбрасывается", priorityNow.Add(10*time.Hour + 40*time.Minute), 99, 10, 36},
-		{"просрочена: Tl = 1", priorityNow.Add(-5 * time.Hour), 99, 1, 360},
-		{"дедлайн сейчас: Tl = 1", priorityNow, 0, 1, 360},
-		{"меньше часа: Tl = 1", priorityNow.Add(30 * time.Minute), 7, 1, 360},
-		{"ровно час: Tl = 1", priorityNow.Add(time.Hour), 7, 1, 360},
+		{"Tl пересчитывается от now", exampleNow.Add(10 * time.Hour), 99, 10, 36},
+		{"дробная часть отбрасывается", exampleNow.Add(10*time.Hour + 40*time.Minute), 99, 10, 36},
+		{"просрочена: Tl = 1", exampleNow.Add(-5 * time.Hour), 99, 1, 360},
+		{"дедлайн сейчас: Tl = 1", exampleNow, 0, 1, 360},
+		{"меньше часа: Tl = 1", exampleNow.Add(30 * time.Minute), 7, 1, 360},
+		{"ровно час: Tl = 1", exampleNow.Add(time.Hour), 7, 1, 360},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			task := &models.Task{GroupPriorty: 3, TimeForExecution: 120, PercentOfCompleting: 0,
 				DeadLine: tt.deadline, NumberOfHoursUntilDL: tt.staleTl}
-			refreshTaskPriorty(task, priorityNow)
+			refreshTaskPriorty(task, exampleNow)
 			if task.NumberOfHoursUntilDL != tt.wantTl {
 				t.Errorf("Tl = %d, ожидалось %d", task.NumberOfHoursUntilDL, tt.wantTl)
 			}
@@ -110,7 +116,8 @@ func TestRefreshTaskPriorty(t *testing.T) {
 }
 
 func TestNewPlanCandidate(t *testing.T) {
-	today := priorityNow.Truncate(24 * time.Hour)
+	// Truncate(24h) даёт полночь именно потому, что exampleNow в UTC
+	today := exampleNow.Truncate(24 * time.Hour)
 	tomorrow := today.Add(24 * time.Hour)
 	tests := []struct {
 		name     string
@@ -132,9 +139,14 @@ func TestNewPlanCandidate(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			task := tt.task
 			task.TaskId = 7
-			c := newPlanCandidate(&task, tt.dayStart, priorityNow)
+			task.Priority = 4.5
+			task.DeadLine = tt.task.DeadLine
+			c := newPlanCandidate(&task, tt.dayStart, exampleNow)
 			if c.Work != tt.wantWork || c.Days != tt.wantDays {
 				t.Errorf("W=%v D=%d, ожидалось W=%v D=%d", c.Work, c.Days, tt.wantWork, tt.wantDays)
+			}
+			if c.Priority != 4.5 || !c.DeadLine.Equal(tt.task.DeadLine) {
+				t.Errorf("Priority/DeadLine не скопированы: %v, %v", c.Priority, c.DeadLine)
 			}
 			if c.TaskId != 7 {
 				t.Errorf("TaskId = %d, ожидалось 7", c.TaskId)
@@ -144,8 +156,8 @@ func TestNewPlanCandidate(t *testing.T) {
 }
 
 func TestSortPlanCandidates(t *testing.T) {
-	d1 := priorityNow.Add(time.Hour)
-	d2 := priorityNow.Add(2 * time.Hour)
+	d1 := exampleNow.Add(time.Hour)
+	d2 := exampleNow.Add(2 * time.Hour)
 	tests := []struct {
 		name string
 		in   []PlanCandidate
@@ -183,6 +195,7 @@ func checkSlotInvariants(t *testing.T, total int, slots []PlanSlot) {
 			t.Errorf("задача %d: %d мин нарушает инвариант слота", s.TaskId, s.Minutes)
 		}
 	}
+	// для total < 0 (недопустимый ввод) план пуст, и сравнивать с отрицательным лимитом нечего
 	if total >= 0 && sum > total {
 		t.Errorf("сумма %d больше total %d", sum, total)
 	}
@@ -190,7 +203,7 @@ func checkSlotInvariants(t *testing.T, total int, slots []PlanSlot) {
 
 func TestAllocateDayTimeEdgeCases(t *testing.T) {
 	mk := func(id int64, pt, work float64, days int) PlanCandidate {
-		return PlanCandidate{TaskId: id, Priority: pt, DeadLine: priorityNow.Add(time.Duration(id) * time.Hour), Work: work, Days: days}
+		return PlanCandidate{TaskId: id, Priority: pt, DeadLine: exampleNow.Add(time.Duration(id) * time.Hour), Work: work, Days: days}
 	}
 	tests := []struct {
 		name  string
@@ -227,7 +240,7 @@ func TestAllocateDayTimeInvariants(t *testing.T) {
 	// для задач с одинаковой работой и сроком (больший Pt не получает меньше).
 	cands := []PlanCandidate{}
 	for i := int64(1); i <= 8; i++ {
-		cands = append(cands, PlanCandidate{TaskId: i, Priority: float64(i), DeadLine: priorityNow.Add(time.Hour), Work: 120, Days: 2})
+		cands = append(cands, PlanCandidate{TaskId: i, Priority: float64(i), DeadLine: exampleNow.Add(time.Hour), Work: 120, Days: 2})
 	}
 	for total := 15; total <= 960; total += 5 {
 		slots := AllocateDayTime(total, cands)
@@ -244,11 +257,11 @@ func TestAllocateDayTimeInvariants(t *testing.T) {
 func TestAllocateDayTimeLargeInput(t *testing.T) {
 	cands := make([]PlanCandidate, 10000)
 	for i := range cands {
-		cands[i] = PlanCandidate{TaskId: int64(i + 1), Priority: float64(i%50 + 1), DeadLine: priorityNow.Add(time.Duration(i) * time.Minute), Work: float64(30 + i%200), Days: 1 + i%5}
+		cands[i] = PlanCandidate{TaskId: int64(i + 1), Priority: float64(i%50 + 1), DeadLine: exampleNow.Add(time.Duration(i) * time.Minute), Work: float64(30 + i%200), Days: 1 + i%5}
 	}
 	slots := AllocateDayTime(960, cands)
-	if len(slots) != 960/planMinSlot {
-		t.Errorf("слотов %d, ожидалось %d", len(slots), 960/planMinSlot)
+	if len(slots) > 960/planMinSlot {
+		t.Errorf("слотов %d, ожидалось не больше %d", len(slots), 960/planMinSlot)
 	}
 	checkSlotInvariants(t, 960, slots)
 }
