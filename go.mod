@@ -5,6 +5,11 @@ go 1.26
 require gorm.io/gorm v1.25.12
 
 require (
+	github.com/SherClockHolmes/webpush-go v1.4.0
+	github.com/golang-jwt/jwt/v5 v5.2.1 // indirect
+)
+
+require (
 	github.com/anthropics/anthropic-sdk-go v1.75.0 // indirect
 	github.com/bahlo/generic-list-go v0.2.0 // indirect
 	github.com/buger/jsonparser v1.1.2 // indirect

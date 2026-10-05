@@ -84,7 +84,7 @@ func validationMessage(fieldError validator.FieldError) string {
 	}
 }
 
-// respondError отвечает {"error": "..."}: ошибки сервисов с видом (services.Error) — 400/404/409
+// respondError отвечает {"error": "..."}: ошибки сервисов с видом (services.Error) — 400/404/409/410
 // с их текстом, остальные — 500 с записью в лог.
 func respondError(context *gin.Context, logger *slog.Logger, err error, logMessage string, attrs ...any) {
 	var serviceError *services.Error
@@ -97,6 +97,8 @@ func respondError(context *gin.Context, logger *slog.Logger, err error, logMessa
 			status = http.StatusBadRequest
 		case errors.Is(serviceError, services.ErrKindConflict):
 			status = http.StatusConflict
+		case errors.Is(serviceError, services.ErrKindGone):
+			status = http.StatusGone
 		}
 		logger.Info(logMessage, append(attrs, slog.Int("status", status), slog.String("error", err.Error()))...)
 		context.JSON(status, gin.H{"error": serviceError.Error()})
