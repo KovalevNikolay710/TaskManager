@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  DEADLINE_TOO_CLOSE, TASK_TIME_MAX, TASK_TIME_MIN, deadlinePresets, durationWarning, validateDeadline, validateDuration,
+  DEADLINE_TOO_CLOSE, TASK_TIME_MAX, TASK_TIME_MIN, deadlinePresets, defaultDeadlinePreset, durationWarning, validateDeadline, validateDuration,
 } from './taskForm'
 import { formatDuration } from './format'
 
@@ -114,5 +114,52 @@ describe('deadlinePresets', () => {
     for (const p of deadlinePresets(new Date('2026-10-05T19:00:00'))) {
       expect(validateDeadline(p.date, p.time, new Date('2026-10-05T19:00:00'))).toBeUndefined()
     }
+  })
+})
+
+describe('defaultDeadlinePreset', () => {
+  const at = (time: string) => new Date(`2026-10-05T${time}:00`)
+  const pick = (time: string) => {
+    const presets = deadlinePresets(at(time))
+    return { presets, result: defaultDeadlinePreset(at(time), presets) }
+  }
+
+  it.each(['00:00', '03:30', '04:59'])('ночью (%s) - «Сегодня»', (time) => {
+    const { presets, result } = pick(time)
+    expect(result.id).toBe('today')
+    expect(result).toBe(presets.find((p) => p.id === 'today'))
+  })
+
+  it.each(['05:00', '12:00', '19:59'])('днём и вечером (%s) - «Завтра»', (time) => {
+    const { presets, result } = pick(time)
+    expect(result.id).toBe('tomorrow')
+    expect(result).toBe(presets.find((p) => p.id === 'tomorrow'))
+  })
+
+  it.each(['20:00', '23:59'])('после 20:00 (%s) чипа «Сегодня» нет, выбирается «Завтра»', (time) => {
+    const { presets, result } = pick(time)
+    expect(presets.some((p) => p.id === 'today')).toBe(false)
+    expect(result.id).toBe('tomorrow')
+    expect(result).toBe(presets.find((p) => p.id === 'tomorrow'))
+  })
+
+  it('результат всегда элемент presets для каждого часа', () => {
+    for (let hour = 0; hour < 24; hour++) {
+      const { presets, result } = pick(`${String(hour).padStart(2, '0')}:15`)
+      expect(presets.includes(result)).toBe(true)
+    }
+  })
+
+  it('ночью без «Сегодня» - «Завтра»', () => {
+    const presets = deadlinePresets(at('21:00')) // без 'today'
+    const result = defaultDeadlinePreset(at('02:00'), presets)
+    expect(result).toBe(presets.find((p) => p.id === 'tomorrow'))
+  })
+
+  it('без «Сегодня» и «Завтра» - первый элемент списка', () => {
+    const presets = deadlinePresets(at('12:00')).filter((p) => p.id !== 'today' && p.id !== 'tomorrow')
+    expect(presets.length).toBeGreaterThan(0)
+    expect(defaultDeadlinePreset(at('02:00'), presets)).toBe(presets[0])
+    expect(defaultDeadlinePreset(at('12:00'), presets)).toBe(presets[0])
   })
 })

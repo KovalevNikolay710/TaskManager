@@ -102,12 +102,21 @@ export function deadlinePresets(now = new Date()): DeadlinePreset[] {
   return presets
 }
 
+/** До этого часа (не включая) быстрая задача по умолчанию получает срок «Сегодня, 21:00». */
+const NIGHT_END_HOUR = 5
+
 /**
  * Срок, выбранный по умолчанию при открытии «Быстрой задачи» (design/screens/quick-add.md, «Срок по умолчанию»).
  * Контракт: возвращает один из presets (их даёт deadlinePresets(now)), никогда не «Другое…».
+ *
+ * Ночью (00:00–04:59) — «Сегодня, 21:00»: для человека «сегодня» ещё не началось, это дело на наступающий день.
+ * В остальное время — «Завтра, 18:00»: срок «сегодня» дал бы маленький Tl и поднимал бы каждую быструю задачу наверх списка.
  */
 export function defaultDeadlinePreset(now: Date, presets: DeadlinePreset[]): DeadlinePreset {
-  // TODO(human): выбрать срок по умолчанию для быстрой задачи (см. design/screens/quick-add.md, «Срок по умолчанию»)
-  void now // заглушка не смотрит на время; void — чтобы TS не ругался на неиспользуемый параметр
-  return presets.find((preset) => preset.id === 'tomorrow') ?? presets[0]
+  const preferred: DeadlinePresetId = now.getHours() < NIGHT_END_HOUR ? 'today' : 'tomorrow'
+  return (
+    presets.find((preset) => preset.id === preferred) ??
+    presets.find((preset) => preset.id === 'tomorrow') ??
+    presets[0]
+  )
 }
