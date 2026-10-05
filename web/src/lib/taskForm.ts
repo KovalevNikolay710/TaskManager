@@ -76,7 +76,11 @@ export function durationWarning(date: string, time: string, duration: string, no
   return `До дедлайна ${formatSpan(left)}, а задача займёт ${formatDuration(minutes)} — может не хватить времени`
 }
 
+export type DeadlinePresetId = 'today' | 'tomorrow' | 'in3days' | 'inWeek'
+
 export interface DeadlinePreset {
+  /** Стабильный идентификатор: по нему выбирают чип, не сравнивая подписи */
+  id: DeadlinePresetId
   label: string
   date: string
   time: string
@@ -89,11 +93,21 @@ export function deadlinePresets(now = new Date()): DeadlinePreset[] {
     return toDateKey(date)
   }
   const presets: DeadlinePreset[] = []
-  if (now.getHours() < 20) presets.push({ label: 'Сегодня, 21:00', date: inDays(0), time: '21:00' })
+  if (now.getHours() < 20) presets.push({ id: 'today', label: 'Сегодня, 21:00', date: inDays(0), time: '21:00' })
   presets.push(
-    { label: 'Завтра, 18:00', date: inDays(1), time: DEFAULT_DEADLINE_TIME },
-    { label: 'Через 3 дня', date: inDays(3), time: DEFAULT_DEADLINE_TIME },
-    { label: 'Через неделю', date: inDays(7), time: DEFAULT_DEADLINE_TIME },
+    { id: 'tomorrow', label: 'Завтра, 18:00', date: inDays(1), time: DEFAULT_DEADLINE_TIME },
+    { id: 'in3days', label: 'Через 3 дня', date: inDays(3), time: DEFAULT_DEADLINE_TIME },
+    { id: 'inWeek', label: 'Через неделю', date: inDays(7), time: DEFAULT_DEADLINE_TIME },
   )
   return presets
+}
+
+/**
+ * Срок, выбранный по умолчанию при открытии «Быстрой задачи» (design/screens/quick-add.md, «Срок по умолчанию»).
+ * Контракт: возвращает один из presets (их даёт deadlinePresets(now)), никогда не «Другое…».
+ */
+export function defaultDeadlinePreset(now: Date, presets: DeadlinePreset[]): DeadlinePreset {
+  // TODO(human): выбрать срок по умолчанию для быстрой задачи (см. design/screens/quick-add.md, «Срок по умолчанию»)
+  void now // заглушка не смотрит на время; void — чтобы TS не ругался на неиспользуемый параметр
+  return presets.find((preset) => preset.id === 'tomorrow') ?? presets[0]
 }

@@ -8,6 +8,7 @@ import { buttonClassName } from '../components/buttonClassName'
 import { Fab } from '../components/Fab'
 import { GroupSection } from '../components/GroupSection'
 import { Icon } from '../components/Icon'
+import { QuickAddSheet } from '../components/QuickAddSheet'
 import { SearchField } from '../components/SearchField'
 import { Skeleton, SkeletonTaskRow } from '../components/Skeleton'
 import { StateMessage } from '../components/StateMessage'
@@ -15,18 +16,26 @@ import { TaskRow } from '../components/TaskRow'
 import { useCollapsedGroups } from '../hooks/useCollapsedGroups'
 import { useDebouncedValue } from '../hooks/useDebouncedValue'
 import { useGroups } from '../hooks/useGroups'
+import { useQuickAdd } from '../hooks/useQuickAdd'
 import { useTasks } from '../hooks/useTasks'
+import { useToast } from '../hooks/useToast'
 import { useToggleTask } from '../hooks/useToggleTask'
 import { plural } from '../lib/format'
 import { clearTaskHighlight, peekTaskHighlight } from '../lib/highlight'
+import { createdTasksMessage } from '../lib/quickAdd'
 import { isDone, matchesQuery, maxActivePriority, normalizeForSearch, priorityLevel, sortTasks } from '../lib/tasks'
 import styles from './AllTasksPage.module.css'
 
-const NEW_TASK_PATH = '/tasks/new'
 /** Больше стольких выполненных — сворачиваем их в строку «Выполнено: N — показать» */
 const DONE_COLLAPSE_THRESHOLD = 3
 const NO_GROUP_ID = 0
 const HIGHLIGHT_MS = 1500
+
+/** Подсветка новых карточек: ids — какие, scroll — прокрутить к первой из них */
+interface Flash {
+  ids: ReadonlySet<number>
+  scroll: boolean
+}
 
 interface Section {
   id: number
@@ -56,10 +65,11 @@ export function AllTasksPage() {
   const tasksQuery = useTasks()
   const groupsQuery = useGroups()
   const { toggle, pendingIds } = useToggleTask()
-  // После «Новой задачи»: раскрыть группу задачи, прокрутить к карточке и подсветить её
+  const { showToast } = useToast()
+  // После полной формы «Новая задача»: раскрыть группу задачи, прокрутить к карточке и подсветить её
   const [highlight] = useState(peekTaskHighlight)
-  const [highlightedId, setHighlightedId] = useState(highlight?.taskId ?? null)
-  const { collapsed, toggleGroup } = useCollapsedGroups(highlight?.groupId)
+  const [flash, setFlash] = useState<Flash | null>(() => (highlight ? { ids: new Set([highlight.taskId]), scroll: true } : null))
+  const { collapsed, toggleGroup, expandGroup } = useCollapsedGroups(highlight?.groupId)
   const [search, setSearch] = useState('')
   const [shownDone, setShownDone] = useState<ReadonlySet<number>>(new Set())
 
@@ -73,14 +83,44 @@ export function AllTasksPage() {
   const sections = useMemo(() => (tasks && groups ? buildSections(tasks, groups) : []), [tasks, groups])
   const maxPriority = useMemo(() => maxActivePriority(tasks ?? []), [tasks])
 
-  const highlightReady = highlightedId !== null && sections.some((s) => s.tasks.some((t) => t.TaskId === highlightedId))
+  const flashReady = flash !== null && sections.some((s) => s.tasks.some((t) => flash.ids.has(t.TaskId)))
   useEffect(() => {
-    if (!highlightReady) return
+    if (!flashReady || !flash) return
     clearTaskHighlight()
-    document.getElementById(`task-name-${highlightedId}`)?.scrollIntoView({ block: 'center' })
-    const timer = window.setTimeout(() => setHighlightedId(null), HIGHLIGHT_MS)
+    if (flash.scroll) {
+      // Первая новая карточка — верхняя на экране, а не первая по порядку создания
+      const cards = [...flash.ids]
+        .map((id) => document.getElementById(`task-name-${id}`))
+        .filter((el): el is HTMLElement => el !== null)
+        .sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top)
+      cards[0]?.scrollIntoView({ block: 'center' })
+    }
+    const timer = window.setTimeout(() => setFlash(null), HIGHLIGHT_MS)
     return () => window.clearTimeout(timer)
-  }, [highlightReady, highlightedId])
+  }, [flashReady, flash])
+
+  /** Подсветить карточки заново: сначала снять класс, чтобы анимация началась с начала */
+  const showCreated = (ids: number[]) => {
+    setFlash(null)
+    window.requestAnimationFrame(() => setFlash({ ids: new Set(ids), scroll: true }))
+  }
+
+  const knownGroupIds = useMemo(() => new Set((groups ?? []).map((g) => g.GroupId)), [groups])
+  const quickAdd = useQuickAdd({
+    // Новая карточка появляется под листом с подсветкой; её группу раскрываем
+    onCreated: (task) => {
+      expandGroup(knownGroupIds.has(task.GroupId) ? task.GroupId : NO_GROUP_ID)
+      setFlash((prev) => ({ ids: new Set([...(prev?.ids ?? []), task.TaskId]), scroll: false }))
+    },
+    onFinished: (created) => {
+      const first = created[0]
+      showToast(
+        created.length === 1
+          ? { message: createdTasksMessage(1), action: { label: 'Открыть', onClick: () => navigate(`/tasks/${first.TaskId}`) } }
+          : { message: createdTasksMessage(created.length), action: { label: 'Показать', onClick: () => showCreated(created.map((t) => t.TaskId)) } },
+      )
+    },
+  })
 
   const doneCount = tasks?.filter(isDone).length ?? 0
   const activeCount = (tasks?.length ?? 0) - doneCount
@@ -132,10 +172,10 @@ export function AllTasksPage() {
           title="Задач пока нет"
           text="Добавьте первую задачу с дедлайном и оценкой времени — мы сами расставим приоритеты."
         >
-          <Link to={NEW_TASK_PATH} className={buttonClassName('primary')}>
+          <Button variant="primary" aria-haspopup="dialog" onClick={quickAdd.open}>
             <Icon name="plus" size="sm" />
             Добавить задачу
-          </Link>
+          </Button>
         </StateMessage>
       )
     }
@@ -189,7 +229,7 @@ export function AllTasksPage() {
                       query={query}
                       pending={pendingIds.has(task.TaskId)}
                       divider={index > 0}
-                      highlighted={task.TaskId === highlightedId}
+                      highlighted={flash?.ids.has(task.TaskId) ?? false}
                       onToggle={toggle}
                       onOpen={openTask}
                     />
@@ -204,16 +244,16 @@ export function AllTasksPage() {
   }
 
   return (
-    <AppShell floating={<Fab to={NEW_TASK_PATH} />}>
+    <AppShell floating={<Fab onClick={quickAdd.open} />}>
       <AppHeader
         title="Все задачи"
         subtitle={subtitle}
         actions={
           <>
-            <Link to={NEW_TASK_PATH} className={buttonClassName('primary', styles.newTask)}>
+            <Button variant="primary" className={styles.newTask} aria-haspopup="dialog" aria-keyshortcuts="N" onClick={quickAdd.open}>
               <Icon name="plus" size="sm" />
               Новая задача
-            </Link>
+            </Button>
             <Link to="/groups" className={buttonClassName('icon', styles.groups)} aria-label="Группы" title="Группы">
               <Icon name="folder" />
             </Link>
@@ -221,6 +261,7 @@ export function AllTasksPage() {
         }
       />
       {renderContent()}
+      {quickAdd.sheet && <QuickAddSheet {...quickAdd.sheet} />}
     </AppShell>
   )
 }

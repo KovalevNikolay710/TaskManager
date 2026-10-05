@@ -5,6 +5,12 @@ export const GROUP_WEIGHT_MIN = 1
 export const GROUP_WEIGHT_MAX = 10
 export const GROUP_NAME_MAX = 60
 export const NO_GROUP_ID = 0
+/** Длиннее — название группы в чипе обрезается с многоточием (полное — в title) */
+export const GROUP_CHIP_NAME_LIMIT = 24
+
+export function shortGroupName(name: string): string {
+  return name.length > GROUP_CHIP_NAME_LIMIT ? `${name.slice(0, GROUP_CHIP_NAME_LIMIT - 1)}…` : name
+}
 
 /** Порядок групп везде одинаковый: GroupPriority ↓, затем по имени. */
 export function sortGroups(groups: readonly Group[]): Group[] {

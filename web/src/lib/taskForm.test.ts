@@ -87,15 +87,16 @@ describe('deadlinePresets', () => {
   it('до 20:00 есть «Сегодня, 21:00»', () => {
     const presets = deadlinePresets(new Date('2026-10-05T12:00:00'))
     expect(presets.map((p) => p.label)).toEqual(['Сегодня, 21:00', 'Завтра, 18:00', 'Через 3 дня', 'Через неделю'])
+    expect(presets.map((p) => p.id)).toEqual(['today', 'tomorrow', 'in3days', 'inWeek'])
     expect(presets[0]).toMatchObject({ date: '2026-10-05', time: '21:00' })
   })
 
   it('после 20:00 «Сегодня» нет; даты считаются от now', () => {
     const presets = deadlinePresets(now)
     expect(presets).toEqual([
-      { label: 'Завтра, 18:00', date: '2026-10-06', time: '18:00' },
-      { label: 'Через 3 дня', date: '2026-10-08', time: '18:00' },
-      { label: 'Через неделю', date: '2026-10-12', time: '18:00' },
+      { id: 'tomorrow', label: 'Завтра, 18:00', date: '2026-10-06', time: '18:00' },
+      { id: 'in3days', label: 'Через 3 дня', date: '2026-10-08', time: '18:00' },
+      { id: 'inWeek', label: 'Через неделю', date: '2026-10-12', time: '18:00' },
     ])
   })
 

@@ -17,17 +17,19 @@ interface TimeInputProps {
   presets?: boolean
   disabled?: boolean
   inputRef?: Ref<HTMLInputElement>
+  /** Подпись только для скринридеров (в «Быстрой задаче» её заменяет иконка ряда) */
+  labelHidden?: boolean
 }
 
 /** TimeInput для времени на выполнение задачи: «ч:мм», пресеты 0:30 / 1:00 / 2:00 / 4:00. */
-export function TimeInput({ label, value, onChange, onBlur, error, warning, hint, presets = false, disabled = false, inputRef }: TimeInputProps) {
+export function TimeInput({ label, value, onChange, onBlur, error, warning, hint, presets = false, disabled = false, inputRef, labelHidden = false }: TimeInputProps) {
   const id = useId()
   const hintId = `${id}-hint`
   const current = parseDuration(value)
 
   return (
     <div className={styles.timeField}>
-      <label className={styles.label} htmlFor={id}>
+      <label className={labelHidden ? 'visually-hidden' : styles.label} htmlFor={id}>
         {label}
       </label>
       <span className={cx(styles.timeInput, error && styles.timeInputError)}>
