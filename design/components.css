@@ -517,6 +517,156 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
   .ladder__tread { width: calc(10px + var(--n) * 6px); }
 }
 
+/* =====================================================================
+ * Быстрая задача (QuickAddSheet), профиль и уведомления
+ * ===================================================================== */
+
+/* ---------- Alert: варианты info / warning ---------- */
+.alert--info { background: var(--color-accent-soft); }
+.alert--info > .icon { color: var(--color-accent); }
+.alert--warning { background: var(--color-warning-soft); }
+.alert--warning > .icon { color: var(--color-warning); }
+.alert__actions { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
+.alert__actions .btn { min-height: 36px; }
+.alert__actions .btn { position: relative; }
+.alert__actions .btn::after { content: ""; position: absolute; inset: -4px 0; } /* зона нажатия 44px */
+.alert__steps { margin: var(--space-1) 0 0; padding-left: var(--space-4); color: var(--color-text-muted); }
+
+/* ---------- Notice: нейтральная плашка (нет сети) ---------- */
+.notice {
+  display: flex; align-items: flex-start; gap: var(--space-2);
+  padding: var(--space-2) var(--space-3); border-radius: var(--radius-md);
+  background: var(--color-surface-sunken); color: var(--color-text); font-size: var(--text-sm);
+}
+.notice > .icon { color: var(--color-text-muted); margin-top: 2px; }
+.notice__text { flex: 1; min-width: 0; margin: 0; }
+.notice__text b { font-weight: var(--font-weight-semibold); }
+
+/* ---------- ChipRow: ряд чипов в одну строку с горизонтальной прокруткой ---------- */
+.chip-row { display: grid; grid-template-columns: 24px minmax(0, 1fr); align-items: center; gap: var(--space-1); margin: 0; padding: 0; border: 0; min-width: 0; }
+.chip-row__lead { display: grid; place-items: center; color: var(--color-text-muted); }
+.chip-row__scroll {
+  display: flex; gap: var(--space-2); min-width: 0;
+  margin-right: calc(-1 * var(--space-4)); padding: 4px var(--space-4) 4px 0;  /* до края листа: видно, что ряд продолжается */
+  overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 32px), transparent);
+}
+.chip-row__scroll::-webkit-scrollbar { display: none; }
+.chip-row__scroll .chip { flex: none; white-space: nowrap; }
+.chip-row--end .chip-row__scroll { -webkit-mask-image: none; mask-image: none; }
+.chip--other[aria-expanded="true"] { box-shadow: inset 0 0 0 1.5px var(--color-accent); }
+.chip:disabled { opacity: 0.5; cursor: default; }
+
+/* ---------- QuickAddSheet ---------- */
+.sheet--quick { padding-top: var(--space-2); }
+.quick-add__head { display: flex; align-items: center; gap: var(--space-1); margin: 0 calc(-1 * var(--space-2)) var(--space-2) 0; }
+.quick-add__title { flex: 1; min-width: 0; margin: 0; font-size: var(--text-lg); font-weight: var(--font-weight-semibold); }
+.quick-add__head .btn--ghost { gap: 2px; }
+.quick-add__head .btn--ghost .icon { width: 16px; height: 16px; }
+.quick-add__head .btn--icon { color: var(--color-text); }
+.quick-add { display: grid; gap: var(--space-2); }
+.quick-add__name { min-height: 48px; font-size: var(--text-lg); font-weight: var(--font-weight-medium); }
+.quick-add__name[readonly] { opacity: 0.6; }
+.quick-add__extra { display: grid; gap: var(--space-2); padding: 0 0 var(--space-1) 28px; }  /* под иконкой ряда */
+.quick-add__extra .field__row { max-width: 360px; }
+.quick-add__preview {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 2px var(--space-2); min-height: 24px; margin: 0; padding-left: 28px;
+  font-size: var(--text-xs); color: var(--color-text-muted); font-variant-numeric: tabular-nums;
+}
+.quick-add__foot { display: flex; align-items: center; gap: var(--space-2); margin-top: var(--space-1); }
+.quick-add__foot .btn--primary { margin-left: auto; min-width: 128px; }
+.quick-add__status {
+  display: flex; align-items: center; gap: var(--space-2); min-height: 40px; margin-bottom: var(--space-2);
+  padding: 2px var(--space-1) 2px var(--space-3); border-radius: var(--radius-md);
+  background: var(--color-success-soft); font-size: var(--text-sm);
+}
+.quick-add__status > .icon { color: var(--color-success); }
+.quick-add__status-text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.quick-add__status .btn { position: relative; min-height: 36px; }
+.quick-add__status .btn::after { content: ""; position: absolute; inset: -4px 0; } /* зона нажатия 44px */
+.quick-add__banner { margin-bottom: var(--space-2); }
+.kbd-hint { display: none; }
+kbd {
+  padding: 0 5px; border-radius: 4px; box-shadow: inset 0 0 0 1px var(--color-border-strong);
+  font-family: var(--font-sans); font-size: var(--text-xs); color: var(--color-text-muted);
+}
+
+/* GroupToggle: компактная текущая группа, раскрывает GroupPicker в листе */
+.group-toggle {
+  max-width: 62%; gap: 0;
+  background: var(--w-soft, var(--color-surface-sunken)); color: var(--w-text, var(--color-text));
+  box-shadow: inset 0 0 0 1.5px var(--w, var(--color-border-strong));
+}
+.group-toggle__name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.group-toggle .chip__weight { color: inherit; }
+.group-toggle > .icon { width: 16px; height: 16px; margin-left: 4px; transition: transform var(--duration-normal) var(--easing-standard); }
+.group-toggle[aria-expanded="true"] > .icon { transform: rotate(180deg); }
+
+@media (min-width: 960px) {
+  .sheet-backdrop--top { align-items: flex-start; padding-top: 12vh; }
+  .sheet--quick { width: var(--size-quick-sheet); padding: var(--space-4) var(--space-6) var(--space-6); }
+  .chip-row__scroll { flex-wrap: wrap; overflow: visible; margin-right: 0; padding-right: 0; -webkit-mask-image: none; mask-image: none; }
+  .kbd-hint { display: inline; }
+}
+
+/* ---------- Switch ---------- */
+.switch {
+  position: relative; display: inline-grid; place-items: center; flex: none;
+  width: calc(var(--size-switch-w) + var(--space-2)); height: var(--size-touch); border-radius: var(--radius-full);
+}
+.switch__track {
+  position: relative; width: var(--size-switch-w); height: var(--size-switch-h); border-radius: var(--radius-full);
+  background: var(--color-surface-sunken); box-shadow: inset 0 0 0 1.5px var(--color-border-strong);
+  transition: background var(--duration-fast) var(--easing-standard);
+}
+.switch__thumb {
+  position: absolute; top: 4px; left: 4px; width: 20px; height: 20px; border-radius: var(--radius-full);
+  background: var(--color-border-strong);
+  transition: transform var(--duration-normal) var(--easing-standard), background var(--duration-fast);
+}
+.switch[aria-checked="true"] .switch__track { background: var(--color-accent); box-shadow: none; }
+.switch[aria-checked="true"] .switch__thumb { transform: translateX(20px); background: var(--color-text-inverse); }
+.switch:focus-visible { outline: none; }
+.switch:focus-visible .switch__track { outline: 2px solid var(--color-focus); outline-offset: 2px; }
+.switch:disabled { opacity: 0.5; cursor: not-allowed; }
+.switch--pending .switch__thumb { animation: pulse 1.2s ease-in-out infinite; }
+.switch--pending { cursor: progress; }
+@media (prefers-reduced-motion: reduce) { .switch--pending .switch__thumb { animation: none; } }
+
+/* ---------- SettingsCard: список настроек в карточке ---------- */
+.settings {
+  margin: 0 0 var(--space-6); padding: 0; list-style: none;
+  background: var(--color-surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm); overflow: hidden;
+}
+.settings > li + li { border-top: 1px solid var(--color-border); }
+.settings__row {
+  display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; align-items: center; column-gap: var(--space-3); row-gap: var(--space-2);
+  padding: var(--space-3) var(--space-2) var(--space-3) var(--space-4);
+}
+.settings__icon { color: var(--color-text-muted); align-self: start; margin-top: 2px; }
+.settings__label { min-width: 0; }
+.settings__title { display: block; font-weight: var(--font-weight-medium); line-height: var(--line-height-tight); }
+.settings__sub { display: block; margin-top: 2px; font-size: var(--text-sm); color: var(--color-text-muted); }
+.settings__sub--ok { color: var(--color-success); }
+.settings__extra { grid-column: 2 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); padding-right: var(--space-2); }
+.settings__extra .field__label { margin: 0; color: var(--color-text-muted); }
+.settings__row--off .settings__extra { display: none; }
+.settings__notice { padding: 0 var(--space-4) var(--space-3); }
+.settings__foot { display: grid; gap: var(--space-2); justify-items: start; padding: var(--space-3) var(--space-4) var(--space-4); }
+.settings__foot .field__hint { margin: 0; }
+.settings--muted .settings__row:not(.settings__row--master) { opacity: 0.6; }
+.input--time { width: 120px; font-variant-numeric: tabular-nums; }
+
+/* ---------- ProfileCard ---------- */
+.profile-card {
+  display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-6);
+  padding: var(--space-3) var(--space-4); background: var(--color-surface); border-radius: var(--radius-lg); box-shadow: var(--shadow-sm);
+}
+.profile-card .avatar-btn__circle { width: 48px; height: 48px; font-size: var(--text-md); }
+.profile-card__name { display: block; font-weight: var(--font-weight-semibold); }
+.profile-card__sub { display: block; font-size: var(--text-sm); color: var(--color-text-muted); }
+
 /* ---------- Панель переключения состояний макета (только для design/, не переносить) ---------- */
 .mock-panel {
   position: fixed; z-index: 100; top: var(--space-2); right: var(--space-2);
