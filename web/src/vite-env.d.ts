@@ -1,4 +1,5 @@
 /// <reference types="vite/client" />
+/// <reference types="vite-plugin-pwa/client" />
 
 interface ImportMetaEnv {
   /** Базовый адрес API; по умолчанию — тот же origin (в dev запросы проксирует Vite) */
