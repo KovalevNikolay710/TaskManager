@@ -1,3 +1,4 @@
+/// <reference types="vitest/config" />
 import { writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import react from '@vitejs/plugin-react'
@@ -16,6 +17,10 @@ const keepDistPlaceholder: Plugin = {
 
 export default defineConfig({
   plugins: [react(), keepDistPlaceholder],
+  test: {
+    environment: 'node',
+    include: ['src/**/*.test.ts'],
+  },
   server: {
     // API под /api, поэтому с маршрутами SPA (/day, /tasks/:id) не пересекается
     proxy: {
