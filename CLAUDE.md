@@ -39,6 +39,8 @@ internal/api/spa.go          раздача встроенного фронте�
 internal/config/             загрузка config.yaml (пока не подключена в main)
 web/                         фронтенд: Vite + React + TypeScript (экраны «Все задачи» и «День»)
 web/embed.go                 go:embed собранного web/dist в бинарник (в git — только dist/.gitkeep)
+web/src/sw.ts                service worker PWA (vite-plugin-pwa, injectManifest): precache оболочки, fallback на index.html, /api — только сеть
+web/public/                  статика как есть: favicon, icons/ (SVG из design/icons + PNG 192/512/maskable/apple-touch/badge, сгенерированы один раз и закоммичены)
 design/                      дизайн-система и макеты экранов (ведёт агент designer)
 ```
 
@@ -99,6 +101,14 @@ docker compose up --build            # всё приложение: http://local
 Без собранного фронтенда Go собирается (в `web/dist` закоммичен `.gitkeep`), но сервер отдаёт только API.
 Docker-образ собирается в три stage: `node:lts-alpine` (фронтенд) → `golang` (бинарник) → `alpine`.
 Используйте `docker compose` (v2), а не `docker-compose` (v1).
+
+PWA: манифест (`manifest.webmanifest`) и service worker (`sw.js`) генерирует `npm run build` (vite-plugin-pwa), в `npm run dev` SW не регистрируется.
+Установка на телефон и push работают только по HTTPS (исключение — `localhost`).
+
+Открыть приложение с телефона через Tailscale (телефон и компьютер — в одном tailnet):
+1. В админке Tailscale (DNS) включить MagicDNS и HTTPS Certificates.
+2. Запустить приложение на `:8080` (`docker compose up --build` или бинарник), затем `tailscale serve --bg 8080`.
+3. Открыть на телефоне `https://<host>.<tailnet>.ts.net` → меню Chrome → «Установить приложение». Отключить: `tailscale serve reset`.
 
 ## Как ведётся работа (агенты)
 
