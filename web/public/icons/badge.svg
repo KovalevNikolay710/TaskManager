@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="96" height="96">
+  <title>TaskManager — значок уведомления</title>
+  <!-- Монохромный значок для строки состояния Android (Notification.badge):
+       система берёт только альфа-канал, поэтому всё белое на прозрачном, без полупрозрачности. -->
+  <g fill="#ffffff">
+    <path d="M12 30l8 8 15-16" fill="none" stroke="#ffffff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="44" y="24" width="42" height="11" rx="5.5"/>
+    <circle cx="23" cy="51" r="6.5"/>
+    <rect x="44" y="45.5" width="30" height="11" rx="5.5"/>
+    <circle cx="23" cy="72" r="6.5"/>
+    <rect x="44" y="66.5" width="18" height="11" rx="5.5"/>
+  </g>
+</svg>

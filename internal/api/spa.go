@@ -20,6 +20,13 @@ const (
 	assetsDir = "assets/"
 )
 
+// contentTypes — типы для расширений, которых нет во встроенной таблице mime в Go
+// (и которые не гарантированы в /etc/mime.types образа alpine). Без этого манифест PWA
+// ушёл бы как text/plain после угадывания по содержимому.
+var contentTypes = map[string]string{
+	".webmanifest": "application/manifest+json",
+}
+
 // RegisterFrontend раздаёт собранный фронтенд из dist: существующие файлы — как есть,
 // остальные GET-пути не под /api — index.html (маршрутизацию делает SPA).
 // Неизвестные пути под /api и не-GET запросы получают 404 JSON.
@@ -77,10 +84,15 @@ func serveFile(c *gin.Context, dist fs.FS, name string, logger *slog.Logger) boo
 	if strings.HasPrefix(name, assetsDir) {
 		c.Header("Cache-Control", "public, max-age=31536000, immutable")
 	} else {
-		// index.html и прочее без хеша — всегда перепроверять, чтобы после деплоя подтягивалась новая сборка
+		// index.html, sw.js, manifest.webmanifest, иконки — имена без хеша: всегда перепроверять,
+		// чтобы после деплоя подтягивались новая сборка и новая версия service worker
 		c.Header("Cache-Control", "no-cache")
 	}
-	// У встроенных файлов нет времени изменения; ServeContent сам выставит Content-Type по расширению
+	if contentType, ok := contentTypes[path.Ext(name)]; ok {
+		c.Header("Content-Type", contentType)
+	}
+	// У встроенных файлов нет времени изменения; если Content-Type не задан выше,
+	// ServeContent выставит его по расширению
 	http.ServeContent(c.Writer, c.Request, name, time.Time{}, content)
 	return true
 }
