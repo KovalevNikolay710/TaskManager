@@ -8,9 +8,11 @@ interface AppHeaderProps {
   subtitle?: ReactNode
   /** Действия справа перед аватаром (например, «Новая задача» на десктопе) */
   actions?: ReactNode
+  /** false — без AvatarButton (на самом экране «Профиль») */
+  avatar?: boolean
 }
 
-export function AppHeader({ title, subtitle, actions }: AppHeaderProps) {
+export function AppHeader({ title, subtitle, actions, avatar = true }: AppHeaderProps) {
   const [scrolled, setScrolled] = useState(false)
 
   useEffect(() => {
@@ -29,7 +31,7 @@ export function AppHeader({ title, subtitle, actions }: AppHeaderProps) {
       </div>
       <div className={styles.actions}>
         {actions}
-        <AvatarButton />
+        {avatar && <AvatarButton />}
       </div>
     </header>
   )
