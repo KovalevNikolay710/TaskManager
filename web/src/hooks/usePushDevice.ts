@@ -321,10 +321,10 @@ export function usePushDevice({ onEnabled }: UsePushDeviceOptions = {}) {
         await unsubscribePush({ userId: CURRENT_USER_ID, endpoint: sub.endpoint })
       } catch (error) {
         // Сеть недоступна — не страшно: сервер сам удалит подписку, когда push-сервис ответит 404/410.
-        // Остальные ошибки не глушим (уйдут в консоль как необработанные), но пользователю не показываем.
+        // Остальные ошибки не глушим: пробрасываем, вызывающий пишет их в консоль; пользователю не показываем.
         if (!(error instanceof ApiError && error.status === 0)) throw error
       }
-    })
+    }).catch((e) => console.warn('Не удалось удалить подписку на сервере', e))
   }, [enqueue])
 
   /** Сервер сообщил, что подписки нет или она устарела (тест 404/410): снять её в браузере. */
@@ -334,7 +334,7 @@ export function usePushDevice({ onEnabled }: UsePushDeviceOptions = {}) {
       const sub = await readSubscription()
       // не снялась — после операции состояние перечитается
       await sub?.unsubscribe().catch(() => false)
-    })
+    }).catch((e) => console.warn('Не удалось снять устаревшую подписку', e))
   }, [enqueue])
 
   /** «Проверить снова» (заблокированы): перечитать разрешение и подписку. */
