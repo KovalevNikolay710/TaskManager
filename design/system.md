@@ -48,14 +48,16 @@
 | `/groups` | Группы | `PageHeader` (назад → `/all-tasks`) | да, «Все задачи» | Группы |
 | `/tasks/new` | Новая задача | `PageHeader` | **нет** — внизу `ActionBar` | Все задачи |
 | `/tasks/:taskId` | Задача | `PageHeader` | **нет** — внизу `ActionBar` при изменениях | Все задачи |
-| `/profile` | Профиль (заглушка) | `AppHeader` | да, без активного | — |
+| `/profile` | Профиль и уведомления (`design/screens/profile.md`) | `AppHeader` без `AvatarButton` | да, без активного | блок профиля внизу (`aria-current`) |
+| `?quick=1` на `/all-tasks` и `/day` | `QuickAddSheet` «Быстрая задача» поверх экрана (`design/screens/quick-add.md`) | — | закрыт подложкой | как у экрана под листом |
 
 Экраны-формы (`/tasks/new`, `/tasks/:taskId`) — «вложенные»: на мобильном без `BottomNav`, чтобы липкая панель сохранения и экранная клавиатура не спорили за низ экрана. Выход — кнопкой «назад» в `PageHeader`.
 «Группы» — раздел внутри «Все задачи» (группы — это структура именно этого экрана), поэтому `BottomNav` остаётся с активным «Все задачи», а в `BottomNav` третьего пункта нет. На десктопе места достаточно — «Группы» отдельным пунктом `SideNav`.
 
 ### AppHeader
 - Слева: заголовок экрана (`--text-xl`, semibold; на десктопе `--text-2xl`) и под ним подзаголовок (`--text-sm`, `--color-text-muted`), например «12 активных · 3 выполнено».
-- Справа: `AvatarButton` (профиль). На десктопе аватар переезжает в низ `SideNav`, в шапке не дублируется.
+- Справа: `AvatarButton` (профиль). На десктопе аватар переезжает в низ `SideNav`, в шапке не дублируется. На самом экране «Профиль» аватара нет.
+- Десктоп, «Все задачи» и «День»: primary-кнопка «Новая задача» — открывает `QuickAddSheet` (не переход на `/tasks/new`).
 - На «Все задачи» перед аватаром — icon-кнопка «Группы» (иконка `folder`, цвет `--color-text`, `aria-label="Группы"`, ведёт на `/groups`). На десктопе скрыта — там есть пункт `SideNav`.
 - Фон `--color-bg`; при прокрутке появляется нижняя граница `--color-border`.
 
@@ -105,7 +107,8 @@
 Высота 44px, `--radius-md`, `--text-md` medium, горизонтальный padding `--space-4`. Hover — `--color-accent-hover` (primary) / `--color-surface-sunken` (остальные). Disabled — opacity 0.5. Фокус — `outline: 2px solid var(--color-focus); outline-offset: 2px`.
 
 ### Fab (кнопка «Добавить задачу»)
-Круглая 56px, `--color-accent`, иконка «+» `--color-text-inverse`, `--shadow-lg`. Мобильный: справа над `BottomNav` (`--space-4` от края). Десктоп: вместо Fab — primary-кнопка «Новая задача» в `AppHeader`. `aria-label="Добавить задачу"`. Ведёт на `/tasks/new` (`design/screens/new-task.html`).
+Круглая 56px, `--color-accent`, иконка «+» `--color-text-inverse`, `--shadow-lg`. Мобильный: справа над `BottomNav` (`--space-4` от края) на экранах **«Все задачи» и «День»**. Десктоп: вместо Fab — primary-кнопка «Новая задача» в `AppHeader` и клавиша `N`. `aria-label="Добавить задачу"`, `aria-haspopup="dialog"`.
+**Открывает `QuickAddSheet`** («Быстрая задача», `design/screens/quick-add.md`), а не `/tasks/new`. Полная форма доступна из листа по «Подробнее» с переносом введённого. После закрытия листа фокус возвращается на Fab.
 
 ### Checkbox
 - Видимый квадрат 22px (`--size-checkbox`), `--radius-sm`, обводка 2px `--color-border-strong`; зона нажатия 44×44.
@@ -216,7 +219,7 @@
 Вес группы выбирается не степпером, а `WeightScale` (см. «Формы»).
 
 ### Sheet
-Модальная панель. Мобильный: выезжает снизу, `--radius-lg` сверху, «ручка» 36×4 `--color-border-strong`, фон `--color-surface-raised`. Десктоп: диалог 420px по центру. Подложка `rgba(10,12,20,.45)`. Заголовок `--text-lg` semibold + icon-кнопка «×». Внизу две кнопки поровну: secondary «Отмена» и primary-действие. Закрывается по подложке, «×», Esc; фокус заперт внутри, при закрытии возвращается на кнопку-вызов. `role="dialog" aria-modal="true"`.
+Модальная панель. Варианты: обычный и `sheet--quick` (`QuickAddSheet`: на десктопе ширина `--size-quick-sheet`, прижат к верху — `sheet-backdrop--top`). Мобильный: выезжает снизу, `--radius-lg` сверху, «ручка» 36×4 `--color-border-strong`, фон `--color-surface-raised`. Десктоп: диалог 420px по центру. Подложка `rgba(10,12,20,.45)`. Заголовок `--text-lg` semibold + icon-кнопка «×». Внизу две кнопки поровну: secondary «Отмена» и primary-действие. Закрывается по подложке, «×», Esc; фокус заперт внутри, при закрытии возвращается на кнопку-вызов. `role="dialog" aria-modal="true"`.
 
 ### Badge
 Небольшая pill-метка: `--text-xs` medium, фон `--color-surface-sunken`, текст `--color-text-muted`, `--radius-full`, padding `2px 8px`. Для статусов вроде «Прошедший день».
@@ -318,7 +321,10 @@
 
 ### Alert
 Сообщение об ошибке внутри формы или Sheet (в отличие от `ErrorState`, который заменяет весь экран): фон `--color-danger-soft`, `--radius-md`, иконка `alert-triangle` `--color-danger`, заголовок semibold `--text-sm` («Не удалось создать задачу») и текст ошибки muted. `role="alert"`, при появлении получает фокус (`tabindex="-1"`) и прокручивается в видимую область.
-**Информационный вариант** (не ошибка, например «Выполненное останется в плане» в Sheet плана): фон `--color-accent-soft`, иконка `info` `--color-accent`, без `role="alert"` и без перехвата фокуса.
+**Информационный вариант** `alert--info` (не ошибка, например «Выполненное останется в плане» в Sheet плана, «Браузер не умеет присылать уведомления»): фон `--color-accent-soft`, иконка `info` `--color-accent`, без `role="alert"` и без перехвата фокуса.
+**Предупреждение** `alert--warning` (действие нужно сделать вне приложения: «Уведомления заблокированы»): фон `--color-warning-soft`, иконка `alert-triangle` `--color-warning`, без `role="alert"`.
+Внутри `Alert` могут быть список шагов (`alert__steps`, `--text-sm` muted) и кнопки (`alert__actions`: secondary высотой 36px, зона 44px).
+**Исключение для `QuickAddSheet`:** `Alert` не забирает фокус — иначе на телефоне закроется клавиатура; он объявляется через `role="alert"`.
 
 ### ConfirmSheet
 `Sheet` для подтверждения необратимого действия: `role="alertdialog"`, заголовок-вопрос («Удалить задачу?»), текст-последствие `--color-text-muted` (что именно пропадёт и что будет с зависимыми данными), кнопки «Отмена» (secondary, получает фокус по умолчанию) и danger-кнопка с глаголом («Удалить», «Удалить группу», «Выйти без сохранения»). Во время запроса — состояние загрузки на danger-кнопке, Sheet не закрывается по подложке.
@@ -350,6 +356,54 @@
 ### MetaNote
 Служебная строка по центру `--text-xs` muted: «Создана 20 сентября, 09:12 · изменена вчера, 21:40».
 
+## Быстрый ввод (экран-лист «Быстрая задача»)
+
+### QuickAddSheet
+Нижний лист для ввода задачи в одно действие: название + Enter. Полная спецификация — `design/screens/quick-add.md`.
+- Основа — `Sheet` в варианте `sheet--quick`. Шапка (`quick-add__head`): «Новая задача» `--text-lg` semibold, ghost «Подробнее →» (переход на `/tasks/new` с параметрами), icon-кнопка «×». Нижних кнопок «Отмена / Действие» нет: действие «Добавить» стоит в нижней строке рядом с группой.
+- Сверху вниз: плашка (одна: `Notice` офлайн > `Alert` ошибка > строка успеха) → название (`Input` 48px, `--text-lg` medium) → `ChipRow` «Дедлайн» → `ChipRow` «Время» → (`ChipRow` «Группа», если раскрыта) → строка предпросмотра (`quick-add__preview`: `PriorityIndicator`-чип + «встанет 5-й из 12», `--text-xs` muted; на десктопе ещё подсказка `kbd`) → низ (`quick-add__foot`): `GroupToggle` слева, primary «Добавить» справа (min-width 128px).
+- Раскрытие «Другое…» (`quick-add__extra`, отступ 28px — под иконкой ряда): `DeadlineField` без чипов или `TimeInput`.
+- Строка успеха (`quick-add__status`): фон `--color-success-soft`, иконка `check-circle` `--color-success`, текст `--text-sm` в одну строку с многоточием («**5-я из 12** — «…»»), ghost «Открыть». `role="status"`.
+- Поведение: тап по чипам не уводит фокус из названия (`pointerdown` → `preventDefault`), во время отправки поле `readOnly`, а не `disabled` — экранная клавиатура не закрывается. После успеха лист не закрывается, название очищается (серия задач).
+- Десктоп: диалог `--size-quick-sheet` (520px), прижат к верху (`padding-top: 12vh`), чипы переносятся.
+
+### ChipRow
+Ряд чипов с одиночным выбором в одну строку — компактная замена блока «подпись + чипы».
+- Сетка: иконка ряда 24px (`chip-row__lead`, 16px `--color-text-muted`: `flag`, `clock`, `folder`) и прокручиваемая область (`chip-row__scroll`). Подпись ряда — `legend.visually-hidden` и `aria-label` у `role="radiogroup"`.
+- Мобильный: без переноса, горизонтальная прокрутка без полосы. Ряд заходит под правый край листа (`margin-right: -16px`), справа затухание 32px (`mask-image`). Когда ряд прокручен до конца, затухание снимается (`chip-row--end`). Выбранный чип при показе прокручивается в зону видимости.
+- Десктоп (≥ 960px): чипы переносятся, прокрутки и затухания нет.
+- Чипы — `Chip` с `role="radio"` + `aria-checked` (вид выбранного — как у `aria-pressed`), стрелки ←/→ (roving tabindex). Вертикальная зона нажатия 44px сохраняется за счёт padding 4px у прокручиваемой области.
+- Чип «Другое…» (`chip--other`): `role="radio"` + `aria-expanded` + `aria-controls`. Раскрывает поле под рядом. Когда в поле введено валидное значение, подпись чипа заменяется значением («пт, 9 окт, 12:00», «3:30»).
+
+### GroupToggle
+Компактный показ текущей группы в `QuickAddSheet` — кнопка-чип, которая раскрывает `ChipRow` с `GroupPicker`.
+- Вид: `chip` в цветах ступени выбранной группы (как выбранный `chip--weight`: фон `--w-soft`, обводка 1.5px `--w`, текст `--w-text`); для «Без группы» — `--color-surface-sunken`, обводка `--color-border-strong`. Внутри: точка 8px, название (многоточие, max-width 62% строки), «×3», шеврон 16px, который поворачивается при раскрытии.
+- `aria-expanded`, `aria-controls` — ряд групп; `aria-label="Группа: Учёба, вес 3. Сменить"`.
+- Загрузка групп — `chip--skeleton` шириной 96px.
+
+### Notice
+Нейтральная плашка о состоянии среды, не об ошибке: «Нет сети». Фон `--color-surface-sunken`, `--radius-md`, иконка 16px `--color-text-muted` (`wifi-off`), текст `--text-sm` с жирным началом («**Нет сети.** …»). `role="status"`.
+
+## Настройки (экран «Профиль»)
+
+### ProfileCard
+Карточка пользователя вверху профиля: `--color-surface`, `--radius-lg`, `--shadow-sm`, padding `--space-3 --space-4`. Аватар 48px (как `AvatarButton`, без кнопки), имя semibold («Пользователь #1»), подпись `--text-sm` muted («Вход и синхронизация появятся позже»).
+
+### SettingsCard
+Список настроек в одной карточке (`<ul class="settings">`): фон `--color-surface`, `--radius-lg`, `--shadow-sm`, строки разделены линией `--color-border`.
+- Строка (`settings__row`): сетка `24px | 1fr | auto` — иконка (`--color-text-muted`), название (medium) и подпись под ним (`--text-sm` muted; успешное состояние — `settings__sub--ok`, `--color-success`), справа `Switch`. Высота ≥ 56px.
+- Параметр настройки (`settings__extra`): второй ряд строки под названием (колонки 2–3): подпись `--text-sm` muted + `Input type="time"` (`input--time`, 120px) или чипы. Показывается, только когда настройка включена (`settings__row--off` его скрывает); значение не сбрасывается.
+- Пояснение под строкой (`settings__notice`): `Alert` или подсказка `field__hint`.
+- Низ карточки (`settings__foot`): secondary-кнопка и подсказка под ней.
+- Вся строка — не кнопка: переключается только `Switch` (название связано через `aria-labelledby`).
+
+### Switch
+Переключатель вкл./выкл. для настроек, которые применяются сразу (без кнопки «Сохранить»).
+- Трек `--size-switch-w` × `--size-switch-h` (48×28), `--radius-full`. Выкл.: фон `--color-surface-sunken`, обводка 1.5px `--color-border-strong` (3:1), бегунок 20px `--color-border-strong` слева. Вкл.: фон `--color-accent`, бегунок `--color-text-inverse` справа. Анимация бегунка `--duration-normal`.
+- Зона нажатия 56×44. `<button role="switch" aria-checked>`, подпись через `aria-labelledby`, пояснение через `aria-describedby`. Фокус — кольцо 2px `--color-focus` вокруг трека.
+- Ожидание (`switch--pending`, `aria-busy="true"`): бегунок пульсирует, пока идёт асинхронное действие (запрос разрешения браузера). Disabled — opacity 0.5, `not-allowed`.
+- Ошибка сохранения — откат положения и `Toast` «Не удалось сохранить настройку» + «Повторить».
+
 ## Форматы
 
 | Что | Правило | Примеры |
@@ -369,4 +423,7 @@
 Время — в локальном часовом поясе браузера; API отдаёт RFC3339.
 
 ## Иконки
-Линейные 24px, stroke 1.75, `currentColor` (набор уровня Lucide/Feather). Используемые: `calendar` (День), `list-checks` (Все задачи), `search`, `x`, `plus`, `clock` (длительность), `flag` (дедлайн), `zap` (приоритет), `chevron-down/left/right`, `alert-triangle`, `refresh-cw`, `inbox` (пусто), `folder` (группы), `minus`, `check`, `check-circle` (задача выполнена), `undo` (вернуть в работу), `trash-2` (удаление), `arrow-right`, `grip-vertical` (ручка перетаскивания ⋮⋮), `info` (информационный `Alert`, подсказки `DayChart`), `sun` / `coffee` (пустые состояния дня), `sliders` («Изменить план»).
+Линейные 24px, stroke 1.75, `currentColor` (набор уровня Lucide/Feather). Используемые: `calendar` (День), `list-checks` (Все задачи), `search`, `x`, `plus`, `clock` (длительность), `flag` (дедлайн), `zap` (приоритет), `chevron-down/left/right`, `alert-triangle`, `refresh-cw`, `inbox` (пусто), `folder` (группы), `minus`, `check`, `check-circle` (задача выполнена), `undo` (вернуть в работу), `trash-2` (удаление), `arrow-right`, `grip-vertical` (ручка перетаскивания ⋮⋮), `info` (информационный `Alert`, подсказки `DayChart`), `sun` / `coffee` (пустые состояния дня), `sliders` («Изменить план»), `bell` (push-уведомления), `bell-off` (тихие часы), `moon` (вечернее напоминание), `send` (тестовое уведомление), `wifi-off` (нет сети).
+
+## Иконка приложения (PWA)
+Иконки для манифеста и уведомлений, цвета `theme_color` / `background_color`, название и `short_name` — `design/icons/README.md` (`icon.svg`, `icon-maskable.svg`, `badge.svg`).

@@ -29,6 +29,7 @@
   --color-success: #1e7d3c;         /* выполнено, чекбокс; 5.3:1 на белом */
   --color-success-soft: #e6f4ea;
   --color-warning: #a15c00;         /* дедлайн скоро; 5.4:1 на белом */
+  --color-warning-soft: #fdf3e1;    /* фон предупреждения (Alert warning: уведомления заблокированы) */
 
   /* ---------- Шкала приоритета ----------
    * base — полоска/точка индикатора (графический элемент, контраст ≥ 3:1),
@@ -122,6 +123,9 @@
   --layout-max-width: 720px;
   --size-day-chart: 220px;    /* диаметр кольцевой диаграммы дня (мобильный; десктоп — 240px) */
   --size-ladder-step: 44px;   /* минимальная высота ступени лесенки групп */
+  --size-quick-sheet: 520px;  /* ширина диалога «Быстрая задача» на десктопе */
+  --size-switch-w: 48px;      /* трек Switch (зона нажатия 44px по высоте) */
+  --size-switch-h: 28px;
   --breakpoint-desktop: 960px; /* справочно: в @media переменные не работают, значение дублируется */
 
   /* ---------- Анимация ---------- */
@@ -154,6 +158,7 @@
     --color-success: #5fcf83;
     --color-success-soft: #1d3325;
     --color-warning: #f0b35a;
+    --color-warning-soft: #3a2c14;
 
     --color-priority-low: #7a8398;
     --color-priority-low-soft: #2a2e39;
@@ -209,6 +214,7 @@
   --color-success: #5fcf83;
   --color-success-soft: #1d3325;
   --color-warning: #f0b35a;
+  --color-warning-soft: #3a2c14;
 
   --color-priority-low: #7a8398;
   --color-priority-low-soft: #2a2e39;

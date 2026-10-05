@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Профиль — TaskManager (макет)</title>
+  <link rel="stylesheet" href="../tokens.css">
+  <link rel="stylesheet" href="../components.css">
+  <style>
+    /* Только для макета (во фронтенд не переносить) */
+    [data-when]:not(.is-shown) { display: none !important; }
+  </style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M3 6.5l1.8 1.8L8 5M3 13.5l1.8 1.8L8 12M11 7h10M11 14h10M11 20h10M3.5 20h1"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4l2 2.5h9A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M6.3 17.7l-1.4 1.4M19.1 4.9l-1.4 1.4"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></symbol>
+  <symbol id="i-bell-off" viewBox="0 0 24 24"><path d="M2 2l20 20M8.7 3.4A6 6 0 0 1 18 8c0 3 .6 5 1.3 6.4M17 17H3s3-2 3-9c0-.6.1-1.2.3-1.8M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3zM12 10v4M12 17h.01"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 16v-4.5M12 8h.01"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4.5L3 9M3 4v5h5M4 13a8 8 0 0 0 14.5 4.5L21 15M21 20v-5h-5"/></symbol>
+</svg>
+
+<div class="app">
+
+  <aside class="side-nav" aria-label="Основная навигация">
+    <p class="side-nav__brand">TaskManager</p>
+    <a class="side-nav__item" href="day.html"><svg class="icon"><use href="#i-calendar"/></svg>День</a>
+    <a class="side-nav__item" href="all-tasks.html"><svg class="icon"><use href="#i-list"/></svg>Все задачи</a>
+    <a class="side-nav__item" href="groups.html"><svg class="icon"><use href="#i-folder"/></svg>Группы</a>
+    <a class="side-nav__profile" href="profile.html" aria-current="page" style="text-decoration:none;color:inherit;background:var(--color-accent-soft)">
+      <span class="avatar-btn__circle">Я</span>
+      <span><span class="side-nav__profile-name">Профиль</span><span class="side-nav__profile-sub">Пользователь #1</span></span>
+    </a>
+  </aside>
+
+  <main class="app__main">
+    <div class="app__content">
+
+      <header class="app-header">
+        <div><h1 class="app-header__title">Профиль</h1></div>
+      </header>
+
+      <div class="profile-card">
+        <span class="avatar-btn__circle" aria-hidden="true">Я</span>
+        <div>
+          <span class="profile-card__name">Пользователь #1</span>
+          <span class="profile-card__sub">Вход и синхронизация появятся позже</span>
+        </div>
+      </div>
+
+      <div class="section-title"><h2 id="n-title">Уведомления</h2></div>
+
+      <ul class="settings" aria-labelledby="n-title" id="settings">
+
+        <!-- ===== Главный переключатель: push на этом устройстве ===== -->
+        <li>
+          <div class="settings__row settings__row--master">
+            <svg class="icon settings__icon" aria-hidden="true"><use href="#i-bell"/></svg>
+            <div class="settings__label">
+              <span class="settings__title" id="push-l">Push-уведомления</span>
+              <span class="settings__sub settings__sub--ok" id="push-d" data-when="on">Включены на этом устройстве</span>
+              <span class="settings__sub" data-when="off error">Напомним о плане и дедлайнах, даже когда приложение закрыто</span>
+              <span class="settings__sub" data-when="pending">Разрешите уведомления в окне браузера…</span>
+              <span class="settings__sub" data-when="denied">Заблокированы в настройках браузера</span>
+              <span class="settings__sub" data-when="unsupported">Недоступны в этом браузере</span>
+            </div>
+            <button class="switch" type="button" role="switch" id="push-switch" aria-checked="true" aria-labelledby="push-l" aria-describedby="push-d"><span class="switch__track"><span class="switch__thumb"></span></span></button>
+          </div>
+
+          <div class="settings__notice" data-when="denied">
+            <div class="alert alert--warning">
+              <svg class="icon icon--sm"><use href="#i-alert"/></svg>
+              <div class="alert__body">
+                <p class="alert__title">Уведомления заблокированы</p>
+                <p class="alert__text">Разрешить их можно только в настройках:</p>
+                <ul class="alert__steps">
+                  <li>в установленном приложении — долгое нажатие на иконку TaskManager → «О приложении» → «Уведомления»;</li>
+                  <li>в браузере — значок слева от адреса → «Разрешения» → «Уведомления» → «Разрешить».</li>
+                </ul>
+                <div class="alert__actions"><button class="btn btn--secondary" type="button"><svg class="icon icon--sm"><use href="#i-refresh"/></svg>Проверить снова</button></div>
+              </div>
+            </div>
+          </div>
+          <div class="settings__notice" data-when="unsupported">
+            <div class="alert alert--info">
+              <svg class="icon icon--sm"><use href="#i-info"/></svg>
+              <div class="alert__body">
+                <p class="alert__title">Браузер не умеет присылать уведомления</p>
+                <p class="alert__text">На Android откройте TaskManager в Chrome и установите на главный экран: ⋮ → «Установить приложение». На iPhone уведомления работают только у приложения, добавленного на экран «Домой» (iOS 16.4 и новее).</p>
+              </div>
+            </div>
+          </div>
+          <div class="settings__notice" data-when="error">
+            <div class="alert" role="alert">
+              <svg class="icon icon--sm"><use href="#i-alert"/></svg>
+              <div class="alert__body">
+                <p class="alert__title">Не удалось включить уведомления</p>
+                <p class="alert__text">Сервер не ответил. Разрешение браузера сохранено — осталось повторить.</p>
+                <div class="alert__actions"><button class="btn btn--secondary" type="button"><svg class="icon icon--sm"><use href="#i-refresh"/></svg>Повторить</button></div>
+              </div>
+            </div>
+          </div>
+          <div class="settings__notice" data-when="off denied unsupported error pending">
+            <p class="field__hint" style="margin:0">Настройки ниже сохранятся, но на это устройство напоминания не придут, пока уведомления выключены.</p>
+          </div>
+        </li>
+
+        <!-- ===== Загрузка настроек ===== -->
+        <li data-when="loading" aria-busy="true">
+          <div class="settings__row"><span class="skeleton" style="width:24px;height:24px"></span><span><span class="skeleton" style="display:block;width:70%;height:16px"></span><span class="skeleton" style="display:block;width:50%;height:12px;margin-top:6px"></span></span><span class="skeleton" style="width:48px;height:28px;border-radius:var(--radius-full)"></span></div>
+        </li>
+        <li data-when="loading" aria-busy="true">
+          <div class="settings__row"><span class="skeleton" style="width:24px;height:24px"></span><span><span class="skeleton" style="display:block;width:60%;height:16px"></span><span class="skeleton" style="display:block;width:40%;height:12px;margin-top:6px"></span></span><span class="skeleton" style="width:48px;height:28px;border-radius:var(--radius-full)"></span></div>
+        </li>
+
+        <!-- ===== Ошибка загрузки настроек ===== -->
+        <li data-when="load-error">
+          <div class="settings__notice" style="padding-top: var(--space-3)">
+            <div class="alert" role="alert">
+              <svg class="icon icon--sm"><use href="#i-alert"/></svg>
+              <div class="alert__body">
+                <p class="alert__title">Не удалось загрузить напоминания</p>
+                <p class="alert__text">Не удалось связаться с сервером.</p>
+                <div class="alert__actions"><button class="btn btn--secondary" type="button"><svg class="icon icon--sm"><use href="#i-refresh"/></svg>Повторить</button></div>
+              </div>
+            </div>
+          </div>
+        </li>
+
+        <!-- ===== Утро ===== -->
+        <li data-when="on off pending denied unsupported error toast" data-setting>
+          <div class="settings__row">
+            <svg class="icon settings__icon" aria-hidden="true"><use href="#i-sun"/></svg>
+            <div class="settings__label">
+              <span class="settings__title" id="m-l">Утром: составить план</span>
+              <span class="settings__sub" id="m-d">Если плана на сегодня ещё нет</span>
+            </div>
+            <button class="switch" type="button" role="switch" aria-checked="true" aria-labelledby="m-l" aria-describedby="m-d"><span class="switch__track"><span class="switch__thumb"></span></span></button>
+            <div class="settings__extra">
+              <label class="field__label" for="m-time">Во сколько</label>
+              <input class="input input--time" id="m-time" type="time" value="08:00">
+            </div>
+          </div>
+        </li>
+
+        <!-- ===== Вечер ===== -->
+        <li data-when="on off pending denied unsupported error toast" data-setting>
+          <div class="settings__row">
+            <svg class="icon settings__icon" aria-hidden="true"><use href="#i-moon"/></svg>
+            <div class="settings__label">
+              <span class="settings__title" id="e-l">Вечером: отметить сделанное</span>
+              <span class="settings__sub" id="e-d">Если в плане дня остались неотмеченные задачи</span>
+            </div>
+            <button class="switch" type="button" role="switch" aria-checked="true" aria-labelledby="e-l" aria-describedby="e-d"><span class="switch__track"><span class="switch__thumb"></span></span></button>
+            <div class="settings__extra">
+              <label class="field__label" for="e-time">Во сколько</label>
+              <input class="input input--time" id="e-time" type="time" value="21:00">
+            </div>
+          </div>
+        </li>
+
+        <!-- ===== Дедлайн скоро ===== -->
+        <li data-when="on off pending denied unsupported error toast" data-setting>
+          <div class="settings__row">
+            <svg class="icon settings__icon" aria-hidden="true"><use href="#i-flag"/></svg>
+            <div class="settings__label">
+              <span class="settings__title" id="d-l">Дедлайн скоро</span>
+              <span class="settings__sub" id="d-d">Один раз по каждой невыполненной задаче</span>
+            </div>
+            <button class="switch" type="button" role="switch" aria-checked="true" aria-labelledby="d-l" aria-describedby="d-d"><span class="switch__track"><span class="switch__thumb"></span></span></button>
+            <div class="settings__extra">
+              <span class="field__label" id="d-h">За</span>
+              <div class="chips" role="radiogroup" aria-labelledby="d-l d-h">
+                <button class="chip" type="button" role="radio" aria-checked="false" aria-label="за 1 час">1 ч</button>
+                <button class="chip" type="button" role="radio" aria-checked="true" aria-label="за 3 часа">3 ч</button>
+                <button class="chip" type="button" role="radio" aria-checked="false" aria-label="за 6 часов">6 ч</button>
+                <button class="chip" type="button" role="radio" aria-checked="false" aria-label="за 12 часов">12 ч</button>
+                <button class="chip" type="button" role="radio" aria-checked="false" aria-label="за 24 часа">24 ч</button>
+              </div>
+            </div>
+          </div>
+        </li>
+
+        <!-- ===== Тихие часы (только для «Дедлайн скоро») ===== -->
+        <li data-when="on off pending denied unsupported error toast" data-setting>
+          <div class="settings__row">
+            <svg class="icon settings__icon" aria-hidden="true"><use href="#i-bell-off"/></svg>
+            <div class="settings__label">
+              <span class="settings__title" id="q-l">Тихие часы</span>
+              <span class="settings__sub" id="q-d">Напоминания о дедлайнах придут после их окончания</span>
+            </div>
+            <button class="switch" type="button" role="switch" aria-checked="true" aria-labelledby="q-l" aria-describedby="q-d"><span class="switch__track"><span class="switch__thumb"></span></span></button>
+            <div class="settings__extra">
+              <label class="field__label" for="q-from">С</label>
+              <input class="input input--time" id="q-from" type="time" value="23:00" aria-describedby="q-h">
+              <label class="field__label" for="q-to">до</label>
+              <input class="input input--time" id="q-to" type="time" value="07:00" aria-describedby="q-h">
+              <span class="field__hint" id="q-h" style="flex-basis:100%;margin:0">Через полночь: до 07:00 следующего дня</span>
+            </div>
+          </div>
+        </li>
+
+        <!-- ===== Тест ===== -->
+        <li>
+          <div class="settings__foot">
+            <button class="btn btn--secondary" type="button" id="test-btn" aria-describedby="test-h"><svg class="icon icon--sm"><use href="#i-send"/></svg>Отправить тестовое уведомление</button>
+            <span class="field__hint" id="test-h" data-when="on toast loading load-error">Придёт на это устройство в течение минуты</span>
+            <span class="field__hint" data-when="off pending denied unsupported error">Сначала включите push-уведомления</span>
+          </div>
+        </li>
+      </ul>
+
+    </div>
+  </main>
+
+  <nav class="bottom-nav" aria-label="Основная навигация">
+    <a class="bottom-nav__item" href="day.html"><span class="bottom-nav__pill"><svg class="icon"><use href="#i-calendar"/></svg></span>День</a>
+    <a class="bottom-nav__item" href="all-tasks.html"><span class="bottom-nav__pill"><svg class="icon"><use href="#i-list"/></svg></span>Все задачи</a>
+  </nav>
+
+  <div class="toast" role="status" data-when="toast">Отправили. Уведомление придёт в течение минуты</div>
+</div>
+
+<div class="mock-panel" aria-hidden="true">
+  <span class="mock-panel__label">Макет · push на этом устройстве</span>
+  <button data-set="on">Включены</button>
+  <button data-set="off">Не включены</button>
+  <button data-set="pending">Запрос разрешения</button>
+  <button data-set="denied">Заблокированы</button>
+  <button data-set="unsupported">Не поддерживается</button>
+  <button data-set="error">Ошибка подписки</button>
+  <span class="mock-panel__label">Настройки напоминаний</span>
+  <button data-set="loading">Загрузка</button>
+  <button data-set="load-error">Ошибка загрузки</button>
+  <button data-set="toast">Тест отправлен</button>
+  <button data-theme-toggle>Тема</button>
+</div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  function apply(state) {
+    var sw = $('push-switch');
+    var on = state === 'on' || state === 'toast' || state === 'loading' || state === 'load-error';
+    sw.setAttribute('aria-checked', on || state === 'pending');
+    sw.classList.toggle('switch--pending', state === 'pending');
+    sw.setAttribute('aria-busy', state === 'pending');
+    sw.disabled = state === 'denied' || state === 'unsupported';
+    $('test-btn').disabled = !on;
+    document.querySelectorAll('[data-when]').forEach(function (el) {
+      el.classList.toggle('is-shown', el.dataset.when.split(' ').indexOf(state) !== -1);
+    });
+    document.querySelectorAll('.mock-panel [data-set]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.set === state); });
+  }
+  document.querySelectorAll('.mock-panel [data-set]').forEach(function (b) { b.addEventListener('click', function () { apply(b.dataset.set); }); });
+
+  // Переключатели напоминаний: параметр (время, «за N ч») виден, только когда напоминание включено
+  document.querySelectorAll('[data-setting] .switch').forEach(function (s) {
+    s.addEventListener('click', function () {
+      var v = s.getAttribute('aria-checked') !== 'true';
+      s.setAttribute('aria-checked', v);
+      s.closest('.settings__row').classList.toggle('settings__row--off', !v);
+    });
+  });
+  $('push-switch').addEventListener('click', function () {
+    if (this.getAttribute('aria-checked') === 'true') { apply('off'); return; }
+    apply('pending'); setTimeout(function () { apply('on'); }, 1200);
+  });
+  document.querySelectorAll('[role="radiogroup"]').forEach(function (g) {
+    g.addEventListener('click', function (e) {
+      var c = e.target.closest('[role="radio"]'); if (!c) return;
+      g.querySelectorAll('[role="radio"]').forEach(function (x) { x.setAttribute('aria-checked', x === c); });
+    });
+  });
+  function quietHint() {
+    var f = $('q-from').value, t = $('q-to').value, h = $('q-h');
+    var same = f && f === t;
+    $('q-from').classList.toggle('input--error', same); $('q-to').classList.toggle('input--error', same);
+    h.classList.toggle('field__hint--error', same);
+    h.textContent = same ? 'Начало и конец не могут совпадать' : (f > t ? 'Через полночь: до ' + t + ' следующего дня' : 'С ' + f + ' до ' + t + ' того же дня');
+  }
+  $('q-from').addEventListener('change', quietHint); $('q-to').addEventListener('change', quietHint);
+  $('test-btn').addEventListener('click', function () { apply('toast'); });
+  document.querySelector('[data-theme-toggle]').addEventListener('click', function () {
+    var root = document.documentElement;
+    var dark = root.dataset.theme === 'dark' || (!root.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches);
+    root.dataset.theme = dark ? 'light' : 'dark';
+  });
+  apply('on');
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <!-- interactive-widget=resizes-content: на Android клавиатура уменьшает layout viewport, и лист встаёт над ней -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <title>Быстрая задача — TaskManager (макет)</title>
+  <link rel="stylesheet" href="../tokens.css">
+  <link rel="stylesheet" href="../components.css">
+  <style>
+    /* Только для макета (во фронтенд не переносить) */
+    [data-when]:not(.is-shown) { display: none !important; }
+    .mock-keyboard { display: none; }
+    @media (max-width: 959px) {
+      body.mock-kb .mock-keyboard {
+        position: fixed; left: 0; right: 0; bottom: 0; z-index: 31; height: 260px;
+        display: grid; place-items: center; background: #c9ccd3; color: #50545e; font: 13px/1.2 var(--font-sans);
+      }
+      [data-theme="dark"] body.mock-kb .mock-keyboard { background: #2b2e36; color: #9aa0ad; }
+      body.mock-kb .sheet-backdrop { bottom: 260px; }
+      body.mock-kb .sheet { padding-bottom: var(--space-3); }
+    }
+  </style>
+</head>
+<body class="mock-kb">
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M3 6.5l1.8 1.8L8 5M3 13.5l1.8 1.8L8 12M11 7h10M11 14h10M11 20h10M3.5 20h1"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4l2 2.5h9A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5 16 16"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.8 2.8L16.5 9.5"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3zM12 10v4M12 17h.01"/></symbol>
+  <symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M2 2l20 20M8.5 16.5a5 5 0 0 1 7 0M2 8.8a15 15 0 0 1 4.2-2.6M10.7 5c4-.4 8.1.9 11.3 3.8M16.9 11.3a10 10 0 0 1 2.2 1.6M5 13a10 10 0 0 1 5.2-2.8M12 20h.01"/></symbol>
+</svg>
+
+<div class="app">
+
+  <aside class="side-nav" aria-label="Основная навигация">
+    <p class="side-nav__brand">TaskManager</p>
+    <a class="side-nav__item" href="day.html"><svg class="icon"><use href="#i-calendar"/></svg>День</a>
+    <a class="side-nav__item" href="all-tasks.html" aria-current="page"><svg class="icon"><use href="#i-list"/></svg>Все задачи</a>
+    <a class="side-nav__item" href="groups.html"><svg class="icon"><use href="#i-folder"/></svg>Группы</a>
+    <a class="side-nav__profile" href="profile.html" aria-label="Профиль" style="text-decoration:none;color:inherit">
+      <span class="avatar-btn__circle">Я</span>
+      <span><span class="side-nav__profile-name">Профиль</span><span class="side-nav__profile-sub">Пользователь #1</span></span>
+    </a>
+  </aside>
+
+  <!-- ============ Экран под листом: «Все задачи» (сокращённо) ============ -->
+  <main class="app__main">
+    <div class="app__content">
+      <header class="app-header">
+        <div>
+          <h1 class="app-header__title">Все задачи</h1>
+          <p class="app-header__subtitle">11 активных · 2 выполнено</p>
+        </div>
+        <div class="app-header__actions">
+          <!-- Десктоп: та же кнопка открывает «Быструю задачу» (клавиша N) -->
+          <button class="btn btn--primary app-header__new" type="button" data-open-quick><svg class="icon icon--sm"><use href="#i-plus"/></svg>Новая задача</button>
+          <a class="btn btn--icon app-header__groups" href="groups.html" aria-label="Группы"><svg class="icon"><use href="#i-folder"/></svg></a>
+          <a class="avatar-btn" href="profile.html" aria-label="Профиль"><span class="avatar-btn__circle">Я</span></a>
+        </div>
+      </header>
+
+      <label class="search">
+        <svg class="icon icon--sm"><use href="#i-search"/></svg>
+        <span class="visually-hidden">Поиск задач</span>
+        <input class="search__input" type="search" placeholder="Поиск задач">
+      </label>
+
+      <section class="group" aria-labelledby="g1">
+        <button class="group__header" type="button" aria-expanded="true">
+          <span class="group__name" id="g1">Учёба</span>
+          <span class="group__weight w-3">×3</span>
+          <span class="group__count">1 / 5</span>
+          <svg class="icon icon--sm group__chevron"><use href="#i-chevron"/></svg>
+        </button>
+        <ul class="group__body">
+          <li><article class="task p-high">
+            <label class="checkbox"><input type="checkbox" aria-labelledby="t1"><span class="checkbox__box"><svg class="icon icon--xs"><use href="#i-check"/></svg></span></label>
+            <div class="task__body"><p class="task__name" id="t1">Подготовить отчёт по ТИПИС</p>
+              <div class="task__meta"><span class="task__facts"><span class="task__fact"><svg class="icon icon--xs"><use href="#i-clock"/></svg>3:00</span><span class="task__fact deadline deadline--soon"><svg class="icon icon--xs"><use href="#i-flag"/></svg>завтра, 10:00</span><span class="task__fact">40%</span></span>
+              <span class="priority-chip"><svg class="icon"><use href="#i-zap"/></svg>16,2</span></div></div>
+          </article></li>
+          <li><article class="task p-mid">
+            <label class="checkbox"><input type="checkbox" aria-labelledby="t2"><span class="checkbox__box"><svg class="icon icon--xs"><use href="#i-check"/></svg></span></label>
+            <div class="task__body"><p class="task__name" id="t2">Лабораторная №4 по базам данных</p>
+              <div class="task__meta"><span class="task__facts"><span class="task__fact"><svg class="icon icon--xs"><use href="#i-clock"/></svg>2:00</span><span class="task__fact deadline"><svg class="icon icon--xs"><use href="#i-flag"/></svg>через 3 дня</span></span>
+              <span class="priority-chip"><svg class="icon"><use href="#i-zap"/></svg>5,0</span></div></div>
+          </article></li>
+          <li data-when="success closed" id="new-row"><article class="task p-low" style="background: var(--color-accent-soft)">
+            <label class="checkbox"><input type="checkbox" aria-labelledby="t9"><span class="checkbox__box"><svg class="icon icon--xs"><use href="#i-check"/></svg></span></label>
+            <div class="task__body"><p class="task__name" id="t9">Повторить билеты 1–10 к коллоквиуму</p>
+              <div class="task__meta"><span class="task__facts"><span class="task__fact"><svg class="icon icon--xs"><use href="#i-clock"/></svg>0:30</span><span class="task__fact deadline"><svg class="icon icon--xs"><use href="#i-flag"/></svg>завтра, 18:00</span></span>
+              <span class="priority-chip"><svg class="icon"><use href="#i-zap"/></svg>3,3</span></div></div>
+          </article></li>
+          <li><article class="task p-low">
+            <label class="checkbox"><input type="checkbox" aria-labelledby="t3"><span class="checkbox__box"><svg class="icon icon--xs"><use href="#i-check"/></svg></span></label>
+            <div class="task__body"><p class="task__name" id="t3">Прочитать главу 5 по матанализу</p>
+              <div class="task__meta"><span class="task__facts"><span class="task__fact"><svg class="icon icon--xs"><use href="#i-clock"/></svg>1:00</span><span class="task__fact deadline"><svg class="icon icon--xs"><use href="#i-flag"/></svg>через 6 дней</span></span>
+              <span class="priority-chip"><svg class="icon"><use href="#i-zap"/></svg>1,3</span></div></div>
+          </article></li>
+        </ul>
+      </section>
+    </div>
+  </main>
+
+  <!-- Fab теперь открывает «Быструю задачу» (на «Все задачи» и на «День») -->
+  <button class="fab" type="button" aria-label="Добавить задачу" aria-haspopup="dialog" data-open-quick><svg class="icon"><use href="#i-plus"/></svg></button>
+
+  <nav class="bottom-nav" aria-label="Основная навигация">
+    <a class="bottom-nav__item" href="day.html"><span class="bottom-nav__pill"><svg class="icon"><use href="#i-calendar"/></svg></span>День</a>
+    <a class="bottom-nav__item" href="all-tasks.html" aria-current="page"><span class="bottom-nav__pill"><svg class="icon"><use href="#i-list"/></svg></span>Все задачи</a>
+  </nav>
+
+  <!-- Toast после закрытия листа -->
+  <div class="toast" role="status" data-when="closed">Добавлено 2 задачи<button class="btn btn--ghost" type="button">Показать</button></div>
+
+  <!-- ============ QuickAddSheet ============ -->
+  <div class="sheet-backdrop sheet-backdrop--top" data-view="sheet" data-active>
+    <div class="sheet sheet--quick" role="dialog" aria-modal="true" aria-labelledby="qa-title">
+      <div class="sheet__grip"></div>
+      <div class="quick-add__head">
+        <h2 class="quick-add__title" id="qa-title">Новая задача</h2>
+        <a class="btn btn--ghost" id="qa-more" href="new-task.html?name=%D0%9F%D0%BE%D0%B2%D1%82%D0%BE%D1%80%D0%B8%D1%82%D1%8C&amp;date=2026-10-06&amp;time=18:00&amp;te=30&amp;groupId=3">Подробнее<svg class="icon"><use href="#i-arrow-right"/></svg></a>
+        <button class="btn btn--icon" type="button" aria-label="Закрыть" data-close-quick><svg class="icon"><use href="#i-x"/></svg></button>
+      </div>
+
+      <!-- Одна плашка над полем: офлайн > ошибка > успех -->
+      <div class="notice quick-add__banner" role="status" data-when="offline">
+        <svg class="icon icon--sm"><use href="#i-wifi-off"/></svg>
+        <p class="notice__text"><b>Нет сети.</b> Добавить задачу получится, когда связь вернётся. Текст не пропадёт.</p>
+      </div>
+      <div class="alert quick-add__banner" role="alert" data-when="error">
+        <svg class="icon icon--sm"><use href="#i-alert"/></svg>
+        <div class="alert__body">
+          <p class="alert__title">Не удалось добавить задачу</p>
+          <p class="alert__text">Сервер не ответил. Всё введённое на месте — нажмите «Добавить» ещё раз.</p>
+        </div>
+      </div>
+      <div class="quick-add__status" role="status" data-when="success">
+        <svg class="icon icon--sm"><use href="#i-check-circle"/></svg>
+        <span class="quick-add__status-text"><b>5-я из 12</b> — «Повторить билеты 1–10 к коллоквиуму»</span>
+        <a class="btn btn--ghost" href="task.html">Открыть</a>
+      </div>
+
+      <form class="quick-add" id="qa-form" novalidate onsubmit="return false" aria-labelledby="qa-title">
+        <label class="visually-hidden" for="qa-name">Название задачи</label>
+        <input class="input quick-add__name" id="qa-name" type="text" maxlength="200" autocomplete="off" autocapitalize="sentences"
+               enterkeyhint="send" placeholder="Что нужно сделать?" autofocus>
+
+        <!-- Срок -->
+        <fieldset class="chip-row" id="row-deadline">
+          <legend class="visually-hidden">Дедлайн</legend>
+          <span class="chip-row__lead" aria-hidden="true"><svg class="icon icon--sm"><use href="#i-flag"/></svg></span>
+          <div class="chip-row__scroll" role="radiogroup" aria-label="Дедлайн">
+            <button class="chip" type="button" role="radio" aria-checked="false" data-dl="today">Сегодня, 21:00</button>
+            <button class="chip" type="button" role="radio" aria-checked="true" data-dl="tomorrow">Завтра, 18:00</button>
+            <button class="chip" type="button" role="radio" aria-checked="false" data-dl="3days" title="чт, 8 октября, 18:00">Через 3 дня</button>
+            <button class="chip" type="button" role="radio" aria-checked="false" data-dl="week" title="пн, 12 октября, 18:00">Через неделю</button>
+            <button class="chip chip--other" type="button" role="radio" aria-checked="false" aria-expanded="false" aria-controls="qa-dl-extra" data-dl="other"><span data-label>Другое…</span></button>
+          </div>
+        </fieldset>
+        <div class="quick-add__extra" id="qa-dl-extra" data-when="deadline-other">
+          <div class="field__row">
+            <input class="input" type="date" value="2026-10-09" aria-label="Дата дедлайна">
+            <input class="input" type="time" value="12:00" aria-label="Время дедлайна">
+          </div>
+          <span class="field__hint"><svg class="icon icon--xs"><use href="#i-flag"/></svg> через 4 дня — пт, 9 октября, 12:00</span>
+        </div>
+
+        <!-- Время на выполнение -->
+        <fieldset class="chip-row" id="row-time">
+          <legend class="visually-hidden">Время на выполнение</legend>
+          <span class="chip-row__lead" aria-hidden="true"><svg class="icon icon--sm"><use href="#i-clock"/></svg></span>
+          <div class="chip-row__scroll" role="radiogroup" aria-label="Время на выполнение">
+            <button class="chip" type="button" role="radio" aria-checked="false" aria-label="15 минут" data-te="15">15 мин</button>
+            <button class="chip" type="button" role="radio" aria-checked="true" aria-label="30 минут" data-te="30">30 мин</button>
+            <button class="chip" type="button" role="radio" aria-checked="false" aria-label="1 час" data-te="60">1:00</button>
+            <button class="chip" type="button" role="radio" aria-checked="false" aria-label="2 часа" data-te="120">2:00</button>
+            <button class="chip chip--other" type="button" role="radio" aria-checked="false" aria-expanded="false" aria-controls="qa-te-extra" data-te="other"><span data-label>Другое…</span></button>
+          </div>
+        </fieldset>
+        <div class="quick-add__extra" id="qa-te-extra" data-when="time-other">
+          <div class="time-field">
+            <span class="time-input"><input type="text" inputmode="numeric" value="3:30" aria-label="Время на выполнение" aria-describedby="qa-te-hint"><span class="time-input__unit">ч:мм</span></span>
+            <span class="field__hint" id="qa-te-hint">От 0:05 до 99:59, например 1:30</span>
+          </div>
+        </div>
+
+        <!-- Группа: раскрывается из GroupToggle -->
+        <fieldset class="chip-row" id="row-group" data-when="group-open">
+          <legend class="visually-hidden">Группа</legend>
+          <span class="chip-row__lead" aria-hidden="true"><svg class="icon icon--sm"><use href="#i-folder"/></svg></span>
+          <div class="chip-row__scroll" role="radiogroup" aria-label="Группа" id="qa-groups">
+            <button class="chip chip--weight w-4" type="button" role="radio" aria-checked="false" aria-label="Английский, вес 4"><span class="chip__dot" aria-hidden="true"></span>Английский<span class="chip__weight" aria-hidden="true">×4</span></button>
+            <button class="chip chip--weight w-3" type="button" role="radio" aria-checked="true" aria-label="Учёба, вес 3"><span class="chip__dot" aria-hidden="true"></span>Учёба<span class="chip__weight" aria-hidden="true">×3</span></button>
+            <button class="chip chip--weight w-2" type="button" role="radio" aria-checked="false" aria-label="Работа, вес 2"><span class="chip__dot" aria-hidden="true"></span>Работа<span class="chip__weight" aria-hidden="true">×2</span></button>
+            <button class="chip chip--weight w-2" type="button" role="radio" aria-checked="false" aria-label="Хобби, вес 2"><span class="chip__dot" aria-hidden="true"></span>Хобби<span class="chip__weight" aria-hidden="true">×2</span></button>
+            <button class="chip chip--weight w-1" type="button" role="radio" aria-checked="false" aria-label="Дом, вес 1"><span class="chip__dot" aria-hidden="true"></span>Дом<span class="chip__weight" aria-hidden="true">×1</span></button>
+            <button class="chip chip--weight w-1" type="button" role="radio" aria-checked="false" aria-label="Спорт, вес 1"><span class="chip__dot" aria-hidden="true"></span>Спорт<span class="chip__weight" aria-hidden="true">×1</span></button>
+            <button class="chip chip--weight" type="button" role="radio" aria-checked="false" aria-label="Без группы"><span class="chip__dot" aria-hidden="true"></span>Без группы</button>
+          </div>
+        </fieldset>
+
+        <!-- Предпросмотр места в очереди -->
+        <p class="quick-add__preview" aria-live="polite">
+          <span class="p-low"><span class="priority-chip" aria-label="Приоритет 3,3, низкий"><svg class="icon"><use href="#i-zap"/></svg>3,3</span></span>
+          <span>встанет 5-й из 12</span>
+          <span class="kbd-hint">· <kbd>Enter</kbd> добавить · <kbd>Esc</kbd> закрыть</span>
+        </p>
+
+        <div class="quick-add__foot">
+          <button class="chip group-toggle w-3" type="button" id="qa-group" aria-expanded="false" aria-controls="row-group" aria-label="Группа: Учёба, вес 3. Сменить">
+            <span class="chip__dot" aria-hidden="true"></span><span class="group-toggle__name">Учёба</span><span class="chip__weight" aria-hidden="true">×3</span><svg class="icon" aria-hidden="true"><use href="#i-chevron"/></svg>
+          </button>
+          <button class="btn btn--primary" type="submit" id="qa-submit" data-when="empty filled deadline-other time-other group-open success error offline">Добавить</button>
+          <button class="btn btn--primary" type="button" disabled aria-busy="true" data-when="submitting" style="opacity:1"><span class="spinner" aria-hidden="true"></span>Добавляем…</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="mock-keyboard" aria-hidden="true">экранная клавиатура (только в макете)</div>
+
+<div class="mock-panel" aria-hidden="true">
+  <span class="mock-panel__label">Макет · «Быстрая задача»</span>
+  <button data-set="empty">Пусто</button>
+  <button data-set="filled">Заполнено</button>
+  <button data-set="deadline-other">Срок: другое</button>
+  <button data-set="time-other">Время: другое</button>
+  <button data-set="group-open">Группа</button>
+  <button data-set="submitting">Отправка</button>
+  <button data-set="success">Успех (серия)</button>
+  <button data-set="error">Ошибка</button>
+  <button data-set="offline">Офлайн</button>
+  <button data-set="closed">Закрыт + Toast</button>
+  <button data-kb aria-pressed="true">Клавиатура</button>
+  <button data-theme-toggle>Тема</button>
+</div>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var name = 'Повторить билеты 1–10 к коллоквиуму';
+  var states = {
+    'empty':          { name: '', dl: 'tomorrow', te: '30' },
+    'filled':         { name: name, dl: 'tomorrow', te: '30' },
+    'deadline-other': { name: name, dl: 'other', te: '30' },
+    'time-other':     { name: name, dl: 'tomorrow', te: 'other' },
+    'group-open':     { name: name, dl: 'tomorrow', te: '30' },
+    'submitting':     { name: name, dl: 'tomorrow', te: '30' },
+    'success':        { name: '', dl: 'tomorrow', te: '30' },
+    'error':          { name: name, dl: 'tomorrow', te: '30' },
+    'offline':        { name: name, dl: 'tomorrow', te: '30' },
+    'closed':         { name: '', dl: 'tomorrow', te: '30' }
+  };
+  function pick(group, attr, value) {
+    document.querySelectorAll('#' + group + ' [role="radio"]').forEach(function (c) { c.setAttribute('aria-checked', c.dataset[attr] === value); });
+  }
+  function apply(state) {
+    var s = states[state];
+    $('qa-name').value = s.name;
+    $('qa-name').readOnly = state === 'submitting';
+    pick('row-deadline', 'dl', s.dl);
+    pick('row-time', 'te', s.te);
+    var dlOther = document.querySelector('[data-dl="other"]');
+    dlOther.setAttribute('aria-expanded', state === 'deadline-other');
+    dlOther.querySelector('[data-label]').textContent = state === 'deadline-other' ? 'пт, 9 окт, 12:00' : 'Другое…';
+    var teOther = document.querySelector('[data-te="other"]');
+    teOther.setAttribute('aria-expanded', state === 'time-other');
+    teOther.querySelector('[data-label]').textContent = state === 'time-other' ? '3:30' : 'Другое…';
+    $('qa-group').setAttribute('aria-expanded', state === 'group-open');
+    document.querySelectorAll('#qa-form .chip').forEach(function (c) { c.disabled = state === 'submitting'; });
+    $('qa-submit').disabled = state === 'empty' || state === 'success' || state === 'offline';
+    document.querySelector('[data-view="sheet"]').toggleAttribute('data-active', state !== 'closed');
+    document.querySelectorAll('[data-when]').forEach(function (el) {
+      el.classList.toggle('is-shown', el.dataset.when.split(' ').indexOf(state) !== -1);
+    });
+    document.querySelectorAll('.mock-panel [data-set]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.set === state); });
+    if (state !== 'closed' && state !== 'submitting') $('qa-name').focus({ preventScroll: true });
+  }
+  document.querySelectorAll('.mock-panel [data-set]').forEach(function (b) { b.addEventListener('click', function () { apply(b.dataset.set); }); });
+
+  // Выбор в рядах чипов: не уводим фокус из поля названия (иначе на Android закроется клавиатура)
+  document.querySelectorAll('#qa-form .chip').forEach(function (c) {
+    c.addEventListener('pointerdown', function (e) { e.preventDefault(); });
+  });
+  document.querySelectorAll('#qa-form [role="radiogroup"]').forEach(function (g) {
+    g.addEventListener('click', function (e) {
+      var chip = e.target.closest('[role="radio"]'); if (!chip) return;
+      g.querySelectorAll('[role="radio"]').forEach(function (x) { x.setAttribute('aria-checked', x === chip); });
+      if (chip.dataset.dl === 'other') apply('deadline-other');
+      if (chip.dataset.te === 'other') apply('time-other');
+      if (g.id === 'qa-groups') {
+        var t = $('qa-group');
+        t.className = 'chip group-toggle ' + ((chip.className.match(/w-\d+/) || [''])[0]);
+        t.querySelector('.group-toggle__name').textContent = chip.childNodes[1].textContent;
+        var w = chip.querySelector('.chip__weight'); t.querySelector('.chip__weight').textContent = w ? w.textContent : '';
+        apply('filled');
+      }
+    });
+  });
+  $('qa-group').addEventListener('click', function () {
+    apply(this.getAttribute('aria-expanded') === 'true' ? 'filled' : 'group-open');
+  });
+  $('qa-name').addEventListener('input', function () {
+    $('qa-submit').disabled = !this.value.trim();
+  });
+  $('qa-form').addEventListener('submit', function () {
+    if (!$('qa-name').value.trim()) return;
+    apply('submitting'); setTimeout(function () { apply('success'); }, 700);
+  });
+  document.querySelectorAll('[data-open-quick]').forEach(function (b) { b.addEventListener('click', function () { apply('empty'); }); });
+  var backdrop = document.querySelector('[data-view="sheet"]');
+  backdrop.addEventListener('click', function (e) { if (e.target === backdrop || e.target.closest('[data-close-quick]')) apply('closed'); });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape') apply('closed');
+    if ((e.key === 'n' || e.key === 'т') && !e.target.closest('input, textarea') && !backdrop.hasAttribute('data-active')) { e.preventDefault(); apply('empty'); }
+  });
+  document.querySelector('[data-kb]').addEventListener('click', function () {
+    var on = document.body.classList.toggle('mock-kb'); this.setAttribute('aria-pressed', on);
+  });
+  document.querySelector('[data-theme-toggle]').addEventListener('click', function () {
+    var root = document.documentElement;
+    var dark = root.dataset.theme === 'dark' || (!root.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches);
+    root.dataset.theme = dark ? 'light' : 'dark';
+  });
+  // Ряд прокручен до конца — убрать затухание справа
+  document.querySelectorAll('.chip-row__scroll').forEach(function (s) {
+    function upd() { s.parentElement.classList.toggle('chip-row--end', s.scrollLeft + s.clientWidth >= s.scrollWidth - 2); }
+    s.addEventListener('scroll', upd); window.addEventListener('resize', upd); upd();
+  });
+  apply('filled');
+})();
+</script>
+</body>
+</html>
