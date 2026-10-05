@@ -29,7 +29,8 @@ registerSW({
   onRegisteredSW(_swUrl, registration) {
     if (!registration) return
     document.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') void registration.update()
+      // офлайн или сервер недоступен — проверка просто пропускается до следующего раза
+      if (document.visibilityState === 'visible') registration.update().catch(() => {})
     })
   },
 })

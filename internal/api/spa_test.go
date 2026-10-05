@@ -47,23 +47,29 @@ func TestRegisterFrontend(t *testing.T) {
 		method       string
 		path         string
 		wantStatus   int
-		wantType     string // префикс Content-Type
+		wantType     string // подстрока Content-Type
 		wantCache    string // точное значение Cache-Control; пусто — не проверяется
 		wantBodyPart string
 	}{
-		{"service worker — файл, перепроверяется", http.MethodGet, "/sw.js", http.StatusOK, "text/javascript", noCache, "addEventListener"},
+		{"service worker — файл, перепроверяется", http.MethodGet, "/sw.js", http.StatusOK, "javascript", noCache, "addEventListener"},
+		{"HEAD service worker", http.MethodHead, "/sw.js", http.StatusOK, "javascript", noCache, ""},
 		{"манифест PWA — свой тип, перепроверяется", http.MethodGet, "/manifest.webmanifest", http.StatusOK, "application/manifest+json", noCache, `"start_url"`},
 		{"HEAD манифеста", http.MethodHead, "/manifest.webmanifest", http.StatusOK, "application/manifest+json", noCache, ""},
 		{"PNG-иконка", http.MethodGet, "/icons/icon-192.png", http.StatusOK, "image/png", noCache, ""},
 		{"SVG-иконка", http.MethodGet, "/icons/icon.svg", http.StatusOK, "image/svg+xml", noCache, "<svg"},
 		{"favicon", http.MethodGet, "/favicon.svg", http.StatusOK, "image/svg+xml", noCache, "<svg"},
-		{"ассет с хешем кешируется навсегда", http.MethodGet, "/assets/index-abc.js", http.StatusOK, "text/javascript", immutable, "console.log"},
+		{"ассет с хешем кешируется навсегда", http.MethodGet, "/assets/index-abc.js", http.StatusOK, "javascript", immutable, "console.log"},
 		{"css-ассет", http.MethodGet, "/assets/index-abc.css", http.StatusOK, "text/css", immutable, "body"},
 		{"отсутствующий ассет — 404, а не index.html", http.MethodGet, "/assets/missing.js", http.StatusNotFound, "application/json", "", "файл не найден"},
 		{"корень — index.html", http.MethodGet, "/", http.StatusOK, "text/html", noCache, "TaskManager"},
 		{"маршрут SPA — index.html", http.MethodGet, "/all-tasks?quick=1", http.StatusOK, "text/html", noCache, "TaskManager"},
 		{"вложенный маршрут SPA — index.html", http.MethodGet, "/tasks/42", http.StatusOK, "text/html", noCache, "TaskManager"},
-		{"скрытый файл не отдаётся", http.MethodGet, "/.gitkeep", http.StatusOK, "text/html", noCache, "TaskManager"},
+		{"скрытый файл → fallback на index.html", http.MethodGet, "/.gitkeep", http.StatusOK, "text/html", noCache, "TaskManager"},
+		// выход за пределы dist невозможен: путь очищается, остаётся файл из dist или fallback SPA
+		{"traversal к sw.js", http.MethodGet, "/../sw.js", http.StatusOK, "javascript", noCache, "addEventListener"},
+		{"traversal из assets", http.MethodGet, "/assets/../index.html", http.StatusOK, "text/html", noCache, "TaskManager"},
+		{"traversal в URL-кодировке", http.MethodGet, "/%2e%2e/sw.js", http.StatusOK, "javascript", noCache, "addEventListener"},
+		{"traversal за пределы dist → fallback", http.MethodGet, "/../../etc/passwd", http.StatusOK, "text/html", noCache, "TaskManager"},
 		{"существующий маршрут API", http.MethodGet, "/api/ping", http.StatusOK, "application/json", "", `"ok":true`},
 		{"неизвестный маршрут API — 404 JSON", http.MethodGet, "/api/unknown", http.StatusNotFound, "application/json", "", "маршрут не найден"},
 		{"сам /api — 404 JSON", http.MethodGet, "/api", http.StatusNotFound, "application/json", "", "маршрут не найден"},
@@ -78,8 +84,10 @@ func TestRegisterFrontend(t *testing.T) {
 			if rec.Code != tt.wantStatus {
 				t.Fatalf("статус = %d, ожидался %d (тело: %q)", rec.Code, tt.wantStatus, rec.Body.String())
 			}
-			if got := rec.Header().Get("Content-Type"); !strings.HasPrefix(got, tt.wantType) {
-				t.Errorf("Content-Type = %q, ожидался с префиксом %q", got, tt.wantType)
+			// подстрока, а не точное значение: mime может подмешать /etc/mime.types окружения
+			// (text/javascript или application/javascript)
+			if got := rec.Header().Get("Content-Type"); !strings.Contains(got, tt.wantType) {
+				t.Errorf("Content-Type = %q, ожидалось содержащее %q", got, tt.wantType)
 			}
 			if tt.wantCache != "" {
 				if got := rec.Header().Get("Cache-Control"); got != tt.wantCache {
