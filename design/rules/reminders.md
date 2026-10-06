@@ -18,15 +18,15 @@ All texts use the user's local time (`Timezone`); dates/durations per [formats](
 - **Click:** `/day`. **tag:** `plan-evening`. **TTL:** 2 h.
 
 ### 3. «Дедлайн скоро»
-- **When:** checked every minute. Task with `Status = 1`, `now < DeadLine <= now + DeadlineHoursBefore`, and no notification yet for the pair `(TaskId, DeadLine)`. If the deadline moves, a new notification may follow.
+- **When:** checked every minute. Task with `Status = 1`, `now < Deadline <= now + DeadlineHoursBefore`, and no notification yet for the pair `(TaskId, Deadline)`. If the deadline moves, a new notification may follow.
 - **Not right after creation:** a task created < 30 minutes ago is postponed (stays in the window on later checks).
 - **Quiet hours** (if `QuietEnabled`; default 23:00–07:00, by `Timezone`): "Дедлайн скоро" falling into `[QuietFrom, QuietTo)` is postponed until `QuietTo` if the deadline has not passed by then (else not sent). The interval may cross midnight (`QuietFrom > QuietTo`: 23:00–07:00 = 23:00…23:59 and 00:00…06:59). Morning and evening reminders ignore quiet hours.
 - **Title:** task name (up to 60 chars, then "…"): "Подготовить отчёт по ТИПИС"
 - **Body:** "Дедлайн через 2 ч 50 мин — сегодня, 18:00. Осталось ≈ 1:50 работы."
   - "Осталось" = `TimeForExecution * (100 - PercentOfCompleting) / 100`, rounded to 5 min, `Ч:ММ`;
   - if work exceeds the time left: "Дедлайн через 2 ч 50 мин — сегодня, 18:00. Работы ≈ 4:00 — больше, чем осталось времени.";
-  - "через N": under an hour "через 45 мин", else "через 2 ч 50 мин" / "через 3 ч". Computed from `DeadLine` and current time, not from stored `NumberOfHoursUntilDL`.
-- **Click:** `/tasks/:TaskId`. **tag:** `deadline-<TaskId>`. **TTL:** until `DeadLine`. **Urgency:** `high`.
+  - "через N": under an hour "через 45 мин", else "через 2 ч 50 мин" / "через 3 ч". Computed from `Deadline` and current time, not from stored `HoursUntilDeadline`.
+- **Click:** `/tasks/:TaskId`. **tag:** `deadline-<TaskId>`. **TTL:** until `Deadline`. **Urgency:** `high`.
 - **Summary:** if one check finds 3+ tasks (e.g. right after enabling), send one notification: title "3 дедлайна в ближайшие 3 ч"; body "Подготовить отчёт по ТИПИС — 18:00, Код-ревью задачи по API — 19:30 и ещё 1"; click `/all-tasks`, tag `deadline-summary`.
 
 ### 4. Тестовое
@@ -34,7 +34,7 @@ Title "Уведомления работают"; body "Так будут при�
 
 ## Delivery rules
 - Scheduler: goroutine ticking every minute, stopped by context; for each user with subscriptions checks rules 1–3.
-- No repeats: table `notification_log` (`UserId`, `Kind` morning|evening|deadline, `TaskId`, `Key` = local date `YYYY-MM-DD` for morning/evening, `DeadLine` RFC3339 for deadline, `SentAt`), unique index `(UserId, Kind, TaskId, Key)`; the row is written before sending, in one transaction with the check.
+- No repeats: table `notification_log` (`UserId`, `Kind` morning|evening|deadline, `TaskId`, `Key` = local date `YYYY-MM-DD` for morning/evening, `Deadline` RFC3339 for deadline, `SentAt`), unique index `(UserId, Kind, TaskId, Key)`; the row is written before sending, in one transaction with the check.
 - Missed times: after a restart a morning/evening reminder is sent only while its TTL has not expired (3 h / 2 h).
 - Dead subscriptions: push service answered 404/410 (403 after key change) -> subscription deleted.
 - Push headers: `TTL` from the rules above; `Urgency: high` for deadline, others `normal`; `Topic` = `tag`.

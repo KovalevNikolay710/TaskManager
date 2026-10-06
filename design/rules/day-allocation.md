@@ -8,19 +8,19 @@ Source of truth for `AllocateDayTime` (`internal/services/day_plan.go`, tests in
 
 ## Input
 - `T` = `Day.TimeForTasks`, minutes (15–960). On rebuild: `T - sum(Minutes of completed slots)` (see Rebuild).
-- Candidates: user's tasks with `Status = 1` and `DeadLine` later than the start of `Day.Date`. Before computing, refresh `NumberOfHoursUntilDL` and `Priority` for each candidate from the current moment (`refreshTaskPriorty(task, now)`); saving them is not required.
+- Candidates: user's tasks with `Status = 1` and `Deadline` later than the start of `Day.Date`. Before computing, refresh `HoursUntilDeadline` and `Priority` for each candidate from the current moment (`task.Recalculate(now)`); saving them is not required.
 - Constants: `Q = 15` min slot, `STEP = 5` rounding step.
 
 ## Per candidate `i`
 - `W = Te * (100 - %) / 100` remaining work, min (`Te` = `TimeForExecution`, `%` = `PercentOfCompleting`);
-- `D = max(1, ceil(H / 24))` days to deadline; `H` = hours from `max(now, start of plan day)` to `DeadLine` (plan for today: `H` = `NumberOfHoursUntilDL`);
+- `D = max(1, ceil(H / 24))` days to deadline; `H` = hours from `max(now, start of plan day)` to `Deadline` (plan for today: `H` = `HoursUntilDeadline`);
 - `need = W / D` pace, min/day;
 - `cap = max(Q, roundUp5(W))` — never give more;
 - `base = min(max(Q, roundUp5(need)), cap)` — what the task gets first.
 - If `W < 15` the task still gets 15 (`cap = max(Q, ...)`): a slot is a minimum attention span; slots under 15 do not exist.
 
 ## Steps
-1. Sort candidates by `Pt` desc; ties: earlier `DeadLine`, then smaller `TaskId`.
+1. Sort candidates by `Pt` desc; ties: earlier `Deadline`, then smaller `TaskId`.
 2. If `Q * n > T`, only the first `k = floor(T / Q)` candidates enter the plan, others do not. `k = 0` -> empty plan.
 3. `S = sum(base)`.
 4. **Not enough (`S > T`)**: find `lambda >= 0` with `sum(clamp(lambda * Pt_i, Q, base_i)) = T`; `x_i = clamp(lambda * Pt_i, Q, base_i)`. Monotonic in `lambda`; a solution exists since `Q * k <= T < S`. Binary search (60 iterations) or breakpoint sort. Ceiling per task here is `base`.

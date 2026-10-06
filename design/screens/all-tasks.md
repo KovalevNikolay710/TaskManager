@@ -3,7 +3,7 @@ Mockup `all-tasks.html` holds exact copy for all states (switcher panel is mocku
 
 ## Data (`userId` = `CURRENT_USER_ID`, PascalCase responses)
 - `GET /api/groups/user/:id` -> `Group[]` (`GroupId`, `Name`, `GroupPriority`).
-- `POST /api/tasks/user/:id` `{}` -> `Task[]` (`Name`, `Description`, `DeadLine`, `TimeForExecution`, `PercentOfCompleting`, `Priority`, `Status`, `GroupId`, `UpdatedAt`). Never pass `status` in the filter.
+- `GET /api/tasks/user/:id` -> `Task[]` (`Name`, `Description`, `Deadline`, `TimeForExecution`, `PercentOfCompleting`, `Priority`, `Status`, `GroupId`, `UpdatedAt`). Never pass `status` in the query.
 
 ## Rules
 - Sections by `GroupPriority` desc, then name; "Без группы" last (`GroupId = 0` or unknown group); empty groups hidden.

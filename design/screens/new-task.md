@@ -2,7 +2,7 @@
 Mockup `new-task.html` holds exact copy for all states. Code is the source of truth. **Purpose:** create a task with all fields; see queue place before saving. **Route:** `/tasks/new` (from "Подробнее" in QuickAddSheet; query params: [quick-add-rules](../rules/quick-add-rules.md)).
 
 ## Data
-- `GET /api/groups/user/:id` -> `Group[]` (`GroupId`, `Name`, `GroupPriority`); `POST /api/tasks/user/:id` `{}` -> `Task[]` (`Priority`, `Status`) for queue place (failure -> number only).
+- `GET /api/groups/user/:id` -> `Group[]` (`GroupId`, `Name`, `GroupPriority`); `GET /api/tasks/user/:id` -> `Task[]` (`Priority`, `Status`) for queue place (failure -> number only).
 - Default group: `localStorage` `tm.lastGroupId` if it exists, else "Без группы".
 
 ## Rules

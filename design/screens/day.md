@@ -6,12 +6,12 @@ Mockup `day.html` holds the copy for all states. Code is the source of truth. **
 ## Data
 1. `GET /api/days/user/:id` -> `Day[]` with `Tasks`, `Slots` (`TaskId`, `Minutes`), `Date`, `TimeForTasks`. Day = local `Date` match (several: max `DayId`).
 2. `GET /api/groups/user/:id` -> labels (failure hides them).
-3. `POST /api/tasks/user/:id` `{}` -> "Ещё N задач не в плане": active, `DeadLine` after day start, not in `Slots`; today/future only.
+3. `GET /api/tasks/user/:id` -> "Ещё N задач не в плане": active, `Deadline` after day start, not in `Slots`; today/future only.
 
 ## Rules
 - Order of list and sectors: active by `Priority` desc, completed by `Minutes` desc, then "Свободно".
 - Free = `TimeForTasks - sum(Minutes)`, shown if >= 5 min. Centre "осталось" = sum of active `Minutes`. "Приоритет дня (осталось)" = sum of `Priority` of `Status = 1` (client).
-- Sector colour: `Task.GroupPriorty` clamped 1–10 (no group 1). Priority level vs max over this day's active tasks.
+- Sector colour: `Task.GroupPriority` clamped 1–10 (no group 1). Priority level vs max over this day's active tasks.
 - Past day: Badge "Прошедший день", no plan editing.
 - Refetch `days` on `visibilitychange`; group weight change invalidates `days`.
 

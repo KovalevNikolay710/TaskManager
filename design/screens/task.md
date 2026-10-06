@@ -3,8 +3,8 @@ Mockup `task.html` holds exact copy for all states. Code is the source of truth.
 
 ## Data
 - `GET /api/tasks/:id` -> `Task` (404 = not found; non-numeric id -> 400, shown as not found). Render from cache (`tasks` / `Day.Tasks`) at once, refresh in background.
-- `GET /api/groups/user/:id` (picker, group name); `POST /api/tasks/user/:id` `{}` (queue place only; failure hides it).
-- Fields: `Name`, `Status`, `UpdatedAt` (no `CompletedAt`: "Отмечена …" uses it), `Priority`, `GroupPriorty`/`TimeForExecution`/`NumberOfHoursUntilDL`/`PercentOfCompleting` (server values for the breakdown), `DeadLine`, `GroupId`, `Description`, `CreatedAt`.
+- `GET /api/groups/user/:id` (picker, group name); `GET /api/tasks/user/:id` (queue place only; failure hides it).
+- Fields: `Name`, `Status`, `UpdatedAt` (no `CompletedAt`: "Отмечена …" uses it), `Priority`, `GroupPriority`/`TimeForExecution`/`HoursUntilDeadline`/`PercentOfCompleting` (server values for the breakdown), `Deadline`, `GroupId`, `Description`, `CreatedAt`.
 - Place = position in `sortTasks` among active; level relative to max over all active; hidden when done.
 
 ## Rules
