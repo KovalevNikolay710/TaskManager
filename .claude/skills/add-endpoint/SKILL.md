@@ -1,19 +1,19 @@
 ---
 name: add-endpoint
-description: Как добавить или изменить эндпоинт в Go-бэкенде TaskManager (gin + GORM) по слоям model → repository → service → handler → route. Используй при любой доработке API.
+description: Steps to add or change a TaskManager Go endpoint (gin + GORM) layer by layer — model → repository → service → handler → route. Use for any backend API change.
 ---
 
-# Добавление эндпоинта
+# Adding an endpoint
 
-Иди по слоям снизу вверх и повторяй стиль соседнего кода (эталон — задачи: `internal/models/task.go`, `internal/repository/task_database.go`, `internal/services/task_services.go`, `internal/api/handlers/task_handlers.go`).
+Go bottom-up and copy the style of the neighbouring code. Reference implementation — tasks: `internal/models/task.go`, `internal/repository/task_database.go`, `internal/services/task_services.go`, `internal/api/handlers/task_handlers.go`. Current endpoints and contract: `api-reference` skill.
 
-## 1. Модель — `internal/models/<entity>.go`
+## 1. Model — `internal/models/<entity>.go`
 
-- GORM-модель: первичный ключ `<Entity>Id int64 gorm:"primaryKey;autoIncrement"`, `UserId` с `gorm:"not null;index"`, `CreatedAt`/`UpdatedAt`.
-- DTO запросов рядом: `<Entity>CreateRequest` (с `binding:"required"` на обязательных полях), `<Entity>UpdateRequest`. JSON-теги в camelCase.
-- Новую модель добавь в `db.AutoMigrate(...)` в `internal/repository/database.go`.
+- GORM model: primary key `<Entity>Id int64 gorm:"primaryKey;autoIncrement"`, `UserId` with `gorm:"not null;index"`, `CreatedAt`/`UpdatedAt`.
+- Request DTOs beside it: `<Entity>CreateRequest` (`binding:"required"` on mandatory fields), `<Entity>UpdateRequest`; json tags camelCase.
+- Register a new model in `db.AutoMigrate(...)` in `internal/repository/database.go`.
 
-## 2. Репозиторий — `internal/repository/<entity>_database.go`
+## 2. Repository — `internal/repository/<entity>_database.go`
 
 ```go
 type XRepositoryImpl struct {
@@ -25,40 +25,39 @@ func NewXRepository(db *gorm.DB) *XRepositoryImpl {
 }
 ```
 
-- CRUD уже есть в `GenericRepository` (`Create`, `FindByID`, `Update`, `Delete`; `Create`/`Update` принимают имена связей для `Preload`). Свой метод — только для специфичных запросов.
-- «Не найдено» — возвращай `nil, nil` (как `FindByID`), остальные ошибки — `fmt.Errorf("ошибка при ...: %w", err)`.
-- Никакой бизнес-логики.
+- CRUD comes from `GenericRepository` (`Create`, `FindByID`, `Update`, `Delete`; `Create`/`Update` take relation names to `Preload`). Add a method only for a specific query.
+- Not found → `nil, nil` (as `FindByID`); other errors → `fmt.Errorf("ошибка при ...: %w", err)`.
+- Data access only — rules belong to the service.
 
-## 3. Сервис — `internal/services/<entity>_services.go`
+## 3. Service — `internal/services/<entity>_services.go`
 
-- Валидация и бизнес-правила (например, пересчёт приоритета через `calculateTaskPriorty` при любом изменении полей формулы).
-- Логи через `slog` со структурированными полями.
+- Validation and business rules (e.g. recalc priority via `calculateTaskPriorty` whenever a formula field changes).
+- `slog` logs with structured fields.
 
-## 4. Обработчик — `internal/api/handlers/<entity>_handler(s).go`
+## 4. Handler — `internal/api/handlers/<entity>_handler(s).go`
 
-- Разбор параметров (`strconv.ParseInt(context.Param("id"), 10, 64)`), `ShouldBindJSON` в DTO.
-- Коды ответа: 400 — неверный ввод, 404 — не найдено, 409 — конфликт, 500 — прочее, 201 — создано, 200 — остальное.
-- Ошибку `ShouldBindJSON` отдавай через `respondBindingError`, ошибку сервиса — через `respondError` (`internal/api/handlers/errors.go`): статус выбирается по виду ошибки.
-- Бизнес-ошибки объявляй в `internal/services/errors.go` через `newError(ErrKindNotFound | ErrKindInvalidInput | ErrKindConflict, "текст для пользователя")`. Текст на русском, без технических подробностей.
-- Удаление — метод `DELETE /:id`.
+- Parse params (`strconv.ParseInt(context.Param("id"), 10, 64)`), `ShouldBindJSON` into the DTO.
+- Bind error → `respondBindingError`; service error → `respondError` (`internal/api/handlers/errors.go`) — it picks the status from the error kind.
+- Business errors are declared in `internal/services/errors.go` via `newError(ErrKindNotFound | ErrKindInvalidInput | ErrKindConflict, "текст для пользователя")` — Russian, user-facing, no technical detail.
+- Status codes: 201 created, 200 otherwise; deletion is `DELETE /:id`.
 
-## 5. Маршрут — `internal/api/routes.go`
+## 5. Route — `internal/api/routes.go`
 
-Добавь в нужную группу — все группы вложены в `apiRoutes` (префикс `/api`). Если сущность новая, группу тоже создавай от `apiRoutes`, а сервис и репозиторий — в `cmd/taskManager/main.go` и передай их в `RegisterTaskRoutes`.
+Add to the right group; all groups hang off `apiRoutes` (`/api` prefix). A new entity gets its own group from `apiRoutes`; wire its repository and service in `cmd/taskManager/main.go` and pass them to `RegisterTaskRoutes`.
 
-## 6. Проверка
+## 6. Check
 
 ```bash
-go build ./... && go vet ./...
+go build ./... && go vet ./... && go test ./...
 ```
 
-Если поднята БД — проверь curl'ом:
+With the DB up (`ops` skill), smoke-test with curl:
 
 ```bash
 curl -s -X POST localhost:8080/api/tasks/ -H 'Content-Type: application/json' \
   -d '{"userId":1,"name":"Проверка","deadline":"2030-01-01T10:00:00Z","timeForExecution":60,"percentOfCompleting":0}'
 ```
 
-## 7. Документация
+## 7. Docs
 
-Обнови таблицу API в `CLAUDE.md` и, если меняется формат ответа, `web/src/api/types.ts`.
+Update the endpoint table in the `api-reference` skill (`.claude/skills/api-reference/SKILL.md`); if the response shape changes, update `web/src/api/types.ts` too.
