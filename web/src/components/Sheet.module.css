@@ -5,7 +5,7 @@
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  /* Подложка по system.md (Sheet); отдельного токена для неё нет */
+  /* Подложка по design/components/Sheet.md; отдельного токена для неё нет */
   background: rgba(10, 12, 20, 0.45);
 }
 

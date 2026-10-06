@@ -3,7 +3,7 @@ import { combineDateTime, formatSpan, toDateKey, toTimeKey } from './dates'
 import { formatDuration, parseDuration } from './format'
 import { MIN_DEADLINE_MS } from './priority'
 
-// Поля формы задачи (экраны «Новая задача» и «Задача») и их проверка — design/screens/new-task.md, «Валидация».
+// Поля формы задачи (экраны «Новая задача» и «Задача») и их проверка — design/rules/task-form.md, «Валидация».
 
 export const TASK_NAME_MAX = 200
 export const TASK_DESCRIPTION_MAX = 2000
@@ -106,7 +106,7 @@ export function deadlinePresets(now = new Date()): DeadlinePreset[] {
 const NIGHT_END_HOUR = 5
 
 /**
- * Срок, выбранный по умолчанию при открытии «Быстрой задачи» (design/screens/quick-add.md, «Срок по умолчанию»).
+ * Срок, выбранный по умолчанию при открытии «Быстрой задачи» (design/rules/quick-add-rules.md, «Default deadline»).
  * Контракт: возвращает один из presets (их даёт deadlinePresets(now)), никогда не «Другое…».
  *
  * Ночью (00:00–04:59) — «Сегодня, 21:00»: для человека «сегодня» ещё не началось, это дело на наступающий день.

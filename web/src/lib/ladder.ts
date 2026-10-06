@@ -1,6 +1,6 @@
 import { GROUP_WEIGHT_MAX, GROUP_WEIGHT_MIN } from './groups'
 
-// Правило переноса по лесенке групп — design/screens/groups.md, «Перенос: правило вставки между ступенями».
+// Правило переноса по лесенке групп — design/rules/ladder-insert.md.
 
 /** Группа на лесенке: вес уже ограничен шкалой 1–10. */
 export interface LadderItem {

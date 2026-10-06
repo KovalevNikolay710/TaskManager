@@ -45,7 +45,7 @@ var (
 	ErrEmptyGroupName = newError(ErrKindInvalidInput, "название группы не может быть пустым")
 	ErrGroupNameTaken = newError(ErrKindConflict, "группа с таким названием уже есть")
 
-	// Push-уведомления и настройки напоминаний (design/screens/profile.md)
+	// Push-уведомления и настройки напоминаний (design/rules/push-states.md, design/rules/reminders.md)
 	ErrSubscriptionNotFound = newError(ErrKindNotFound, "Подписка не найдена")
 	// ErrSubscriptionGone — push-сервис ответил 404/410/403, подписка удалена
 	ErrSubscriptionGone        = newError(ErrKindGone, "Подписка устарела")

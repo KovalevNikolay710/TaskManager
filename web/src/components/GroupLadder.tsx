@@ -83,7 +83,7 @@ function gapText(k: number, plan: InsertPlan | null, names: ReadonlyMap<number, 
 }
 
 /**
- * GroupLadder — лесенка групп ×10…×1 (design/system.md). Перенос — перетаскиванием за ручку ⋮⋮
+ * GroupLadder — лесенка групп ×10…×1 (design/components/GroupLadder.md). Перенос — перетаскиванием за ручку ⋮⋮
  * или без перетаскивания: короткий тап / Enter по ручке включает режим размещения с кнопками-целями.
  */
 export function GroupLadder({ entries, noGroupMeta, pendingIds, locked, highlightedId, onEdit, onMove }: GroupLadderProps) {

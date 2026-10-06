@@ -13,7 +13,7 @@ const SIDE_NAV_ITEMS: Array<{ to: string; label: string; icon: IconName; section
   { to: '/groups', label: 'Группы', icon: 'folder', section: 'groups' },
 ]
 
-// В BottomNav только два главных экрана: «Группы» — раздел внутри «Все задачи» (system.md, «Карта экранов»)
+// В BottomNav только два главных экрана: «Группы» — раздел внутри «Все задачи» (design/foundations/layout.md, «Screen map»)
 const BOTTOM_NAV_ITEMS = SIDE_NAV_ITEMS.filter((item) => item.section !== 'groups')
 
 /** Раздел по маршруту: экраны задачи относятся к «Все задачи»; у профиля в BottomNav активного пункта нет. */

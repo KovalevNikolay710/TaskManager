@@ -134,7 +134,7 @@ export interface GroupReorderRequest {
   groups: Array<{ groupId: number; groupPriority: number }>
 }
 
-// --- Push-уведомления и напоминания (design/screens/profile.md, «Эндпоинты») ---
+// --- Push-уведомления и напоминания (design/rules/push-states.md, «Эндпоинты») ---
 
 /** Публичный VAPID-ключ сервера, base64url. */
 export interface PushKey {

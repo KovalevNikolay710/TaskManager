@@ -15,7 +15,7 @@ interface StateMessageProps {
   children?: ReactNode
 }
 
-/** EmptyState / ErrorState из system.md. */
+/** EmptyState / ErrorState — design/components/EmptyState.md, ErrorState.md. */
 export function StateMessage({ icon, title, text, detail, tone = 'default', compact = false, children }: StateMessageProps) {
   return (
     <div className={cx(styles.state, tone === 'error' && styles.error, compact && styles.compact)} role={tone === 'error' ? 'alert' : undefined}>
