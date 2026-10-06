@@ -25,14 +25,16 @@ func newError(kind error, msg string) *Error {
 	return &Error{kind: kind, msg: msg}
 }
 
+// NewInvalidInputError — ошибка неверных данных запроса (400) для слоёв выше сервиса, например неверный id в пути.
+func NewInvalidInputError(msg string) *Error {
+	return newError(ErrKindInvalidInput, msg)
+}
+
 func (e *Error) Error() string { return e.msg }
 
 func (e *Error) Unwrap() error { return e.kind }
 
 var (
-	// ErrNotFound — записи с таким ID нет (для GenericService)
-	ErrNotFound = newError(ErrKindNotFound, "запись не найдена")
-
 	ErrTaskNotFound    = newError(ErrKindNotFound, "задача не найдена")
 	ErrDayNotFound     = newError(ErrKindNotFound, "день не найден")
 	ErrGroupNotFound   = newError(ErrKindNotFound, "группа не найдена")

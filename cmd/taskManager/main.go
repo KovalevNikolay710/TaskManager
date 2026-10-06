@@ -2,13 +2,16 @@ package main
 
 import (
 	"TaskManager/internal/api"
-	"TaskManager/internal/lib/logger/slog"
+	"TaskManager/internal/config"
+	sl "TaskManager/internal/lib/logger/slog"
 	"TaskManager/internal/repository"
 	"TaskManager/internal/services"
 	"TaskManager/web"
 	"context"
 	"errors"
-	"log"
+	"fmt"
+	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -22,14 +25,46 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Таймауты HTTP-сервера: защита от медленных и зависших клиентов.
+const (
+	readHeaderTimeout = 10 * time.Second
+	readTimeout       = 15 * time.Second
+	writeTimeout      = 30 * time.Second
+	idleTimeout       = 60 * time.Second
+	shutdownTimeout   = 10 * time.Second
+)
+
 func main() {
+	logger := sl.InitLogger()
+	slog.SetDefault(logger)
+	if err := run(logger); err != nil {
+		logger.Error("Сервер остановлен с ошибкой", sl.Err(err))
+		os.Exit(1)
+	}
+}
+
+func run(logger *slog.Logger) error {
+	cfg, err := config.Load()
+	if err != nil {
+		return fmt.Errorf("ошибка настроек: %w", err)
+	}
+
 	// Контекст отменяется по Ctrl+C и SIGTERM (docker stop): сервер и планировщик завершаются штатно
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
 
-	// Подключение к базе данных
-	repository.Connect()
-	db := repository.GetDB()
+	// Подключение к базе данных и миграция схемы
+	db, err := repository.Connect(ctx, cfg.DB.DSN(), logger)
+	if err != nil {
+		return err
+	}
+	if err := repository.Migrate(db, logger); err != nil {
+		if !errors.Is(err, repository.ErrRepairFailed) {
+			return err
+		}
+		// Данные остались прежними, сервер продолжает запуск
+		logger.Error("Чистка данных старых версий не удалась", sl.Err(err))
+	}
 
 	// Инициализация репозитория
 	taskRepository := repository.NewTaskRepository(db)
@@ -40,21 +75,19 @@ func main() {
 	vapidRepository := repository.NewVapidKeysRepository(db)
 	notificationLogRepository := repository.NewNotificationLogRepository(db)
 
-	logger := slog.InitLogger()
-
 	// Инициализация сервиса
 	taskService := services.NewTaskService(taskRepository, groupRepository, logger)
 	dayService := services.NewDayService(dayRepository, taskRepository, logger)
 	groupServices := services.NewGroupService(groupRepository, taskRepository, taskService, logger)
 	pushService := services.NewPushService(subscriptionRepository, vapidRepository, services.NewWebPushSender(), services.PushConfig{
-		PublicKey:  os.Getenv("VAPID_PUBLIC_KEY"),
-		PrivateKey: os.Getenv("VAPID_PRIVATE_KEY"),
-		Subject:    os.Getenv("VAPID_SUBJECT"),
+		PublicKey:  cfg.VAPID.PublicKey,
+		PrivateKey: cfg.VAPID.PrivateKey,
+		Subject:    cfg.VAPID.Subject,
 		// Домены push-сервисов сверх встроенных, через запятую
-		ExtraEndpointHosts: services.ParseEndpointHosts(os.Getenv("PUSH_ENDPOINT_HOSTS")),
+		ExtraEndpointHosts: services.ParseEndpointHosts(cfg.PushEndpointHosts),
 	}, logger)
 	if err := pushService.InitKeys(); err != nil {
-		logger.Error("Не удалось загрузить VAPID-ключи, повторим при первом запросе", slog.Err(err))
+		logger.Error("Не удалось загрузить VAPID-ключи, повторим при первом запросе", sl.Err(err))
 	}
 	notificationService := services.NewNotificationService(settingsRepository, logger)
 	reminderService := services.NewReminderService(pushService, subscriptionRepository, settingsRepository,
@@ -73,58 +106,36 @@ func main() {
 	background.Go(func() { reminderService.Run(ctx) })
 
 	// Запуск сервера; ошибка запуска (например, порт занят) приходит через канал,
-	// чтобы остановить планировщик штатно, а не через log.Fatalf из горутины
-	server := &http.Server{Addr: ":8080", Handler: router, ReadHeaderTimeout: 10 * time.Second}
+	// чтобы остановить планировщик штатно, а не аварийно из горутины
+	server := &http.Server{
+		Addr:              net.JoinHostPort("", cfg.Port),
+		Handler:           router,
+		ReadHeaderTimeout: readHeaderTimeout,
+		ReadTimeout:       readTimeout,
+		WriteTimeout:      writeTimeout,
+		IdleTimeout:       idleTimeout,
+	}
 	serverErr := make(chan error, 1)
 	go func() {
-		log.Println("Сервер запущен на порту :8080")
+		logger.Info("Сервер запущен", slog.String("addr", server.Addr))
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			serverErr <- err
 		}
 	}()
 
-	exitCode := 0
+	var runErr error
 	select {
 	case <-ctx.Done():
 		logger.Info("Остановка сервера")
 	case err := <-serverErr:
-		logger.Error("Ошибка запуска сервера", slog.Err(err))
-		exitCode = 1
+		runErr = fmt.Errorf("ошибка запуска сервера: %w", err)
 	}
 	stop()
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
 	if err := server.Shutdown(shutdownCtx); err != nil {
-		logger.Error("Ошибка при остановке сервера", slog.Err(err))
+		logger.Error("Ошибка при остановке сервера", sl.Err(err))
 	}
 	background.Wait()
-	cancel()
-	if exitCode != 0 {
-		os.Exit(exitCode)
-	}
+	return runErr
 }
-
-// func main() {
-// 	cfg := config.MustLoad()
-
-// 	log := setupLogger(cfg.Env)
-// 	log = log.With(slog.String("env", cfg.Env)) // к каждому сообщению будет добавляться поле с информацией о текущем окружении
-
-// 	log.Info("initializing server", slog.String("address", cfg.Address)) // Помимо сообщения выведем параметр с адресом
-// 	log.Debug("logger debug mode enabled")
-// }
-
-// func setupLogger(env string) *slog.Logger {
-// 	var log *slog.Logger
-
-// 	switch env {
-// 	case envLocal:
-// 		log = slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-// 	case envDev:
-// 		log = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelDebug}))
-// 	case envProd:
-// 		log = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
-// 	}
-
-// 	return log
-// }

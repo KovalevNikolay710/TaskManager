@@ -5,7 +5,6 @@ import (
 	"TaskManager/internal/services"
 	"log/slog"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -128,9 +127,13 @@ func (handler *NotificationHandler) UpdateSettings(context *gin.Context) {
 }
 
 func (handler *NotificationHandler) userIDFromContext(context *gin.Context) (int64, bool) {
-	userID, err := strconv.ParseInt(context.Param("user_id"), 10, 64)
-	if err != nil || userID <= 0 {
-		context.JSON(http.StatusBadRequest, gin.H{"error": "Неправильное id пользователя"})
+	userID, ok := parseIDParam(context, handler.Logger, "user_id", "пользователя")
+	if !ok {
+		return 0, false
+	}
+	if userID <= 0 {
+		respondError(context, handler.Logger, services.NewInvalidInputError("Неправильное id пользователя"),
+			"Неправильный параметр пути", slog.String("param", "user_id"), slog.String("path", context.Request.URL.Path))
 		return 0, false
 	}
 	return userID, true

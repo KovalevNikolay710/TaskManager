@@ -5,7 +5,6 @@ import (
 	"TaskManager/internal/services"
 	"log/slog"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,14 +16,6 @@ type TaskHandler struct {
 
 func NewTaskHandler(taskService *services.TaskServiceImpl, logger *slog.Logger) *TaskHandler {
 	return &TaskHandler{TaskService: taskService, Logger: logger}
-}
-
-type TaskServiceImpl interface {
-	CreateTask(input models.TaskCreateRequest) (task *models.Task, err error)
-	DeleteTask(taskId int64) error
-	GetTaskByID(taskId int64) (*models.Task, error)
-	GetTasksByUserID(userId int64, filters models.TaskFilter) ([]*models.Task, error)
-	UpdateTask(taskID int64, input models.TaskUpdateRequest) (*models.Task, error)
 }
 
 func (handler *TaskHandler) CreateTask(context *gin.Context) {
@@ -44,29 +35,22 @@ func (handler *TaskHandler) CreateTask(context *gin.Context) {
 }
 
 func (handler *TaskHandler) GetTaskById(context *gin.Context) {
-	taskId, err := handler.GetIdFromContext(context)
-	if err != nil {
+	taskId, ok := parseIDParam(context, handler.Logger, "id", "задачи")
+	if !ok {
 		return
 	}
 
 	task, err := handler.TaskService.GetById(taskId)
 	if err != nil {
-		handler.Logger.Error("Ошибка при получении задачи из БД",
-			slog.String("error", err.Error()),
-			slog.Int64("taskId", taskId))
-		context.JSON(http.StatusInternalServerError, gin.H{"error": "Ошибка сервера"})
-		return
-	}
-	if task == nil {
-		context.JSON(http.StatusNotFound, gin.H{"error": services.ErrTaskNotFound.Error()})
+		respondError(context, handler.Logger, err, "Ошибка при получении задачи", slog.Int64("taskId", taskId))
 		return
 	}
 	context.JSON(http.StatusOK, task)
 }
 
 func (handler *TaskHandler) UpdateTask(context *gin.Context) {
-	taskId, err := handler.GetIdFromContext(context)
-	if err != nil {
+	taskId, ok := parseIDParam(context, handler.Logger, "id", "задачи")
+	if !ok {
 		return
 	}
 
@@ -82,14 +66,12 @@ func (handler *TaskHandler) UpdateTask(context *gin.Context) {
 		return
 	}
 
-	handler.Logger.Info("Задача успешно обновлена",
-		slog.Int64("taskId", taskId))
 	context.JSON(http.StatusOK, updatedTask)
 }
 
 func (handler *TaskHandler) DeleteTask(context *gin.Context) {
-	taskId, err := handler.GetIdFromContext(context)
-	if err != nil {
+	taskId, ok := parseIDParam(context, handler.Logger, "id", "задачи")
+	if !ok {
 		return
 	}
 
@@ -98,22 +80,16 @@ func (handler *TaskHandler) DeleteTask(context *gin.Context) {
 		return
 	}
 
-	handler.Logger.Info("Задача успешно удалена",
-		slog.Int64("taskId", taskId))
 	context.JSON(http.StatusOK, gin.H{"message": "Задача успешно удалена"})
 }
 
 func (handler *TaskHandler) GetTasksByUserID(context *gin.Context) {
-	userId, err := strconv.ParseInt(context.Param("user_id"), 10, 64)
-	if err != nil {
-		handler.Logger.Error("Неправильное id пользователя в запросе",
-			slog.String("method", context.Request.Method),
-			slog.String("path", context.Request.URL.Path),
-			slog.String("error", err.Error()))
-		context.JSON(http.StatusBadRequest, gin.H{"error": "Неправильное id пользователя"})
+	userId, ok := parseIDParam(context, handler.Logger, "user_id", "пользователя")
+	if !ok {
 		return
 	}
 
+	// Тело с фильтром необязательно: без него или с неверным JSON отдаём все задачи пользователя
 	var filter models.TaskFilter
 	if err := context.ShouldBindJSON(&filter); err != nil {
 		handler.Logger.Warn("Фильтр не предоставлен или ошибка при привязке",
@@ -122,16 +98,10 @@ func (handler *TaskHandler) GetTasksByUserID(context *gin.Context) {
 		filter = models.TaskFilter{}
 	}
 
-	handler.Logger.Info("Получен фильтр задач",
-		slog.Int64("userId", userId),
-		slog.Any("filter", filter))
-
 	tasks, err := handler.TaskService.GetTasksByUserID(userId, filter)
 	if err != nil {
-		handler.Logger.Error("Ошибка при получении задач по userId",
-			slog.Int64("userId", userId),
-			slog.String("error", err.Error()))
-		context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		respondError(context, handler.Logger, err, "Ошибка при получении задач по userId",
+			slog.Int64("userId", userId), slog.Any("filter", filter))
 		return
 	}
 	if tasks == nil {
@@ -140,19 +110,7 @@ func (handler *TaskHandler) GetTasksByUserID(context *gin.Context) {
 
 	handler.Logger.Info("Задачи успешно получены",
 		slog.Int64("userId", userId),
+		slog.Any("filter", filter),
 		slog.Int("taskCount", len(tasks)))
 	context.JSON(http.StatusOK, tasks)
-}
-
-func (handler *TaskHandler) GetIdFromContext(context *gin.Context) (int64, error) {
-	taskId, err := strconv.ParseInt(context.Param("id"), 10, 64)
-	if err != nil {
-		handler.Logger.Error("Ошибка при получении id задачи из запроса",
-			slog.String("error", err.Error()),
-			slog.String("method", context.Request.Method),
-			slog.String("path", context.Request.URL.Path))
-		context.JSON(http.StatusBadRequest, gin.H{"error": "Неправильное id задачи"})
-		return 0, err
-	}
-	return taskId, nil
 }

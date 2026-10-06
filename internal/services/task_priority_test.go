@@ -24,7 +24,7 @@ func TestHoursUntilDeadline(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := hoursUntilDeadline(tt.deadline, exampleNow); got != tt.want {
+			if got := models.HoursUntilDeadline(tt.deadline, exampleNow); got != tt.want {
 				t.Errorf("получено %d ч, ожидалось %d", got, tt.want)
 			}
 		})
@@ -52,7 +52,7 @@ func TestCalculateTaskPriorty(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			task := &models.Task{GroupPriorty: tt.pg, TimeForExecution: tt.te, NumberOfHoursUntilDL: tt.tl, PercentOfCompleting: tt.percent}
-			calculateTaskPriorty(task)
+			task.CalculatePriority()
 			if math.Abs(task.Priority-tt.want) > 1e-9 {
 				t.Errorf("Pt = %v, ожидалось %v", task.Priority, tt.want)
 			}
@@ -63,7 +63,7 @@ func TestCalculateTaskPriorty(t *testing.T) {
 func TestCalculateTaskPriortyMonotonic(t *testing.T) {
 	pt := func(tl, percent int) float64 {
 		task := &models.Task{GroupPriorty: 2, TimeForExecution: 100, NumberOfHoursUntilDL: tl, PercentOfCompleting: percent}
-		calculateTaskPriorty(task)
+		task.CalculatePriority()
 		return task.Priority
 	}
 	// Ближе дедлайн — выше приоритет (строго)
@@ -101,7 +101,7 @@ func TestRefreshTaskPriorty(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			task := &models.Task{GroupPriorty: 3, TimeForExecution: 120, PercentOfCompleting: 0,
 				DeadLine: tt.deadline, NumberOfHoursUntilDL: tt.staleTl}
-			refreshTaskPriorty(task, exampleNow)
+			task.Recalculate(exampleNow)
 			if task.NumberOfHoursUntilDL != tt.wantTl {
 				t.Errorf("Tl = %d, ожидалось %d", task.NumberOfHoursUntilDL, tt.wantTl)
 			}

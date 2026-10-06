@@ -4,7 +4,7 @@ import "time"
 
 const (
 	StatusDayValid = iota
-	StatusDayExpierd
+	StatusDayExpired
 )
 
 // Границы времени дня (TimeForTasks), минуты: от 0:15 до 16:00.
@@ -15,8 +15,8 @@ const (
 
 type Day struct {
 	DayId  int64     `gorm:"primaryKey;autoIncrement"`
-	UserId int64     `gorm:"not null;index"`
-	Date   time.Time `gorm:"not null"`
+	UserId int64     `gorm:"not null;index:idx_days_user_date,priority:1"`
+	Date   time.Time `gorm:"not null;index:idx_days_user_date,priority:2"`
 	// TimeForTasks — сколько минут пользователь готов отдать задачам в этот день (100% диаграммы);
 	// время делится между задачами плана (Slots), остаток — свободное время
 	TimeForTasks int `gorm:"not null;default:0"`

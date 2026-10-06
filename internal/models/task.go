@@ -9,7 +9,7 @@ const (
 
 type Task struct {
 	TaskId               int64  `gorm:"primaryKey;autoIncrement"`
-	UserId               int64  `gorm:"not null"`
+	UserId               int64  `gorm:"not null;index:idx_tasks_user_status,priority:1"`
 	GroupId              int64  `gorm:"index;default:0"` // 0 — задача без группы; индекс ускоряет выборку задач группы
 	GroupPriorty         uint64 `gorm:"default:1"`
 	DeadLine             time.Time
@@ -17,7 +17,7 @@ type Task struct {
 	Priority             float64
 	NumberOfHoursUntilDL int
 	PercentOfCompleting  int
-	Status               uint16 `gorm:"not null; default:1"`
+	Status               uint16 `gorm:"not null;default:1;index:idx_tasks_user_status,priority:2"`
 	Name                 string
 	Description          string
 	CreatedAt            time.Time

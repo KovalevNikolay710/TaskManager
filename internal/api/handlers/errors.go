@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"TaskManager/internal/services"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -105,6 +107,16 @@ func respondError(context *gin.Context, logger *slog.Logger, err error, logMessa
 		return
 	}
 
-	logger.Error(logMessage, append(attrs, slog.String("error", err.Error()))...)
-	context.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	// Неожиданная ошибка (БД, сеть, баг): подробности — только в лог, клиенту — общий текст с кодом,
+	// по которому запись находится в логе.
+	errorID := newErrorID()
+	logger.Error(logMessage, append(attrs, slog.String("error_id", errorID), slog.String("error", err.Error()))...)
+	context.JSON(http.StatusInternalServerError, gin.H{"error": "Внутренняя ошибка сервера (код " + errorID + ")"})
+}
+
+// newErrorID — короткий случайный код ошибки для сопоставления ответа и записи в логе.
+func newErrorID() string {
+	b := make([]byte, 4)
+	_, _ = rand.Read(b) // crypto/rand.Read не возвращает ошибку (Go 1.24+)
+	return hex.EncodeToString(b)
 }

@@ -43,7 +43,7 @@ type PlanSlot struct {
 func newPlanCandidate(task *models.Task, dayStart, now time.Time) PlanCandidate {
 	hours := task.NumberOfHoursUntilDL
 	if dayStart.After(now) {
-		hours = max(hoursUntilDeadline(task.DeadLine, dayStart), minHoursUntilDeadline)
+		hours = max(models.HoursUntilDeadline(task.DeadLine, dayStart), models.MinHoursUntilDeadline)
 	}
 	return PlanCandidate{
 		TaskId:   task.TaskId,

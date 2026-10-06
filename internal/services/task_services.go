@@ -19,22 +19,15 @@ func NewTaskService(taskRepo *rep.TaskRepositoryImpl, groupRepo *rep.GroupReposi
 	return &TaskServiceImpl{TaskRepo: taskRepo, GroupRepo: groupRepo, Logger: logger}
 }
 
-type TaskRepositoryImpl interface {
-	Create(task *models.Task) (*models.Task, error)
-	FindByID(taskID int64) (*models.Task, error)
-	Update(task *models.Task) (*models.Task, error)
-	Delete(taskID int64) error
-	FindByUserID(userID int64, filter models.TaskFilter) ([]*models.Task, error)
-}
-
 func (serv TaskServiceImpl) CreateTask(input models.TaskCreateRequest) (task *models.Task, err error) {
 	name := strings.TrimSpace(input.Name)
 	if name == "" {
 		return nil, ErrEmptyTaskName
 	}
 
-	hours := hoursUntilDeadline(input.DeadLine, time.Now())
-	if hours < minHoursUntilDeadline {
+	now := time.Now()
+	hours := models.HoursUntilDeadline(input.DeadLine, now)
+	if hours < models.MinHoursUntilDeadline {
 		serv.Logger.Warn("Неверный дедлайн", slog.Int("hoursUntilDeadline", hours))
 		return nil, ErrInvalidDeadline
 	}
@@ -49,22 +42,20 @@ func (serv TaskServiceImpl) CreateTask(input models.TaskCreateRequest) (task *mo
 	}
 
 	task = &models.Task{
-		UserId:               input.UserID,
-		GroupId:              input.GroupId,
-		GroupPriorty:         groupPriorty,
-		Name:                 name,
-		Description:          input.Description,
-		DeadLine:             input.DeadLine,
-		TimeForExecution:     input.TimeForExecution,
-		PercentOfCompleting:  input.PercentOfCompleting,
-		NumberOfHoursUntilDL: hours,
-		Status:               models.StatusActive,
+		UserId:              input.UserID,
+		GroupId:             input.GroupId,
+		GroupPriorty:        groupPriorty,
+		Name:                name,
+		Description:         input.Description,
+		DeadLine:            input.DeadLine,
+		TimeForExecution:    input.TimeForExecution,
+		PercentOfCompleting: input.PercentOfCompleting,
+		Status:              models.StatusActive,
 	}
-	calculateTaskPriorty(task)
+	task.Recalculate(now)
 
 	task, err = serv.TaskRepo.CreateInGroup(task)
 	if err != nil {
-		serv.Logger.Error("Ошибка при записи задачи в БД", slog.String("error", err.Error()))
 		return nil, fmt.Errorf("ошибка при записи задачи: %w", err)
 	}
 
@@ -78,50 +69,42 @@ func (serv TaskServiceImpl) CreateTask(input models.TaskCreateRequest) (task *mo
 
 // findUserGroup возвращает группу пользователя или ErrTaskGroupInvalid, если группы нет или она чужая.
 func (serv TaskServiceImpl) findUserGroup(groupID, userID int64) (*models.Group, error) {
-	group, err := serv.GroupRepo.FindByID(groupID)
+	group, err := serv.GroupRepo.FindUserGroup(userID, groupID)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при поиске группы: %w", err)
 	}
-	if group == nil || group.UserId != userID {
-		serv.Logger.Warn("Группа задачи не найдена или принадлежит другому пользователю",
-			slog.Int64("groupId", groupID), slog.Int64("userId", userID))
+	if group == nil {
 		return nil, ErrTaskGroupInvalid
 	}
 	return group, nil
 }
 
-// minHoursUntilDeadline — новый дедлайн должен быть не раньше чем через час:
-// Tl считается в целых часах и стоит в знаменателе формулы.
-const minHoursUntilDeadline = 1
-
-// hoursUntilDeadline — целые часы от now до дедлайна (Tl); для прошедшего дедлайна — 0 или меньше.
-func hoursUntilDeadline(deadline, now time.Time) int {
-	return int(deadline.Sub(now).Hours())
-}
-
-// calculateTaskPriorty считает приоритет задачи: Pt = Pg * Te / Tl * %in.
-func calculateTaskPriorty(task *models.Task) {
-	task.Priority = float64(task.GroupPriorty) * float64(task.TimeForExecution) / float64(task.NumberOfHoursUntilDL) * float64(100-task.PercentOfCompleting) / float64(100)
-}
-
-// refreshTaskPriorty пересчитывает Tl от текущего времени и приоритет задачи.
-// Для просроченной задачи (и задачи, до дедлайна которой меньше часа) Tl = 1:
-// приоритет максимальный для её параметров и без деления на ноль.
-func refreshTaskPriorty(task *models.Task, now time.Time) {
-	task.NumberOfHoursUntilDL = max(hoursUntilDeadline(task.DeadLine, now), minHoursUntilDeadline)
-	calculateTaskPriorty(task)
-}
-
-// UpdateTask применяет переданные поля (nil — не менять), пересчитывает Tl от текущего времени
-// и приоритет. Смена группы и связь в group_tasks сохраняются вместе с задачей в одной транзакции.
+// UpdateTask применяет переданные поля (nil — не менять) к задаче с любым владельцем: REST-маршрут
+// не передаёт userId. Для проверки владельца используйте UpdateTaskForUser.
 func (serv TaskServiceImpl) UpdateTask(taskID int64, input models.TaskUpdateRequest) (*models.Task, error) {
 	task, err := serv.TaskRepo.FindByID(taskID)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при поиске задачи: %w", err)
 	}
+	return serv.applyUpdate(task, input)
+}
+
+// UpdateTaskForUser — UpdateTask с проверкой владельца: чужая или несуществующая задача — ErrTaskNotFound.
+func (serv TaskServiceImpl) UpdateTaskForUser(userID, taskID int64, input models.TaskUpdateRequest) (*models.Task, error) {
+	task, err := serv.TaskRepo.FindByIDForUser(userID, taskID)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка при поиске задачи: %w", err)
+	}
+	return serv.applyUpdate(task, input)
+}
+
+// applyUpdate меняет загруженную задачу (nil — не найдена), пересчитывает Tl от текущего времени
+// и приоритет. Смена группы и связь в group_tasks сохраняются вместе с задачей в одной транзакции.
+func (serv TaskServiceImpl) applyUpdate(task *models.Task, input models.TaskUpdateRequest) (*models.Task, error) {
 	if task == nil {
 		return nil, ErrTaskNotFound
 	}
+	taskID := task.TaskId
 	now := time.Now()
 
 	if input.Name != nil {
@@ -141,7 +124,7 @@ func (serv TaskServiceImpl) UpdateTask(taskID int64, input models.TaskUpdateRequ
 	}
 
 	if input.DeadLine != nil {
-		if hoursUntilDeadline(*input.DeadLine, now) < minHoursUntilDeadline {
+		if models.HoursUntilDeadline(*input.DeadLine, now) < models.MinHoursUntilDeadline {
 			return nil, ErrInvalidDeadline
 		}
 		task.DeadLine = *input.DeadLine
@@ -187,7 +170,7 @@ func (serv TaskServiceImpl) UpdateTask(taskID int64, input models.TaskUpdateRequ
 		}
 	}
 
-	refreshTaskPriorty(task, now)
+	task.Recalculate(now)
 	task.UpdatedAt = now
 
 	updatedTask, err := serv.TaskRepo.UpdateWithGroup(task, groupChanged)
@@ -195,7 +178,7 @@ func (serv TaskServiceImpl) UpdateTask(taskID int64, input models.TaskUpdateRequ
 		return nil, fmt.Errorf("ошибка при обновлении задачи: %w", err)
 	}
 
-	serv.Logger.Info("Задача успешно обновлена", slog.Int64("taskID", taskID), slog.Any("updatedTask", updatedTask))
+	serv.Logger.Info("Задача успешно обновлена", slog.Int64("taskId", taskID))
 
 	return updatedTask, nil
 }
@@ -206,33 +189,57 @@ func (serv TaskServiceImpl) DeleteTask(taskID int64) error {
 	if err != nil {
 		return fmt.Errorf("ошибка при поиске задачи: %w", err)
 	}
+	return serv.deleteLoaded(task)
+}
+
+// DeleteTaskForUser — DeleteTask с проверкой владельца: чужая или несуществующая задача — ErrTaskNotFound.
+func (serv TaskServiceImpl) DeleteTaskForUser(userID, taskID int64) error {
+	task, err := serv.TaskRepo.FindByIDForUser(userID, taskID)
+	if err != nil {
+		return fmt.Errorf("ошибка при поиске задачи: %w", err)
+	}
+	return serv.deleteLoaded(task)
+}
+
+func (serv TaskServiceImpl) deleteLoaded(task *models.Task) error {
 	if task == nil {
 		return ErrTaskNotFound
 	}
-	if err := serv.TaskRepo.DeleteWithLinks(taskID); err != nil {
+	if err := serv.TaskRepo.DeleteWithLinks(task.TaskId); err != nil {
 		return fmt.Errorf("ошибка при удалении задачи: %w", err)
 	}
-	serv.Logger.Info("Задача удалена", slog.Int64("taskId", taskID))
+	serv.Logger.Info("Задача удалена", slog.Int64("taskId", task.TaskId))
 	return nil
 }
 
+// GetById возвращает задачу с любым владельцем или ErrTaskNotFound.
 func (serv *TaskServiceImpl) GetById(taskId int64) (*models.Task, error) {
 	task, err := serv.TaskRepo.FindByID(taskId)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при получении задачи: %w", err)
 	}
-
 	if task == nil {
-		return nil, nil
+		return nil, ErrTaskNotFound
 	}
+	return task, nil
+}
 
+// GetTaskForUser возвращает задачу пользователя; чужая или несуществующая — ErrTaskNotFound.
+func (serv *TaskServiceImpl) GetTaskForUser(userID, taskID int64) (*models.Task, error) {
+	task, err := serv.TaskRepo.FindByIDForUser(userID, taskID)
+	if err != nil {
+		return nil, fmt.Errorf("ошибка при получении задачи: %w", err)
+	}
+	if task == nil {
+		return nil, ErrTaskNotFound
+	}
 	return task, nil
 }
 
 func (serv TaskServiceImpl) GetTasksByUserID(userId int64, filters models.TaskFilter) ([]*models.Task, error) {
 	tasks, err := serv.TaskRepo.FindByUserID(userId, filters)
 	if err != nil {
-		return nil, fmt.Errorf("ошибка поиске задач по userId: %s", err)
+		return nil, fmt.Errorf("ошибка при поиске задач по userId: %w", err)
 	}
 	return tasks, nil
 }

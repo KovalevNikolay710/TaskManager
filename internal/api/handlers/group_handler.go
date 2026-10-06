@@ -5,7 +5,6 @@ import (
 	"TaskManager/internal/services"
 	"log/slog"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -17,15 +16,6 @@ type GroupHandler struct {
 
 func NewGroupHandler(groupService *services.GroupServiceImpl, logger *slog.Logger) *GroupHandler {
 	return &GroupHandler{GroupService: groupService, Logger: logger}
-}
-
-type GroupServiceImpl interface {
-	CreateGroup(input models.GroupCreateRequest) (Group *models.Group, err error)
-	DeleteGroup(GroupId int64) error
-	GetGroupByID(GroupId int64) (*models.Group, error)
-	UpdateGroup(GroupId int64, input models.GroupUpdateRequest) (*models.Group, error)
-	GetAllGroupTasks(GroupId int64) *[]models.Task
-	GetAllUserGroups(userId int64) *[]models.Group
 }
 
 func (handler *GroupHandler) CreateGroup(context *gin.Context) {
@@ -47,8 +37,8 @@ func (handler *GroupHandler) CreateGroup(context *gin.Context) {
 }
 
 func (handler *GroupHandler) DeleteGroup(context *gin.Context) {
-	groupId, err := handler.getIdFromContext(context)
-	if err != nil {
+	groupId, ok := parseIDParam(context, handler.Logger, "id", "группы")
+	if !ok {
 		return
 	}
 
@@ -63,8 +53,8 @@ func (handler *GroupHandler) DeleteGroup(context *gin.Context) {
 }
 
 func (handler *GroupHandler) GetGroupByID(context *gin.Context) {
-	groupId, err := handler.getIdFromContext(context)
-	if err != nil {
+	groupId, ok := parseIDParam(context, handler.Logger, "id", "группы")
+	if !ok {
 		return
 	}
 
@@ -78,8 +68,8 @@ func (handler *GroupHandler) GetGroupByID(context *gin.Context) {
 }
 
 func (handler *GroupHandler) UpdateGroup(context *gin.Context) {
-	groupId, err := handler.getIdFromContext(context)
-	if err != nil {
+	groupId, ok := parseIDParam(context, handler.Logger, "id", "группы")
+	if !ok {
 		return
 	}
 
@@ -120,8 +110,8 @@ func (handler *GroupHandler) ReorderGroups(context *gin.Context) {
 }
 
 func (handler *GroupHandler) AddTaskToGroup(context *gin.Context) {
-	groupId, err := handler.getIdFromContext(context)
-	if err != nil {
+	groupId, ok := parseIDParam(context, handler.Logger, "id", "группы")
+	if !ok {
 		return
 	}
 
@@ -142,20 +132,9 @@ func (handler *GroupHandler) AddTaskToGroup(context *gin.Context) {
 	context.JSON(http.StatusCreated, updatedGroup)
 }
 
-func (handler *GroupHandler) getIdFromContext(context *gin.Context) (int64, error) {
-	groupId, err := strconv.ParseInt(context.Param("id"), 10, 64)
-	if err != nil {
-		handler.Logger.Warn("Неправильное id группы в запросе",
-			slog.String("error", err.Error()))
-		context.JSON(http.StatusBadRequest, gin.H{"error": "Неправильное id группы"})
-		return 0, err
-	}
-	return groupId, nil
-}
-
 func (handler *GroupHandler) GetAllGroupTasks(context *gin.Context) {
-	groupId, err := handler.getIdFromContext(context)
-	if err != nil {
+	groupId, ok := parseIDParam(context, handler.Logger, "id", "группы")
+	if !ok {
 		return
 	}
 
@@ -176,22 +155,14 @@ func (handler *GroupHandler) GetAllGroupTasks(context *gin.Context) {
 }
 
 func (handler *GroupHandler) GetAllUserGroups(context *gin.Context) {
-	userID, err := strconv.ParseInt(context.Param("user_id"), 10, 64)
-	if err != nil {
-		handler.Logger.Error("Неправильное id пользователя в запросе",
-			slog.String("error", err.Error()),
-			slog.String("method", context.Request.Method),
-			slog.String("path", context.Request.URL.Path))
-		context.JSON(http.StatusBadRequest, gin.H{"error": "Неправильное id пользователя"})
+	userID, ok := parseIDParam(context, handler.Logger, "user_id", "пользователя")
+	if !ok {
 		return
 	}
 
 	groups, err := handler.GroupService.GetAllUserGroups(userID)
 	if err != nil {
-		handler.Logger.Error("Ошибка при получении всех групп пользователя",
-			slog.Int64("userId", userID),
-			slog.String("error", err.Error()))
-		context.JSON(http.StatusInternalServerError, gin.H{"error": "Не удалось получить группы пользователя"})
+		respondError(context, handler.Logger, err, "Ошибка при получении всех групп пользователя", slog.Int64("userId", userID))
 		return
 	}
 
