@@ -46,7 +46,7 @@ All routes live under `/api` (`internal/api/routes.go`); other GET paths serve t
 ## Domain rules
 
 - Deadline must be ≥ 1 h from now. `NumberOfHoursUntilDL` (Tl) is recomputed from now on every task change; overdue → Tl = 1.
-- `Status = 2` ⇔ `PercentOfCompleting = 100`. `Task.GroupId = 0` = no group.
+- `Status = 2` ⇔ `PercentOfCompleting = 100`. Update with both: `percentOfCompleting: 100` wins over `status: 1`; otherwise `status` is applied last. `Task.GroupId = 0` = no group.
 - Group weight 1–10; group name unique per user, case-insensitive, trimmed.
 - Durations (`TimeForExecution`, `Day.TimeForTasks`) are minutes; the UI shows `h:mm`.
 
