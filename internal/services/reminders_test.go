@@ -594,3 +594,50 @@ func TestQuietHoursEndDST(t *testing.T) {
 		})
 	}
 }
+
+func TestShouldRemindDeadline(t *testing.T) {
+	now := at(10, 5, 15, 0)
+	const (
+		hour = time.Hour
+		min  = time.Minute
+	)
+	tests := []struct {
+		name            string
+		hoursBefore     int
+		deadlineEnabled bool
+		status          uint16
+		deadlineIn      time.Duration // от now; отрицательное — срок прошёл
+		createdAgo      time.Duration
+		want            bool
+	}{
+		{"дедлайн через 2 ч", 3, true, models.StatusActive, 2 * hour, 2 * hour, true},
+		{"ровно через 3 ч — граница включается", 3, true, models.StatusActive, 3 * hour, 2 * hour, true},
+		{"через 3 ч и 1 с — вне окна", 3, true, models.StatusActive, 3*hour + time.Second, 2 * hour, false},
+		{"дедлайн ровно сейчас", 3, true, models.StatusActive, 0, 2 * hour, false},
+		{"дедлайн уже прошёл", 3, true, models.StatusActive, -10 * min, 2 * hour, false},
+		{"задача выполнена", 3, true, models.StatusCompleted, 2 * hour, 2 * hour, false},
+		{"создана 29 минут назад", 3, true, models.StatusActive, 2 * hour, 29 * min, false},
+		{"создана ровно 30 минут назад", 3, true, models.StatusActive, 2 * hour, 30 * min, true},
+		{"окно 1 ч: граница включается", 1, true, models.StatusActive, 1 * hour, 2 * hour, true},
+		{"окно 1 ч: 1 ч и 1 с — вне окна", 1, true, models.StatusActive, 1*hour + time.Second, 2 * hour, false},
+		{"окно 24 ч: граница включается", 24, true, models.StatusActive, 24 * hour, 2 * hour, true},
+		{"окно 24 ч: 24 ч и 1 с — вне окна", 24, true, models.StatusActive, 24*hour + time.Second, 2 * hour, false},
+		{"DeadlineEnabled=false не влияет: в окне", 3, false, models.StatusActive, 2 * hour, 2 * hour, true},
+		{"DeadlineEnabled=false не влияет: вне окна", 3, false, models.StatusActive, 4 * hour, 2 * hour, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			task := &models.Task{
+				Status:    tt.status,
+				DeadLine:  now.Add(tt.deadlineIn),
+				CreatedAt: now.Add(-tt.createdAgo),
+			}
+			s := models.DefaultNotificationSettings(1)
+			s.DeadlineHoursBefore = tt.hoursBefore
+			s.DeadlineEnabled = tt.deadlineEnabled
+			if got := shouldRemindDeadline(task, s, now); got != tt.want {
+				t.Errorf("shouldRemindDeadline = %v, ожидалось %v", got, tt.want)
+			}
+		})
+	}
+}

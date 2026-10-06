@@ -134,8 +134,13 @@ func quietHoursEnd(now time.Time, loc *time.Location, from, to string) (time.Tim
 //
 // Иначе false. s.DeadlineEnabled здесь не проверяется. Функция чистая: время — только из now.
 func shouldRemindDeadline(task *models.Task, s models.NotificationSettings, now time.Time) bool {
-	// TODO(human): решить, пора ли напоминать о дедлайне (design/screens/profile.md, «3. Дедлайн скоро»)
-	return false
+	if task.Status != models.StatusActive {
+		return false
+	}
+	windowEnd := now.Add(time.Duration(s.DeadlineHoursBefore) * time.Hour)
+	inWindow := now.Before(task.DeadLine) && !task.DeadLine.After(windowEnd)
+	oldEnough := now.Sub(task.CreatedAt) >= deadlineMinTaskAge
+	return inWindow && oldEnough
 }
 
 // deadlineWindowFunc — правило «задача в окне напоминания»; в работе — shouldRemindDeadline.
