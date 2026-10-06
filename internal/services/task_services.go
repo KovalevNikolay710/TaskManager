@@ -157,7 +157,9 @@ func (serv TaskServiceImpl) UpdateTask(taskID int64, input models.TaskUpdateRequ
 		}
 	}
 
-	if input.Status != nil {
+	// Переданные 100% важнее статуса: противоречивый status=1 не переоткрывает задачу
+	percentDone := input.PercentOfCompleting != nil && *input.PercentOfCompleting == 100
+	if input.Status != nil && !percentDone {
 		switch *input.Status {
 		case models.StatusCompleted:
 			task.Status = models.StatusCompleted

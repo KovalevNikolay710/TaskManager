@@ -497,7 +497,8 @@ func TestStatusPercentInvariant(t *testing.T) {
 		{"status=1 у выполненной -> 0%", models.TaskUpdateRequest{Status: st(models.StatusCompleted)}, models.TaskUpdateRequest{Status: st(models.StatusActive)}, models.StatusActive, 0},
 		{"status=1 и percent=30 у выполненной -> 30%", models.TaskUpdateRequest{Status: st(models.StatusCompleted)}, models.TaskUpdateRequest{Status: st(models.StatusActive), PercentOfCompleting: ptr(30)}, models.StatusActive, 30},
 		{"status=1 у активной на 60% не сбрасывает процент", models.TaskUpdateRequest{PercentOfCompleting: ptr(60)}, models.TaskUpdateRequest{Status: st(models.StatusActive)}, models.StatusActive, 60},
-		{"percent=100 и status=1 -> активна 0%", models.TaskUpdateRequest{}, models.TaskUpdateRequest{PercentOfCompleting: ptr(100), Status: st(models.StatusActive)}, models.StatusActive, 0},
+		// 100% важнее статуса: противоречивый запрос закрывает задачу
+		{"percent=100 и status=1 -> выполнена", models.TaskUpdateRequest{}, models.TaskUpdateRequest{PercentOfCompleting: ptr(100), Status: st(models.StatusActive)}, models.StatusCompleted, 100},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
