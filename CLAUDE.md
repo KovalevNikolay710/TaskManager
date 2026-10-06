@@ -61,3 +61,4 @@ Run the checks above before calling a task done.
 - `design-system` skill — `design/` structure, tokens, screen specs.
 - `agent-workflow` skill — coordinator pipeline: branches, subagents, tests, review, merge.
 - `ops` skill — Docker, worktrees, PWA, Tailscale/phone access.
+- `docs/codemaps/{backend,frontend,data}.md` — file-by-file map; read before exploring.
