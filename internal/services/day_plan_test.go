@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// Задачи примеров из design/screens/day.md («Требуется от бэкенда», п. 2): 24 сентября, 08:00.
+// Задачи примеров из design/rules/day-allocation.md: 24 сентября, 08:00.
 type exampleTask struct {
 	id      int64
 	name    string

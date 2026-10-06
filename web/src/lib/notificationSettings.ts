@@ -1,4 +1,4 @@
-// Настройки напоминаний (design/screens/profile.md, «Состояния настроек напоминаний»).
+// Настройки напоминаний (design/rules/push-states.md, «Состояния настроек напоминаний»).
 
 import type { NotificationSettings, NotificationSettingsUpdateRequest } from '../api/types'
 import { plural } from './format'

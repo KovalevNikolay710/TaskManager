@@ -1,59 +1,54 @@
 ---
 name: design-system
-description: Дизайн-система TaskManager — где лежат токены и компоненты, правила интерфейса и шаблон спецификации экрана. Используй при создании или изменении макетов в design/ и при реализации экранов по ним.
+description: TaskManager design system — where tokens, components, foundations, rules and screen specs live in design/, UI rules, and the screen-spec template. Use when creating or changing mockups in design/ or implementing a screen from them.
 ---
 
-# Дизайн-система TaskManager
+# TaskManager design system
 
-## Файлы
+## Files
 
-- `design/tokens.css` — единственный источник значений: цвета, типографика, отступы, радиусы, тени. Все макеты и фронтенд используют только эти переменные.
-- `design/system.md` — каталог компонентов: назначение, варианты, состояния, какие токены использует.
-- `design/screens/<screen>.html` + `design/screens/<screen>.md` — макет и спецификация экрана.
+Read the index, then only what the task needs.
 
-Если `tokens.css` ещё нет — создай его первым делом.
+- `design/system.md` — **index**: principles, one line per component, links to everything below. Keep it ≤ 6 KB.
+- `design/tokens.css` — the only source of values (colour, type, spacing, radii, shadows, sizes), light + dark. `design/components.css` — reference markup/CSS for component classes (`.mock-panel` is mockup-only).
+- `design/components/<Name>.md` — one per component: purpose, anatomy, variants, states, classes/tokens, behaviour, a11y.
+- `design/foundations/*.md` — cross-cutting: layout and screen map, weight scale ×1…×10, formats, icons.
+- `design/rules/*.md` — precise rules that code cites (day-plan allocation, ladder insertion, quick-add defaults, task-form validation, reminders, push states). Code comments link here; when a rule changes, keep the file name stable.
+- `design/screens/<screen>.html` (mockup, exact copy) + `design/screens/<screen>.md` (spec).
 
-## Токены
+Agent-facing text is concise English; Russian UI strings stay verbatim in quotes.
 
-Именование: `--color-*`, `--font-*`, `--text-*` (размеры), `--space-*` (шкала 4px: 4, 8, 12, 16, 24, 32, 48), `--radius-*`, `--shadow-*`.
+## Tokens
 
-Цвета задаются семантически, а не по оттенку: `--color-bg`, `--color-surface`, `--color-text`, `--color-text-muted`, `--color-border`, `--color-accent`, `--color-danger`, `--color-success`, плюс шкала приоритета `--color-priority-low|mid|high`.
+Naming: `--color-*`, `--font-*`, `--text-*` (sizes), `--space-*` (4px scale: 4, 8, 12, 16, 24, 32, 48), `--radius-*`, `--shadow-*`, `--size-*`. Colours are semantic (`--color-bg`, `--color-surface`, `--color-text`, `--color-text-muted`, `--color-border`, `--color-accent`, `--color-danger`, `--color-success`, priority and `--color-weight-1…10` scales). Dark theme overrides colour tokens under `@media (prefers-color-scheme: dark)` and `[data-theme="dark"]`. After changing tokens, `web/src/styles/tokens.css` must be re-copied (developer).
 
-Обязательно тёмная тема: переопредели цветовые токены в `@media (prefers-color-scheme: dark)` и в `[data-theme="dark"]`.
+## Screen spec
 
-## Правила интерфейса
-
-- Mobile-first: базовая ширина 360–430px, на десктопе контент центрируется (max-width ~720px), навигация может переезжать в боковую панель.
-- Нижняя навигация на мобильном: «День» и «Все задачи» (из концепции), зона нажатия ≥ 44px.
-- Приоритет: список задач всегда отсортирован по приоритету; приоритет показывается компактным индикатором (цвет по шкале + при необходимости число), а не крупным текстом.
-- Выполненные задачи визуально приглушены и уходят вниз своей группы.
-- У каждого экрана есть состояния: загрузка (skeleton), пусто (с подсказкой, что сделать), ошибка (с кнопкой «Повторить»).
-- Текст интерфейса — на русском. Даты — в человеческом виде («сегодня, 18:00», «через 3 дня»).
-- Контраст текста — не ниже WCAG AA.
-
-## Шаблон спецификации экрана (`design/screens/<screen>.md`)
+Implemented screens: the code in `web/src` is the source of truth and `screens/<screen>.md` is a ≤ 3 KB summary. For a **new** screen or change, write only what the developer needs to build it:
 
 ```markdown
-# <Название экрана>
+# <Screen> — route `/path`
 
-## Назначение
-Одно-два предложения: зачем пользователь сюда приходит.
+## Purpose
+One or two sentences.
 
-## Данные
-| Что показываем | Источник (эндпоинт) | Поле ответа | Формат |
+## Data
+| Shown | Endpoint | Response field | Format |
 
-## Компоненты
-Какие компоненты из system.md используются, новые — с описанием.
+## Components
+Links to `../components/*.md`; new components get their own file (and an index line).
 
-## Состояния
-Загрузка / пусто / ошибка / (прочие).
+## States
+Loading / empty / error / others — one line each.
 
-## Действия
-| Действие пользователя | Что происходит (эндпоинт, тело запроса) | Результат в UI |
+## Actions
+| User action | Request (endpoint, body) | Result in UI |
 
-## Адаптивность
-Отличия на десктопе.
+## Desktop
+Differences from mobile.
 
-## Требуется от бэкенда
-Чего нет в текущем API (или «ничего»).
+## Needs from backend
+What the current API lacks (check the `api-reference` skill), or "nothing".
 ```
+
+Long precise rules (algorithms, validation, notification texts) go to `design/rules/<topic>.md`, linked from the spec.

@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// Примеры из design/screens/profile.md («Уведомления: тексты и правила»): Москва, 5 октября 2026.
+// Примеры из design/rules/reminders.md: Москва, 5 октября 2026.
 var msk = time.FixedZone("MSK", 3*3600)
 
 // at — момент в часовом поясе Москвы.

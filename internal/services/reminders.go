@@ -1,6 +1,6 @@
 package services
 
-// Чистая логика напоминаний (design/screens/profile.md, «Уведомления: тексты и правила»):
+// Чистая логика напоминаний (design/rules/reminders.md):
 // когда пора, тихие часы и тексты. Текущее время и часовой пояс всегда приходят параметрами,
 // поэтому всё здесь проверяется тестами без часов и БД.
 
@@ -122,7 +122,7 @@ func quietHoursEnd(now time.Time, loc *time.Location, from, to string) (time.Tim
 }
 
 // shouldRemindDeadline решает, попала ли задача в окно напоминания «Дедлайн скоро»
-// (design/screens/profile.md, «3. Дедлайн скоро»). Только само окно: тихие часы, журнал
+// (design/rules/reminders.md, п. 3 «Дедлайн скоро»). Только само окно: тихие часы, журнал
 // отправленных и сводку проверяет вызывающий код (selectDeadlineTasks, ReminderServiceImpl).
 //
 // Контракт: true, если одновременно
@@ -232,7 +232,7 @@ func calendarDayDiff(a, b time.Time, loc *time.Location) int {
 	return int(startB.Sub(startA).Hours() / 24)
 }
 
-// formatDeadlineLabel — дедлайн в будущем по «Форматам» design/system.md:
+// formatDeadlineLabel — дедлайн в будущем по design/foundations/formats.md:
 // «сегодня, 18:00», «завтра, 09:30», «через 3 дня», «12 окт» (с годом, если не текущий).
 func formatDeadlineLabel(deadline, now time.Time, loc *time.Location) string {
 	local := deadline.In(loc)

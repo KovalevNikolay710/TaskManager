@@ -1,4 +1,4 @@
-/* GroupLadder и PlaceBanner — design/system.md, эталон .ladder / .place-banner в design/components.css */
+/* GroupLadder и PlaceBanner — design/components/GroupLadder.md, PlaceBanner.md, эталон .ladder / .place-banner в design/components.css */
 .ladder {
   position: relative;
   margin: 0 0 var(--space-4);

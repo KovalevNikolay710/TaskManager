@@ -1,4 +1,4 @@
-/* WeightScale — design/system.md, эталон .weight-scale в design/components.css */
+/* WeightScale — design/components/WeightScale.md, эталон .weight-scale в design/components.css */
 .scale {
   display: grid;
   gap: var(--space-2);

@@ -25,7 +25,7 @@ export function maxActivePriority(tasks: readonly Task[]): number {
   return tasks.reduce((max, task) => (isDone(task) ? max : Math.max(max, task.Priority)), 0)
 }
 
-/** Уровень приоритета относительно максимума набора (пороги 0.6 и 0.25 из system.md). */
+/** Уровень приоритета относительно максимума набора (пороги 0.6 и 0.25 — design/components/PriorityIndicator.md). */
 export function priorityLevel(priority: number, max: number): PriorityLevel {
   if (max <= 0) return 'low'
   if (priority >= 0.6 * max) return 'high'

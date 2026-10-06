@@ -1,4 +1,4 @@
-/* DayChart — design/system.md, эталон .day-chart в design/components.css */
+/* DayChart — design/components/DayChart.md, эталон .day-chart в design/components.css */
 .chart {
   display: grid;
   justify-items: center;

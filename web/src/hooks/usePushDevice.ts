@@ -16,7 +16,7 @@ import {
 } from '../lib/push'
 import { queryKeys } from './queryKeys'
 
-/** Что показывает строка «Push-уведомления» (design/screens/profile.md, «Состояния push»). */
+/** Что показывает строка «Push-уведомления» (design/rules/push-states.md, «Состояния push»). */
 export type PushViewState =
   | { kind: PushStatus }
   /** Разрешение есть, подписка ещё проверяется (доли секунды после открытия экрана) */

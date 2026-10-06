@@ -13,7 +13,7 @@ import (
 const reminderCheckInterval = time.Minute
 
 // ReminderServiceImpl — планировщик напоминаний: раз в минуту проверяет правила 1–3
-// из design/screens/profile.md для каждого пользователя с подписками и отправляет push.
+// из design/rules/reminders.md для каждого пользователя с подписками и отправляет push.
 type ReminderServiceImpl struct {
 	PushService      *PushServiceImpl
 	SubscriptionRepo *rep.PushSubscriptionRepositoryImpl

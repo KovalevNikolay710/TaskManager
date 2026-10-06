@@ -1,4 +1,4 @@
-// Форматы из design/system.md → «Форматы».
+// Форматы — design/foundations/formats.md.
 
 /** Выбор формы слова по числу: plural(3, ['задача', 'задачи', 'задач']) → 'задачи'. */
 export function plural(n: number, forms: [string, string, string]): string {

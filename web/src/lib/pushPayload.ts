@@ -1,5 +1,5 @@
 // Разбор push-сообщения в service worker (src/sw.ts). Без DOM и WebWorker API — проверяется тестами.
-// Формат от сервера: {"title": "…", "body": "…", "url": "/day", "tag": "plan-morning"} (design/screens/profile.md).
+// Формат от сервера: {"title": "…", "body": "…", "url": "/day", "tag": "plan-morning"} (design/rules/push-states.md).
 
 export interface PushMessage {
   title: string
