@@ -3,6 +3,7 @@ package services
 import (
 	"TaskManager/internal/models"
 	"TaskManager/internal/repository"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -23,6 +24,7 @@ func NewDayService(dayRepo *repository.DayRepositoryImpl, taskRepo *repository.T
 }
 
 // CreateDay составляет план: всё время дня делится между активными задачами (AllocateDayTime).
+// Чтение задач и запись дня идут в одной транзакции.
 func (serv *DayServiceImpl) CreateDay(input *models.DayCreateRequest) (*models.Day, error) {
 	day := &models.Day{
 		UserId:       input.UserId,
@@ -30,62 +32,63 @@ func (serv *DayServiceImpl) CreateDay(input *models.DayCreateRequest) (*models.D
 		TimeForTasks: input.TimeForTasks,
 	}
 
-	slots, err := serv.allocate(day, day.TimeForTasks)
+	err := serv.DayRepository.CreateWithPlan(day, func(tasks *repository.TaskRepositoryImpl) ([]models.DayTask, error) {
+		return serv.allocate(tasks, day, day.TimeForTasks)
+	})
 	if err != nil {
-		return nil, err
-	}
-	day.AmountOfTasks = len(slots)
-
-	if err := serv.DayRepository.CreateWithSlots(day, slots); err != nil {
-		return nil, fmt.Errorf("не удалось создать день: %w", err)
+		return nil, wrapDayError("не удалось создать день", err)
 	}
 	return serv.GetDayByID(day.DayId)
 }
 
 // UpdateDay пересобирает план. Слоты выполненных задач остаются с прежними минутами,
-// оставшееся время заново делится между активными задачами.
+// оставшееся время заново делится между активными задачами. Чтение и запись — в одной транзакции
+// с блокировкой строки дня, поэтому параллельные пересборки не затирают друг друга.
 func (serv *DayServiceImpl) UpdateDay(dayId int64, input *models.DayUpdateRequest) (*models.Day, error) {
-	day, err := serv.DayRepository.FindByID(dayId)
+	err := serv.DayRepository.UpdateWithPlan(dayId,
+		func(day *models.Day, tasks *repository.TaskRepositoryImpl) ([]int64, []models.DayTask, error) {
+			if input.TimeForTasks > 0 {
+				day.TimeForTasks = input.TimeForTasks
+			}
+
+			completed := make(map[int64]bool, len(day.Tasks))
+			for _, task := range day.Tasks {
+				if task.Status == models.StatusCompleted {
+					completed[task.TaskId] = true
+				}
+			}
+			var keepTaskIDs []int64
+			doneMinutes := 0
+			for _, slot := range day.Slots {
+				if completed[slot.TaskId] {
+					keepTaskIDs = append(keepTaskIDs, slot.TaskId)
+					doneMinutes += slot.Minutes
+				}
+			}
+			if day.TimeForTasks < doneMinutes {
+				return nil, nil, newError(ErrKindInvalidInput,
+					fmt.Sprintf("Время дня меньше уже выполненного (%s)", formatDuration(doneMinutes)))
+			}
+
+			slots, err := serv.allocate(tasks, day, day.TimeForTasks-doneMinutes)
+			if err != nil {
+				return nil, nil, err
+			}
+			day.AmountOfTasks = len(keepTaskIDs) + len(slots)
+			return keepTaskIDs, slots, nil
+		})
 	if err != nil {
-		return nil, fmt.Errorf("ошибка при поиске дня: %w", err)
-	}
-	if day == nil {
-		return nil, ErrDayNotFound
-	}
-
-	if input.TimeForTasks > 0 {
-		day.TimeForTasks = input.TimeForTasks
-	}
-
-	completed := make(map[int64]bool, len(day.Tasks))
-	for _, task := range day.Tasks {
-		if task.Status == models.StatusCompleted {
-			completed[task.TaskId] = true
-		}
-	}
-	var keepTaskIDs []int64
-	doneMinutes := 0
-	for _, slot := range day.Slots {
-		if completed[slot.TaskId] {
-			keepTaskIDs = append(keepTaskIDs, slot.TaskId)
-			doneMinutes += slot.Minutes
-		}
-	}
-	if day.TimeForTasks < doneMinutes {
-		return nil, newError(ErrKindInvalidInput,
-			fmt.Sprintf("Время дня меньше уже выполненного (%s)", formatDuration(doneMinutes)))
-	}
-
-	slots, err := serv.allocate(day, day.TimeForTasks-doneMinutes)
-	if err != nil {
-		return nil, err
-	}
-	day.AmountOfTasks = len(keepTaskIDs) + len(slots)
-
-	if err := serv.DayRepository.ReplaceSlots(day, keepTaskIDs, slots); err != nil {
-		return nil, fmt.Errorf("не удалось обновить план дня: %w", err)
+		return nil, wrapDayError("не удалось обновить план дня", err)
 	}
 	return serv.GetDayByID(dayId)
+}
+
+// wrapDayError переводит ошибки репозитория в ошибки сервиса; ошибки сервиса (*Error) пропускает как есть.
+func wrapDayError(msg string, err error) error {
+	if errors.Is(err, repository.ErrDayNotFound) {
+		return ErrDayNotFound
+	}
+	return fmt.Errorf("%s: %w", msg, err)
 }
 
 // GetDayByID возвращает сохранённый план дня (без пересборки) или ErrDayNotFound.
@@ -129,8 +132,8 @@ func (serv *DayServiceImpl) DeleteDay(dayId int64) error {
 
 // allocate делит total минут между активными задачами пользователя с дедлайном позже начала дня.
 // Приоритет кандидатов пересчитывается от текущего момента; задачи при этом не сохраняются.
-func (serv *DayServiceImpl) allocate(day *models.Day, total int) ([]models.DayTask, error) {
-	tasks, err := serv.TaskRepository.FindByUserID(day.UserId, models.TaskFilter{Status: models.StatusActive, Date: day.Date})
+func (serv *DayServiceImpl) allocate(taskRepo *repository.TaskRepositoryImpl, day *models.Day, total int) ([]models.DayTask, error) {
+	tasks, err := taskRepo.FindByUserID(day.UserId, models.TaskFilter{Status: models.StatusActive, Date: day.Date})
 	if err != nil {
 		return nil, fmt.Errorf("не удалось получить задачи пользователя: %w", err)
 	}
@@ -138,7 +141,7 @@ func (serv *DayServiceImpl) allocate(day *models.Day, total int) ([]models.DayTa
 	now := time.Now()
 	candidates := make([]PlanCandidate, 0, len(tasks))
 	for _, task := range tasks {
-		refreshTaskPriorty(task, now)
+		task.Recalculate(now)
 		candidates = append(candidates, newPlanCandidate(task, day.Date, now))
 	}
 

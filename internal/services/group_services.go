@@ -9,14 +9,6 @@ import (
 	"time"
 )
 
-type GroupRepositoryImpl interface {
-	Create(group *models.Group) (*models.Group, error)
-	FindByID(groupID int64) (*models.Group, error)
-	Update(group *models.Group) (*models.Group, error)
-	Delete(groupID int64) error
-	FindByUserID(userID int64) ([]*models.Group, error)
-}
-
 type GroupServiceImpl struct {
 	GroupRepository *repository.GroupRepositoryImpl
 	TaskRepository  *repository.TaskRepositoryImpl
@@ -49,10 +41,12 @@ func (service *GroupServiceImpl) CreateGroup(input models.GroupCreateRequest) (c
 		Description:   input.Description,
 	}
 
-	createdGroup, err = service.GroupRepository.Create(group, "Tasks")
+	createdGroup, err = service.GroupRepository.Create(group)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось создать группу: %w", err)
 	}
+	// В ответе у новой группы пустой список задач, а не null
+	createdGroup.Tasks = []*models.Task{}
 
 	return createdGroup, nil
 }
@@ -72,7 +66,7 @@ func (service *GroupServiceImpl) checkNameFree(userID int64, name string, exclud
 
 // GetGroupByID возвращает группу с задачами или ErrGroupNotFound.
 func (service *GroupServiceImpl) GetGroupByID(groupId int64) (*models.Group, error) {
-	group, err := service.GroupRepository.FindByID(groupId)
+	group, err := service.GroupRepository.FindByIDWithTasks(groupId)
 	if err != nil {
 		return nil, fmt.Errorf("не удалось найти группу: %w", err)
 	}
@@ -82,20 +76,67 @@ func (service *GroupServiceImpl) GetGroupByID(groupId int64) (*models.Group, err
 	return group, nil
 }
 
-// UpdateGroup применяет переданные поля (nil — не менять). При смене веса пересчитывает
-// GroupPriorty и Priority задач группы; группа и задачи сохраняются в одной транзакции.
-func (s *GroupServiceImpl) UpdateGroup(groupId int64, input models.GroupUpdateRequest) (updatedGroup *models.Group, err error) {
-	group, err := s.GetGroupByID(groupId)
+// GetGroupForUser — GetGroupByID с проверкой владельца: чужая или несуществующая группа — ErrGroupNotFound.
+func (service *GroupServiceImpl) GetGroupForUser(userID, groupID int64) (*models.Group, error) {
+	if _, err := service.findUserGroup(userID, groupID); err != nil {
+		return nil, err
+	}
+	return service.GetGroupByID(groupID)
+}
+
+// findGroup возвращает группу без задач или ErrGroupNotFound.
+func (service *GroupServiceImpl) findGroup(groupID int64) (*models.Group, error) {
+	group, err := service.GroupRepository.FindByID(groupID)
+	if err != nil {
+		return nil, fmt.Errorf("не удалось найти группу: %w", err)
+	}
+	if group == nil {
+		return nil, ErrGroupNotFound
+	}
+	return group, nil
+}
+
+// findUserGroup возвращает группу пользователя без задач или ErrGroupNotFound, если группы нет или она чужая.
+func (service *GroupServiceImpl) findUserGroup(userID, groupID int64) (*models.Group, error) {
+	group, err := service.GroupRepository.FindUserGroup(userID, groupID)
+	if err != nil {
+		return nil, fmt.Errorf("не удалось найти группу: %w", err)
+	}
+	if group == nil {
+		return nil, ErrGroupNotFound
+	}
+	return group, nil
+}
+
+// UpdateGroup применяет переданные поля (nil — не менять) к группе с любым владельцем: REST-маршрут
+// не передаёт userId. Для проверки владельца используйте UpdateGroupForUser.
+func (s *GroupServiceImpl) UpdateGroup(groupId int64, input models.GroupUpdateRequest) (*models.Group, error) {
+	group, err := s.findGroup(groupId)
 	if err != nil {
 		return nil, err
 	}
+	return s.applyGroupUpdate(group, input)
+}
 
+// UpdateGroupForUser — UpdateGroup с проверкой владельца: чужая или несуществующая группа — ErrGroupNotFound.
+func (s *GroupServiceImpl) UpdateGroupForUser(userID, groupID int64, input models.GroupUpdateRequest) (*models.Group, error) {
+	group, err := s.findUserGroup(userID, groupID)
+	if err != nil {
+		return nil, err
+	}
+	return s.applyGroupUpdate(group, input)
+}
+
+// applyGroupUpdate меняет загруженную группу. При смене веса пересчитывает GroupPriorty и Priority
+// задач группы; группа и задачи сохраняются в одной транзакции.
+func (s *GroupServiceImpl) applyGroupUpdate(group *models.Group, input models.GroupUpdateRequest) (*models.Group, error) {
+	var err error
 	if input.Name != nil {
 		name := strings.TrimSpace(*input.Name)
 		if name == "" {
 			return nil, ErrEmptyGroupName
 		}
-		if err := s.checkNameFree(group.UserId, name, groupId); err != nil {
+		if err := s.checkNameFree(group.UserId, name, group.GroupId); err != nil {
 			return nil, err
 		}
 		group.Name = name
@@ -105,20 +146,21 @@ func (s *GroupServiceImpl) UpdateGroup(groupId int64, input models.GroupUpdateRe
 		group.Description = *input.Description
 	}
 
+	now := time.Now()
 	var tasks []*models.Task
 	if input.GroupPriority != nil && *input.GroupPriority != group.GroupPriority {
 		group.GroupPriority = *input.GroupPriority
-		tasks, err = s.reweighTasks(group, time.Now())
+		tasks, err = s.reweighTasks(group, now)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if err := s.GroupRepository.UpdateWithTasks(group, tasks); err != nil {
+	if err := s.GroupRepository.UpdateWithTasks(group, tasks, now); err != nil {
 		return nil, fmt.Errorf("не удалось обновить данные группы: %w", err)
 	}
 
-	return s.GetGroupByID(groupId)
+	return s.GetGroupByID(group.GroupId)
 }
 
 // reweighTasks загружает задачи группы и пересчитывает их GroupPriorty и Priority под текущий вес группы.
@@ -130,7 +172,7 @@ func (s *GroupServiceImpl) reweighTasks(group *models.Group, now time.Time) ([]*
 	}
 	for _, task := range tasks {
 		task.GroupPriorty = group.GroupPriority
-		refreshTaskPriorty(task, now)
+		task.Recalculate(now)
 	}
 	return tasks, nil
 }
@@ -178,7 +220,7 @@ func (s *GroupServiceImpl) ReorderGroups(input models.GroupReorderRequest) ([]*m
 		tasks = append(tasks, groupTasks...)
 	}
 
-	if err := s.GroupRepository.UpdateWeightsWithTasks(changed, tasks); err != nil {
+	if err := s.GroupRepository.UpdateWeightsWithTasks(changed, tasks, now); err != nil {
 		return nil, fmt.Errorf("не удалось изменить веса групп: %w", err)
 	}
 	s.Logger.Info("Веса групп изменены",
@@ -208,7 +250,7 @@ func (serv *GroupServiceImpl) GetAllUserGroups(userID int64) (groups []*models.G
 
 // AddTaskToGroup создаёт задачу сразу в группе: Task.GroupId и связь в group_tasks выставляются вместе.
 func (s *GroupServiceImpl) AddTaskToGroup(groupId int64, input models.TaskCreateRequest) (*models.Group, error) {
-	group, err := s.GetGroupByID(groupId)
+	group, err := s.findGroup(groupId)
 	if err != nil {
 		return nil, err
 	}
@@ -221,22 +263,30 @@ func (s *GroupServiceImpl) AddTaskToGroup(groupId int64, input models.TaskCreate
 		return nil, fmt.Errorf("не удалось создать задачу в группе: %w", err)
 	}
 
-	group, err = s.GroupRepository.FindByID(groupId)
-	if err != nil {
-		return nil, fmt.Errorf("не удалось получить группу после добавления задачи: %w", err)
-	}
-	return group, nil
+	return s.GetGroupByID(groupId)
 }
 
-// DeleteGroup удаляет группу, а её задачи переводит в «Без группы»: GroupId = 0,
-// множитель группы — 1 (как у новой задачи без группы), приоритет пересчитывается.
+// DeleteGroup удаляет группу с любым владельцем (REST-маршрут не передаёт userId), а её задачи переводит
+// в «Без группы»: GroupId = 0, множитель группы — 1 (как у новой задачи без группы), приоритет пересчитывается.
 func (s *GroupServiceImpl) DeleteGroup(groupId int64) error {
-	group, err := s.GetGroupByID(groupId)
+	group, err := s.findGroup(groupId)
 	if err != nil {
 		return err
 	}
+	return s.deleteLoaded(group)
+}
 
-	tasks, err := s.TaskRepository.FindByUserID(group.UserId, models.TaskFilter{GroupId: groupId})
+// DeleteGroupForUser — DeleteGroup с проверкой владельца: чужая или несуществующая группа — ErrGroupNotFound.
+func (s *GroupServiceImpl) DeleteGroupForUser(userID, groupID int64) error {
+	group, err := s.findUserGroup(userID, groupID)
+	if err != nil {
+		return err
+	}
+	return s.deleteLoaded(group)
+}
+
+func (s *GroupServiceImpl) deleteLoaded(group *models.Group) error {
+	tasks, err := s.TaskRepository.FindByUserID(group.UserId, models.TaskFilter{GroupId: group.GroupId})
 	if err != nil {
 		return fmt.Errorf("не удалось получить задачи группы: %w", err)
 	}
@@ -244,10 +294,10 @@ func (s *GroupServiceImpl) DeleteGroup(groupId int64) error {
 	for _, task := range tasks {
 		task.GroupId = 0
 		task.GroupPriorty = 1
-		refreshTaskPriorty(task, now)
+		task.Recalculate(now)
 	}
 
-	if err := s.GroupRepository.DeleteDetachingTasks(groupId, tasks); err != nil {
+	if err := s.GroupRepository.DeleteDetachingTasks(group.GroupId, tasks, now); err != nil {
 		return fmt.Errorf("не удалось удалить группу: %w", err)
 	}
 	return nil

@@ -7,7 +7,6 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -38,8 +37,8 @@ func (handler *DayHandler) CreateDayHandler(c *gin.Context) {
 
 // GetDayByIDHandler отдаёт сохранённый план дня: чтение план не пересобирает.
 func (handler *DayHandler) GetDayByIDHandler(context *gin.Context) {
-	dayId, err := handler.GetIdFromContext(context)
-	if err != nil {
+	dayId, ok := parseIDParam(context, handler.Logger, "id", "дня")
+	if !ok {
 		return
 	}
 
@@ -53,8 +52,8 @@ func (handler *DayHandler) GetDayByIDHandler(context *gin.Context) {
 }
 
 func (handler *DayHandler) UpdateDayHandler(context *gin.Context) {
-	dayId, err := handler.GetIdFromContext(context)
-	if err != nil {
+	dayId, ok := parseIDParam(context, handler.Logger, "id", "дня")
+	if !ok {
 		return
 	}
 
@@ -75,8 +74,8 @@ func (handler *DayHandler) UpdateDayHandler(context *gin.Context) {
 }
 
 func (handler *DayHandler) DeleteDayHandler(context *gin.Context) {
-	dayId, err := handler.GetIdFromContext(context)
-	if err != nil {
+	dayId, ok := parseIDParam(context, handler.Logger, "id", "дня")
+	if !ok {
 		return
 	}
 
@@ -90,8 +89,8 @@ func (handler *DayHandler) DeleteDayHandler(context *gin.Context) {
 }
 
 func (handler *DayHandler) GetDaysByUserIDHandler(context *gin.Context) {
-	userId, err := handler.GetUserIdFromContext(context)
-	if err != nil {
+	userId, ok := parseIDParam(context, handler.Logger, "user_id", "пользователя")
+	if !ok {
 		return
 	}
 
@@ -105,22 +104,4 @@ func (handler *DayHandler) GetDaysByUserIDHandler(context *gin.Context) {
 	}
 
 	context.JSON(http.StatusOK, days)
-}
-
-func (handler *DayHandler) GetIdFromContext(context *gin.Context) (int64, error) {
-	dayId, err := strconv.ParseInt(context.Param("id"), 10, 64)
-	if err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{"error": "Неправильное id дня"})
-		return 0, err
-	}
-	return dayId, nil
-}
-
-func (handler *DayHandler) GetUserIdFromContext(context *gin.Context) (int64, error) {
-	dayId, err := strconv.ParseInt(context.Param("user_id"), 10, 64)
-	if err != nil {
-		context.JSON(http.StatusBadRequest, gin.H{"error": "Неправильное id пользователя"})
-		return 0, err
-	}
-	return dayId, nil
 }

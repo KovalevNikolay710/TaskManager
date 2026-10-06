@@ -44,7 +44,7 @@ func candidates(ids ...int64) []PlanCandidate {
 				NumberOfHoursUntilDL: e.hours,
 				DeadLine:             exampleNow.Add(time.Duration(e.hours) * time.Hour),
 			}
-			calculateTaskPriorty(task)
+			task.CalculatePriority()
 			result = append(result, newPlanCandidate(task, exampleNow.Truncate(24*time.Hour), exampleNow))
 		}
 	}

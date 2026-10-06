@@ -1,8 +1,16 @@
-# config/local.yaml
-
-env: "local" 
-storage_path: "./storage/storage.db" 
-http_server:
-  address: "localhost:8082"
-  timeout: 4s
-  idle_timeout: 30s
+# Необязательный конфиг-файл: путь задаётся переменной CONFIG_PATH.
+# Без него сервер работает на одних переменных окружения (PORT, DB_*, VAPID_*, PUSH_ENDPOINT_HOSTS, PUBLIC_MCP_URL);
+# переменные окружения важнее значений из файла.
+port: "8080"
+db:
+  host: localhost
+  port: 5434
+  user: postgres
+  password: "12345678"
+  name: task_manager_db
+public_mcp_url: ""
+vapid:
+  public_key: ""
+  private_key: ""
+  subject: ""
+push_endpoint_hosts: ""

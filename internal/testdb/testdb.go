@@ -10,7 +10,6 @@ import (
 	"os"
 	"testing"
 
-	"TaskManager/internal/models"
 	"TaskManager/internal/repository"
 
 	"gorm.io/driver/postgres"
@@ -18,7 +17,7 @@ import (
 	"gorm.io/gorm/logger"
 )
 
-// Open подключается к тестовой БД, применяет ту же схему, что и repository.Connect,
+// Open подключается к тестовой БД, применяет ту же схему, что и сервер (repository.Migrate),
 // и очищает все таблицы с обнулением счётчиков id. Без TEST_DATABASE_URL пропускает тест.
 func Open(t *testing.T) *gorm.DB {
 	t.Helper()
@@ -37,24 +36,8 @@ func Open(t *testing.T) *gorm.DB {
 	}
 	t.Cleanup(func() { _ = sqlDB.Close() })
 
-	// Те же шаги, что в repository.Connect (там глобальный db и log.Fatalf, поэтому повторены здесь)
-	if err := db.SetupJoinTable(&models.Day{}, "Tasks", &models.DayTask{}); err != nil {
-		t.Fatalf("ошибка настройки таблицы day_tasks: %v", err)
-	}
-	if err := db.AutoMigrate(
-		&models.Group{},
-		&models.Task{},
-		&models.Day{},
-		&models.DayTask{},
-		&models.PushSubscription{},
-		&models.NotificationSettings{},
-		&models.VapidKeys{},
-		&models.NotificationLog{},
-	); err != nil {
-		t.Fatalf("ошибка миграции схемы: %v", err)
-	}
-	if err := repository.RepairTaskGroups(db, slog.New(slog.DiscardHandler)); err != nil {
-		t.Fatalf("ошибка чистки связей задач с группами: %v", err)
+	if err := repository.Migrate(db, slog.New(slog.DiscardHandler)); err != nil {
+		t.Fatalf("ошибка миграции тестовой БД: %v", err)
 	}
 
 	truncateAll(t, db)

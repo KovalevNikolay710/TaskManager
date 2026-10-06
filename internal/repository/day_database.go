@@ -44,9 +44,19 @@ func (rep *DayRepositoryImpl) GetAllUserDays(userID int64) ([]*models.Day, error
 	return days, nil
 }
 
-// CreateWithSlots создаёт день и строки плана day_tasks (с минутами) в одной транзакции.
-func (rep *DayRepositoryImpl) CreateWithSlots(day *models.Day, slots []models.DayTask) error {
+// ErrDayNotFound — дня с таким id нет (возвращает UpdateWithPlan).
+var ErrDayNotFound = errors.New("день не найден")
+
+// CreateWithPlan создаёт день в одной транзакции: plan читает задачи через репозиторий этой же транзакции
+// и возвращает слоты плана, затем сохраняются день (AmountOfTasks = len(slots)) и строки day_tasks.
+// Ошибка plan возвращается как есть.
+func (rep *DayRepositoryImpl) CreateWithPlan(day *models.Day, plan func(tasks *TaskRepositoryImpl) ([]models.DayTask, error)) error {
 	return rep.db.Transaction(func(tx *gorm.DB) error {
+		slots, err := plan(NewTaskRepository(tx))
+		if err != nil {
+			return err
+		}
+		day.AmountOfTasks = len(slots)
 		if err := tx.Omit(clause.Associations).Create(day).Error; err != nil {
 			return fmt.Errorf("ошибка при создании дня: %w", err)
 		}
@@ -54,11 +64,25 @@ func (rep *DayRepositoryImpl) CreateWithSlots(day *models.Day, slots []models.Da
 	})
 }
 
-// ReplaceSlots сохраняет поля дня и заменяет строки плана в одной транзакции:
-// строки задач из keepTaskIDs остаются как есть, остальные удаляются, slots вставляются.
-func (rep *DayRepositoryImpl) ReplaceSlots(day *models.Day, keepTaskIDs []int64, slots []models.DayTask) error {
+// UpdateWithPlan пересобирает день в одной транзакции. Строка дня блокируется (FOR UPDATE), поэтому
+// параллельные пересборки одного дня идут по очереди. plan получает актуальный день с задачами и слотами
+// и репозиторий задач этой транзакции; возвращает id задач, чьи строки плана остаются как есть,
+// и новые слоты. Ошибка plan возвращается как есть. Если дня нет — ErrDayNotFound.
+func (rep *DayRepositoryImpl) UpdateWithPlan(dayID int64,
+	plan func(day *models.Day, tasks *TaskRepositoryImpl) (keepTaskIDs []int64, slots []models.DayTask, err error)) error {
 	return rep.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Model(day).Select("TimeForTasks", "AmountOfTasks").Updates(day).Error; err != nil {
+		var day models.Day
+		if err := tx.Clauses(clause.Locking{Strength: "UPDATE"}).Preload("Tasks").Preload("Slots").First(&day, dayID).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return ErrDayNotFound
+			}
+			return fmt.Errorf("ошибка при чтении дня %d: %w", dayID, err)
+		}
+		keepTaskIDs, slots, err := plan(&day, NewTaskRepository(tx))
+		if err != nil {
+			return err
+		}
+		if err := tx.Model(&day).Select("TimeForTasks", "AmountOfTasks").Updates(&day).Error; err != nil {
 			return fmt.Errorf("ошибка при обновлении дня: %w", err)
 		}
 		remove := tx.Where("day_day_id = ?", day.DayId)

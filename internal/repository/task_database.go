@@ -18,20 +18,22 @@ func NewTaskRepository(db *gorm.DB) *TaskRepositoryImpl {
 	}
 }
 
-func (r *TaskRepositoryImpl) FindByID(taskId int64) (*models.Task, error) {
+// FindByIDForUser возвращает задачу пользователя или nil, nil, если задачи нет или она чужая.
+func (r *TaskRepositoryImpl) FindByIDForUser(userID, taskID int64) (*models.Task, error) {
 	var task models.Task
 
-	if err := r.db.First(&task, taskId).Error; err != nil {
+	if err := r.db.Where("user_id = ?", userID).First(&task, taskID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
 
-		return nil, fmt.Errorf("ошибка при поиске задачи в базе данных: %w", err)
+		return nil, fmt.Errorf("ошибка при поиске задачи пользователя в базе данных: %w", err)
 	}
 
 	return &task, nil
 }
 
+// FindByUserID возвращает задачи пользователя; filter.Date — только задачи с дедлайном строго позже этой даты.
 func (r *TaskRepositoryImpl) FindByUserID(userID int64, filter models.TaskFilter) ([]*models.Task, error) {
 	var tasks []*models.Task
 
@@ -45,18 +47,12 @@ func (r *TaskRepositoryImpl) FindByUserID(userID int64, filter models.TaskFilter
 		query = query.Where("group_id = ?", filter.GroupId)
 	}
 
-	if err := query.Find(&tasks).Error; err != nil {
-		return nil, fmt.Errorf("ошибка при поиске по фильтру задач в базе данных: %s", err)
+	if !filter.Date.IsZero() {
+		query = query.Where("dead_line > ?", filter.Date)
 	}
 
-	if !filter.Date.IsZero() {
-		var filteredTasks []*models.Task
-		for _, task := range tasks {
-			if task.DeadLine.After(filter.Date) {
-				filteredTasks = append(filteredTasks, task)
-			}
-		}
-		tasks = filteredTasks
+	if err := query.Find(&tasks).Error; err != nil {
+		return nil, fmt.Errorf("ошибка при поиске по фильтру задач в базе данных: %w", err)
 	}
 
 	return tasks, nil
@@ -84,11 +80,20 @@ func (r *TaskRepositoryImpl) CreateInGroup(task *models.Task) (*models.Task, err
 	return task, nil
 }
 
+// taskUpdateFields — поля, которые меняет обновление задачи. Select нужен, чтобы записать и нулевые значения
+// (GroupId = 0, PercentOfCompleting = 0), а остальные колонки (UserId, CreatedAt) не трогать.
+func taskUpdateFields() []string {
+	return []string{
+		"Name", "Description", "DeadLine", "TimeForExecution", "PercentOfCompleting", "Status",
+		"GroupId", "GroupPriorty", "NumberOfHoursUntilDL", "Priority", "UpdatedAt",
+	}
+}
+
 // UpdateWithGroup сохраняет задачу; если groupChanged — заменяет её связь в group_tasks
 // на task.GroupId (0 — без связи). Всё в одной транзакции, чтобы Task.GroupId и состав группы не расходились.
 func (r *TaskRepositoryImpl) UpdateWithGroup(task *models.Task, groupChanged bool) (*models.Task, error) {
 	err := r.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Save(task).Error; err != nil {
+		if err := tx.Model(task).Select(taskUpdateFields()).Updates(task).Error; err != nil {
 			return fmt.Errorf("ошибка при обновлении задачи: %w", err)
 		}
 		if !groupChanged {
