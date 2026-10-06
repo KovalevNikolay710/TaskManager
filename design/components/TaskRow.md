@@ -10,7 +10,7 @@ Main list element. Layout: `[bar] [Checkbox] name / meta row ... [priority chip]
 - **Completed**: name `--color-text-muted` + line-through, meta row hidden except deadline, card opacity 0.7, neutral bar. Goes to the bottom of its group.
 - **Search match**: matched fragment in `<mark>` with bg `--color-accent-soft`, text colour inherited.
 - **Variant "day slot"** (`task--slot` + `.w-N`, day screen only):
-  - left bar = colour of the [DayChart](DayChart.md) sector (`--w` by `Task.GroupPriorty`), not priority level: the row is the chart legend. Completed: `--color-day-done`. Priority is still conveyed by order and chip;
+  - left bar = colour of the [DayChart](DayChart.md) sector (`--w` by `Task.GroupPriority`), not priority level: the row is the chart legend. Completed: `--color-day-done`. Priority is still conveyed by order and chip;
   - right of the name (`task__top`): allotted time `SlotTime` **"1:25"** (`--text-md` semibold, tabular-nums) + "сегодня" (`--text-xs` muted); screen reader: "В плане на сегодня: 1 час 25 минут". Completed: time stays, muted;
   - in the meta row the execution time is labelled "всего 3:00" so it is not confused with "сегодня";
   - highlight from chart: list gets `task-list--focus` (other cards opacity 0.45), selected card `task-card--active` (2px border `--w`, `--shadow-md`).

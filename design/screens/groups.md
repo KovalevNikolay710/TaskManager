@@ -5,7 +5,7 @@ Ladder UI, drag and placement mode: [GroupLadder](../components/GroupLadder.md).
 
 ## Data
 - `GET /api/groups/user/:id` -> `Group[]` (`GroupId`, `Name`, `GroupPriority`).
-- `POST /api/tasks/user/:id` `{}` -> counters (`GroupId`, `Status = 2` = done); on failure from `Group.Tasks`, "Без группы" without counter. "Без группы" = `GroupId = 0` or unknown group.
+- `GET /api/tasks/user/:id` -> counters (`GroupId`, `Status = 2` = done); on failure from `Group.Tasks`, "Без группы" without counter. "Без группы" = `GroupId = 0` or unknown group.
 
 ## Rules
 - Move to step N: `POST /api/groups/update/:GroupId` `{"groupPriority": N}`. Insert between steps: client computes weights, one request for **all changed groups**: `POST /api/groups/reorder` `{"userId", "groups": [{"groupId", "groupPriority"}]}` -> full `Group[]` replaces the cache. Both invalidate `tasks` and `days`. Optimistic (`--pending`), rollback on error.

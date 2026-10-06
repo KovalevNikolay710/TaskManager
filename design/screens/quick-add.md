@@ -7,7 +7,7 @@ Anatomy/behaviour: [QuickAddSheet](../components/QuickAddSheet.md), [ChipRow](..
 Opened by Fab, desktop "Новая задача", key `N`, EmptyState buttons, or `?quick=1` on `/all-tasks` / `/day` (PWA shortcut). Opening pushes `?quick=1`; Back, x, backdrop, swipe down (>80px), Esc call `history.back()`; shortcut-opened closes via `replace`. Focus returns to the opener. Closing with text never asks (draft).
 
 ## Data
-Shared caches: `GET /api/groups/user/:id` (fetch on open if absent), `POST /api/tasks/user/:id` `{}` (only "встанет N-й из M"). Preview per [PriorityCard](../components/PriorityCard.md), level vs `max(active Priority, Pt)`.
+Shared caches: `GET /api/groups/user/:id` (fetch on open if absent), `GET /api/tasks/user/:id` (only "встанет N-й из M"). Preview per [PriorityCard](../components/PriorityCard.md), level vs `max(active Priority, Pt)`.
 
 ## Actions
 - Enter (not `isComposing`) / "Добавить": `POST /api/tasks/` `{"userId", "name", "description": "", "deadline" RFC3339, "timeForExecution", "percentOfCompleting": 0, "groupId"}`.
