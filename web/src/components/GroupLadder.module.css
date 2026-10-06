@@ -1,0 +1,391 @@
+/* GroupLadder и PlaceBanner — design/system.md, эталон .ladder / .place-banner в design/components.css */
+.ladder {
+  position: relative;
+  margin: 0 0 var(--space-4);
+  padding: var(--space-2) 0;
+  list-style: none;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.dragging {
+  user-select: none;
+  cursor: grabbing;
+}
+
+/* ---------- Ступень ---------- */
+.step {
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  align-items: stretch;
+  min-height: 36px;
+  transition: background var(--duration-fast);
+}
+
+.busy {
+  min-height: calc(var(--size-ladder-step) + var(--space-3));
+}
+
+.placing .step {
+  min-height: calc(var(--size-ladder-step) + var(--space-2));
+}
+
+.hot {
+  background: var(--color-accent-soft);
+}
+
+.rail {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding-left: var(--space-3);
+}
+
+/* Сама ступень: ширина растёт с весом — силуэт лестницы */
+.tread {
+  flex: none;
+  width: calc(6px + var(--n) * 3.4px);
+  height: 10px;
+  border-radius: 0 3px 3px 0;
+  background: var(--w);
+  opacity: 0.35;
+}
+
+.busy .tread {
+  opacity: 1;
+}
+
+.num {
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.busy .num {
+  color: var(--w-text);
+}
+
+.groups {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  padding: var(--space-1) var(--space-3) var(--space-1) 0;
+  list-style: none;
+}
+
+/* «свободно» видно только во время переноса */
+.empty {
+  align-self: center;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  opacity: 0;
+}
+
+.placing .empty,
+.dragging .empty {
+  opacity: 1;
+}
+
+/* ---------- LadderGroup ---------- */
+.group {
+  display: inline-flex;
+  align-items: stretch;
+  max-width: 100%;
+  min-height: var(--size-ladder-step);
+  border-radius: var(--radius-md);
+  background: var(--w-soft);
+  box-shadow: inset 3px 0 0 var(--w);
+  transition: opacity var(--duration-fast);
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  padding: 4px var(--space-2) 4px var(--space-3);
+  text-align: left;
+  border-radius: var(--radius-md) 0 0 var(--radius-md);
+}
+
+button.main:hover {
+  background: color-mix(in srgb, var(--w) 10%, transparent);
+}
+
+.name {
+  max-width: 22ch;
+  overflow: hidden;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+  color: var(--color-text);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.meta {
+  font-size: var(--text-xs);
+  color: var(--w-text);
+  white-space: nowrap;
+}
+
+.shift {
+  margin-left: 4px;
+  font-weight: var(--font-weight-semibold);
+}
+
+.handle {
+  position: relative;
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  border-radius: 0 var(--radius-md) var(--radius-md) 0;
+  color: var(--w-text);
+  touch-action: none;
+  cursor: grab;
+}
+
+/* Зона нажатия 44px */
+.handle::after {
+  content: '';
+  position: absolute;
+  inset: 0 -4px;
+}
+
+.handle:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--w) 14%, transparent);
+}
+
+.handle:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.dragging .handle {
+  cursor: grabbing;
+}
+
+/* «Без группы»: всегда на ×1, некликабельна, нейтральная */
+.static {
+  background: var(--color-surface-sunken);
+  box-shadow: inset 3px 0 0 var(--color-border-strong);
+  border: 1px dashed var(--color-border-strong);
+}
+
+.static .meta {
+  color: var(--color-text-muted);
+}
+
+.ghost {
+  opacity: 0.35;
+  outline: 1.5px dashed var(--w);
+  outline-offset: 1px;
+}
+
+.moving {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.pending {
+  opacity: 0.6;
+}
+
+/* Только что созданная группа: фон --w-soft → обычный за 2 с */
+.highlighted {
+  animation: highlight 2s var(--easing-standard);
+}
+
+@keyframes highlight {
+  from {
+    background: color-mix(in srgb, var(--w) 35%, var(--w-soft));
+  }
+}
+
+/* Поднятая карточка под пальцем */
+.liftedLayer {
+  position: fixed;
+  z-index: 30;
+  display: grid;
+  gap: var(--space-1);
+  justify-items: start;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  pointer-events: none;
+}
+
+.lifted {
+  box-shadow:
+    inset 3px 0 0 var(--w),
+    var(--shadow-lg);
+  transform: rotate(-1.5deg) scale(1.03);
+}
+
+.dragHint {
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-text);
+  color: var(--color-bg);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lifted {
+    transform: none;
+  }
+
+  .highlighted {
+    animation: none;
+  }
+}
+
+/* ---------- Промежуток между ступенями — цель «вставить между» ---------- */
+.gap {
+  position: relative;
+  height: 0;
+}
+
+.gapLine {
+  display: none;
+  position: absolute;
+  left: 72px;
+  right: var(--space-3);
+  top: -2px;
+  height: 4px;
+  border-radius: var(--radius-full);
+}
+
+.dragging .gapLine {
+  display: block;
+}
+
+.gapHot .gapLine {
+  background: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+.gapLabel {
+  position: absolute;
+  z-index: 2;
+  right: var(--space-3);
+  top: -11px;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-accent);
+  color: var(--color-text-inverse);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+  white-space: nowrap;
+}
+
+/* Режим размещения без перетаскивания: промежутки и ступени становятся кнопками */
+.placing .gap {
+  height: auto;
+}
+
+.gapButton {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: calc(100% - 72px - var(--space-3));
+  min-height: var(--size-touch);
+  margin: 0 var(--space-3) 0 72px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-md);
+  font-size: var(--text-xs);
+  color: var(--color-accent);
+  text-align: left;
+}
+
+.gapButton::before {
+  content: '';
+  flex: 1 0 12px;
+  max-width: 24px;
+  height: 2px;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+.gapButton:hover:not(:disabled),
+.gapButton:focus-visible {
+  background: var(--color-accent-soft);
+}
+
+.gapButton:disabled {
+  color: var(--color-text-muted);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.place {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border: 1.5px dashed var(--w);
+  border-radius: var(--radius-md);
+  color: var(--w-text);
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Зона нажатия 44px */
+.place::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+
+.place:hover {
+  background: var(--w-soft);
+}
+
+/* ---------- PlaceBanner ---------- */
+.banner {
+  position: sticky;
+  z-index: 4;
+  top: 60px;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  border-radius: var(--radius-md);
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.banner span {
+  flex: 1;
+  min-width: 0;
+}
+
+@media (min-width: 960px) {
+  .step {
+    grid-template-columns: 112px 1fr;
+  }
+
+  .tread {
+    width: calc(10px + var(--n) * 6px);
+  }
+
+  .gapLine {
+    left: 108px;
+  }
+
+  .gapButton {
+    width: calc(100% - 108px - var(--space-3));
+    margin-left: 108px;
+  }
+}

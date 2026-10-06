@@ -1,0 +1,48 @@
+/* «Новая задача» в шапке — только на десктопе (на мобильном — Fab) */
+.newTask {
+  display: none;
+}
+
+/* «Группы» в шапке — только на мобильном (на десктопе есть пункт SideNav) */
+.groups {
+  color: var(--color-text);
+}
+
+@media (min-width: 960px) {
+  .newTask {
+    display: inline-flex;
+  }
+
+  .groups {
+    display: none;
+  }
+}
+
+.skeletonSearch {
+  margin-bottom: var(--space-6);
+}
+
+.skeletonSearch > div {
+  border-radius: var(--radius-md);
+}
+
+.skeletonGroup {
+  margin-bottom: var(--space-6);
+}
+
+.skeletonHeader {
+  display: flex;
+  align-items: center;
+  min-height: var(--size-touch);
+  padding: 0 var(--space-1);
+}
+
+.skeletonBody {
+  display: grid;
+  gap: var(--space-4);
+  margin-top: var(--space-1);
+  padding: var(--space-3) var(--space-4);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}

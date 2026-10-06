@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <title>TaskManager</title>
+  <!-- Фон: токен color-accent светлой темы (#4c4fd8). Список, отсортированный по приоритету: строки короче сверху вниз, первая — отмечена -->
+  <rect width="512" height="512" rx="112" fill="#4c4fd8"/>
+  <g fill="#ffffff">
+    <!-- 1-я строка: отмеченный круг + самая длинная полоса -->
+    <circle cx="152" cy="176" r="36"/>
+    <path d="M134 177l12 12 25-27" fill="none" stroke="#4c4fd8" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="212" y="156" width="184" height="40" rx="20"/>
+    <!-- 2-я строка -->
+    <circle cx="152" cy="256" r="30" fill="none" stroke="#ffffff" stroke-width="12" stroke-opacity="0.8"/>
+    <rect x="212" y="236" width="140" height="40" rx="20" fill-opacity="0.8"/>
+    <!-- 3-я строка -->
+    <circle cx="152" cy="336" r="30" fill="none" stroke="#ffffff" stroke-width="12" stroke-opacity="0.6"/>
+    <rect x="212" y="316" width="88" height="40" rx="20" fill-opacity="0.6"/>
+  </g>
+</svg>

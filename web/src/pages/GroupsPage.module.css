@@ -1,0 +1,46 @@
+.intro {
+  margin: 0 0 var(--space-4);
+  padding: 0 var(--space-1);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* На самых узких экранах в шапке остаётся только «+» (aria-label у кнопки) */
+@media (max-width: 359px) {
+  .actionText {
+    display: none;
+  }
+}
+
+.skeletonIntro {
+  display: grid;
+  gap: var(--space-2);
+  margin: 0 var(--space-1) var(--space-4);
+}
+
+.introIcon {
+  vertical-align: -2px;
+}
+
+.footnote {
+  margin: 0;
+  padding: 0 var(--space-1);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.skeletonLadder {
+  display: grid;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  padding: var(--space-3);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.skeletonStep {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}

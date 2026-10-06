@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Задачи на день — TaskManager (макет)</title>
+  <link rel="stylesheet" href="../tokens.css">
+  <link rel="stylesheet" href="../components.css">
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M3 6.5l1.8 1.8L8 5M3 13.5l1.8 1.8L8 12M11 7h10M11 14h10M11 20h10M3.5 20h1"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4l2 2.5h9A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4.5L3 9M3 4v5h5M4 13a8 8 0 0 0 14.5 4.5L21 15M21 20v-5h-5"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3zM12 10v4M12 17h.01"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+  <symbol id="i-coffee" viewBox="0 0 24 24"><path d="M4 9h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM17 10h1.5a2.5 2.5 0 0 1 0 5H17M8 2.5v3M12 2.5v3"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></symbol>
+</svg>
+
+<div class="app">
+
+  <aside class="side-nav" aria-label="Основная навигация">
+    <p class="side-nav__brand">TaskManager</p>
+    <a class="side-nav__item" href="day.html" aria-current="page"><svg class="icon"><use href="#i-calendar"/></svg>День</a>
+    <a class="side-nav__item" href="all-tasks.html"><svg class="icon"><use href="#i-list"/></svg>Все задачи</a>
+    <a class="side-nav__item" href="groups.html"><svg class="icon"><use href="#i-folder"/></svg>Группы</a>
+    <button class="side-nav__profile" type="button" aria-label="Профиль">
+      <span class="avatar-btn__circle">Я</span>
+      <span><span class="side-nav__profile-name">Профиль</span><span class="side-nav__profile-sub">Пользователь #1</span></span>
+    </button>
+  </aside>
+
+  <main class="app__main">
+    <div class="app__content">
+
+      <header class="app-header">
+        <div>
+          <h1 class="app-header__title">Задачи на день</h1>
+          <p class="app-header__subtitle" id="subtitle">Выполнено 1 из 7</p>
+        </div>
+        <div class="app-header__actions">
+          <button class="avatar-btn" type="button" aria-label="Профиль"><span class="avatar-btn__circle">Я</span></button>
+        </div>
+      </header>
+
+      <!-- DateSwitcher — во всех состояниях, кроме загрузки -->
+      <div class="date-switcher">
+        <button class="btn btn--icon" type="button" aria-label="Предыдущий день: 23 сентября"><svg class="icon"><use href="#i-left"/></svg></button>
+        <div class="date-switcher__date">
+          <span class="date-switcher__main">Сегодня, 24 сентября</span>
+          <span class="date-switcher__sub">четверг</span>
+        </div>
+        <button class="btn btn--icon" type="button" aria-label="Следующий день" disabled><svg class="icon"><use href="#i-right"/></svg></button>
+      </div>
+
+      <!-- ============ Состояния с планом: data / free / many ============
+           DayChart и список строятся одним и тем же кодом (см. скрипт внизу страницы) из массива слотов:
+           { id, name, group, w (вес группы 1–10), slot (минуты сегодня), te, deadline, soon, pct, pt, done } -->
+      <section data-view="data" data-active data-plan="data"></section>
+      <section data-view="free" data-plan="free"></section>
+      <section data-view="many" data-plan="many"></section>
+
+      <!-- ============ Состояние: плана нет ============ -->
+      <section data-view="no-plan">
+        <div class="state" style="padding-top: var(--space-8)">
+          <div class="state__icon"><svg class="icon"><use href="#i-sun"/></svg></div>
+          <h2 class="state__title">План на сегодня ещё не составлен</h2>
+          <p class="state__text">Сколько времени готовы отдать делам сегодня — вместе с хобби? Мы разделим его между задачами по приоритету.</p>
+          <form class="plan-form" onsubmit="return false">
+            <div class="time-field">
+              <label class="field__label" for="np-time" style="margin:0">Время на день</label>
+              <span class="time-input"><input id="np-time" type="text" inputmode="numeric" placeholder="0:00" value="6:00" aria-describedby="np-time-hint"><span class="time-input__unit">ч:мм</span></span>
+              <div class="chips" aria-label="Быстрый выбор">
+                <button class="chip" type="button" aria-pressed="false">2:00</button>
+                <button class="chip" type="button" aria-pressed="false">4:00</button>
+                <button class="chip" type="button" aria-pressed="true">6:00</button>
+                <button class="chip" type="button" aria-pressed="false">8:00</button>
+              </div>
+              <span class="field__hint" id="np-time-hint">От 0:15 до 16:00. Каждой задаче достанется не меньше 0:15.</span>
+            </div>
+            <button class="btn btn--primary" type="submit" style="width:100%">Составить план</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- ============ Состояние: план пуст ============ -->
+      <section data-view="plan-empty">
+        <div class="state" style="padding-top: var(--space-6)">
+          <div class="state__icon"><svg class="icon"><use href="#i-coffee"/></svg></div>
+          <h2 class="state__title">Сегодня делать нечего</h2>
+          <p class="state__text">На 6:00 нет ни одной активной задачи с дедлайном позже этого дня. Добавьте задачу или хобби — и пересоберите план.</p>
+          <div style="display:flex; gap: var(--space-2); flex-wrap: wrap; justify-content: center;">
+            <a class="btn btn--primary" href="new-task.html" style="text-decoration:none"><svg class="icon icon--sm"><use href="#i-plus"/></svg>Новая задача</a>
+            <button class="btn btn--secondary" type="button"><svg class="icon icon--sm"><use href="#i-refresh"/></svg>Пересобрать</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ Состояние: загрузка ============ -->
+      <section data-view="loading" aria-busy="true" aria-label="Загрузка плана">
+        <div class="day-chart">
+          <div class="skeleton" style="width:var(--size-day-chart);height:var(--size-day-chart);border-radius:var(--radius-full)"></div>
+          <div style="display:grid;gap:8px;width:100%">
+            <div class="skeleton" style="height:14px;width:70%"></div>
+            <div class="skeleton" style="height:14px;width:55%"></div>
+          </div>
+        </div>
+        <div class="task-list">
+          <div class="task-card" style="background:var(--color-surface);padding:var(--space-3) var(--space-4);display:flex;gap:var(--space-3)"><div class="skeleton" style="width:22px;height:22px"></div><div style="flex:1;display:grid;gap:6px"><div class="skeleton" style="height:16px;width:70%"></div><div class="skeleton" style="height:12px;width:50%"></div></div></div>
+          <div class="task-card" style="background:var(--color-surface);padding:var(--space-3) var(--space-4);display:flex;gap:var(--space-3)"><div class="skeleton" style="width:22px;height:22px"></div><div style="flex:1;display:grid;gap:6px"><div class="skeleton" style="height:16px;width:85%"></div><div class="skeleton" style="height:12px;width:40%"></div></div></div>
+          <div class="task-card" style="background:var(--color-surface);padding:var(--space-3) var(--space-4);display:flex;gap:var(--space-3)"><div class="skeleton" style="width:22px;height:22px"></div><div style="flex:1;display:grid;gap:6px"><div class="skeleton" style="height:16px;width:55%"></div><div class="skeleton" style="height:12px;width:45%"></div></div></div>
+        </div>
+      </section>
+
+      <!-- ============ Состояние: ошибка ============ -->
+      <section data-view="error">
+        <div class="state state--error" role="alert">
+          <div class="state__icon"><svg class="icon"><use href="#i-alert"/></svg></div>
+          <h2 class="state__title">Не удалось загрузить план</h2>
+          <p class="state__text">Проверьте, что сервер запущен, и попробуйте ещё раз.</p>
+          <p class="state__detail">не удалось получить дни пользователя: connection refused</p>
+          <button class="btn btn--secondary" type="button"><svg class="icon icon--sm"><use href="#i-refresh"/></svg>Повторить</button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <nav class="bottom-nav" aria-label="Основная навигация">
+    <a class="bottom-nav__item" href="day.html" aria-current="page"><span class="bottom-nav__pill"><svg class="icon"><use href="#i-calendar"/></svg></span>День</a>
+    <a class="bottom-nav__item" href="all-tasks.html"><span class="bottom-nav__pill"><svg class="icon"><use href="#i-list"/></svg></span>Все задачи</a>
+  </nav>
+
+  <!-- ============ Sheet: изменить план ============ -->
+  <div class="sheet-backdrop" data-view="sheet">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+      <div class="sheet__grip"></div>
+      <div class="sheet__head">
+        <h2 class="sheet__title" id="sheet-title">План на 24 сентября</h2>
+        <button class="btn btn--icon" type="button" aria-label="Закрыть"><svg class="icon"><use href="#i-x"/></svg></button>
+      </div>
+      <form class="plan-form" style="max-width:none" onsubmit="return false">
+        <div class="time-field">
+          <label class="field__label" for="sp-time" style="margin:0">Время на день</label>
+          <span class="time-input"><input id="sp-time" type="text" inputmode="numeric" placeholder="0:00" value="6:00" aria-describedby="sp-time-hint"><span class="time-input__unit">ч:мм</span></span>
+          <div class="chips" aria-label="Быстрый выбор">
+            <button class="chip" type="button" aria-pressed="false">2:00</button>
+            <button class="chip" type="button" aria-pressed="false">4:00</button>
+            <button class="chip" type="button" aria-pressed="true">6:00</button>
+            <button class="chip" type="button" aria-pressed="false">8:00</button>
+          </div>
+          <span class="field__hint" id="sp-time-hint">От 0:15 до 16:00.</span>
+        </div>
+        <div class="alert" style="background: var(--color-accent-soft)">
+          <svg class="icon icon--sm" style="color: var(--color-accent)"><use href="#i-info"/></svg>
+          <div class="alert__body">
+            <p class="alert__title">Выполненное останется в плане</p>
+            <p class="alert__text">«Код-ревью задачи по API» сохранит свои 1:30. Остальные 4:30 разделим заново между активными задачами — с учётом нового прогресса и новых задач.</p>
+          </div>
+        </div>
+      </form>
+      <div class="sheet__actions">
+        <button class="btn btn--secondary" type="button">Отмена</button>
+        <button class="btn btn--primary" type="button">Пересобрать план</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mock-panel" aria-hidden="true">
+  <span class="mock-panel__label">Макет · состояние (наведите на сектор или задачу)</span>
+  <button data-set="data" aria-pressed="true">Данные</button>
+  <button data-set="free">Есть свободное</button>
+  <button data-set="many">Много задач</button>
+  <button data-set="no-plan">Плана нет</button>
+  <button data-set="plan-empty">План пуст</button>
+  <button data-set="loading">Загрузка</button>
+  <button data-set="error">Ошибка</button>
+  <button data-set="sheet">+ Изменить план</button>
+  <button data-theme-toggle>Тема</button>
+</div>
+
+<script>
+(function () {
+  /* ---------- Данные макета: результат алгоритма «Темп + остаток» (см. day.md) ---------- */
+  var PLANS = {
+    data: { total: 360, subtitle: 'Выполнено 1 из 7', slots: [
+      { id: 't1', name: 'Подготовить отчёт по ТИПИС', group: 'Учёба', w: 3, slot: 85, te: 180, deadline: 'завтра, 10:00', soon: true, pct: 40, pt: 12.5 },
+      { id: 't2', name: 'Лабораторная №4 по базам данных: нормализация схемы', group: 'Учёба', w: 3, slot: 40, te: 120, deadline: 'через 3 дня', pt: 4.9 },
+      { id: 't3', name: 'Пробежка 5 км', group: 'Спорт', w: 1, slot: 45, te: 45, deadline: 'сегодня, 22:00', soon: true, pt: 3.2 },
+      { id: 't4', name: 'Гитара: разобрать «Группу крови»', group: 'Хобби', w: 2, slot: 40, te: 600, deadline: '8 окт', pct: 20, pt: 2.9 },
+      { id: 't5', name: 'Купить продукты на неделю', group: 'Дом', w: 1, slot: 35, te: 60, deadline: 'завтра, 20:00', soon: true, pt: 1.7 },
+      { id: 't6', name: 'Прочитать главу «Чистой архитектуры»', group: 'Хобби', w: 2, slot: 25, te: 240, deadline: 'через 6 дней', pct: 50, pt: 1.7 },
+      { id: 't7', name: 'Код-ревью задачи по API', group: 'Работа', w: 2, slot: 90, te: 90, deadline: 'сегодня, 18:00', done: true }
+    ], outside: 0 },
+    free: { total: 480, subtitle: 'Выполнено 0 из 4', slots: [
+      { id: 'f1', name: 'Код-ревью задачи по API', group: 'Работа', w: 2, slot: 90, te: 90, deadline: 'сегодня, 18:00', soon: true, pt: 18.0 },
+      { id: 'f2', name: 'Подготовить отчёт по ТИПИС', group: 'Учёба', w: 3, slot: 110, te: 180, deadline: 'завтра, 10:00', soon: true, pct: 40, pt: 12.5 },
+      { id: 'f3', name: 'Пробежка 5 км', group: 'Спорт', w: 1, slot: 45, te: 45, deadline: 'сегодня, 22:00', soon: true, pt: 3.2 },
+      { id: 'f4', name: 'Купить продукты на неделю', group: 'Дом', w: 1, slot: 60, te: 60, deadline: 'завтра, 20:00', soon: true, pt: 1.7 }
+    ], outside: 0 },
+    many: { total: 180, subtitle: 'Выполнено 2 из 12', slots: [
+      { id: 'm1', name: 'Сдать отчёт по практике', group: 'Учёба', w: 3, slot: 15, te: 240, deadline: 'сегодня, 23:59', soon: true, pct: 60, pt: 18.4 },
+      { id: 'm2', name: 'Подготовить слайды к защите курсовой', group: 'Учёба', w: 3, slot: 15, te: 180, deadline: 'завтра, 09:00', soon: true, pt: 16.0 },
+      { id: 'm3', name: 'Ответить заказчику по макетам', group: 'Работа', w: 2, slot: 15, te: 30, deadline: 'сегодня, 16:00', soon: true, pt: 15.0 },
+      { id: 'm4', name: 'Оплатить интернет и коммуналку', group: 'Дом', w: 1, slot: 15, te: 15, deadline: 'сегодня, 20:00', soon: true, pt: 1.3 },
+      { id: 'm5', name: 'Английский: 20 карточек Anki', group: 'Английский', w: 4, slot: 15, te: 20, deadline: 'сегодня, 23:00', soon: true, pt: 5.3 },
+      { id: 'm6', name: 'Созвон с научным руководителем', group: 'Учёба', w: 3, slot: 15, te: 30, deadline: 'завтра, 12:00', soon: true, pt: 3.1 },
+      { id: 'm7', name: 'Разобрать почту', group: 'Работа', w: 2, slot: 15, te: 20, deadline: 'через 2 дня', pt: 2.1 },
+      { id: 'm8', name: 'Гитара: гаммы', group: 'Хобби', w: 2, slot: 15, te: 300, deadline: '8 окт', pt: 1.8 },
+      { id: 'm9', name: 'Записаться к стоматологу', group: 'Дом', w: 1, slot: 15, te: 15, deadline: 'через 3 дня', pt: 0.2 },
+      { id: 'm10', name: 'Полить цветы', group: 'Дом', w: 1, slot: 15, te: 10, deadline: 'завтра, 20:00', soon: true, pt: 0.3 },
+      { id: 'm11', name: 'Пробежка 5 км', group: 'Спорт', w: 1, slot: 15, te: 45, deadline: 'сегодня, 22:00', soon: true, done: true },
+      { id: 'm12', name: 'Растяжка', group: 'Спорт', w: 1, slot: 15, te: 15, deadline: 'сегодня, 23:00', soon: true, done: true }
+    ], outside: 2 }
+  };
+
+  /* ---------- Форматы ---------- */
+  function hm(min) { return Math.floor(min / 60) + ':' + String(min % 60).padStart(2, '0'); }
+  function words(min) {
+    var h = Math.floor(min / 60), m = min % 60, r = [];
+    function pl(n, a, b, c) { var d = n % 10, dd = n % 100; return n + ' ' + (d === 1 && dd !== 11 ? a : d >= 2 && d <= 4 && (dd < 12 || dd > 14) ? b : c); }
+    if (h) r.push(pl(h, 'час', 'часа', 'часов'));
+    if (m) r.push(pl(m, 'минута', 'минуты', 'минут'));
+    return r.join(' ') || '0 минут';
+  }
+  function num(x) { return x.toFixed(1).replace('.', ','); }
+  function tasksWord(n) { var d = n % 10, dd = n % 100; return n + ' ' + (d === 1 && dd !== 11 ? 'задача' : d >= 2 && d <= 4 && (dd < 12 || dd > 14) ? 'задачи' : 'задач'); }
+
+  /* ---------- Кольцо: сектор = кольцевой сегмент ---------- */
+  var C = 120, R = 112, r = 74;
+  function pt(rad, a) { return [C + rad * Math.cos(a), C + rad * Math.sin(a)]; }
+  function arc(a0, a1) {
+    var big = a1 - a0 > Math.PI ? 1 : 0, p0 = pt(R, a0), p1 = pt(R, a1), q1 = pt(r, a1), q0 = pt(r, a0);
+    return 'M' + p0 + 'A' + R + ',' + R + ' 0 ' + big + ' 1 ' + p1 + 'L' + q1 + 'A' + r + ',' + r + ' 0 ' + big + ' 0 ' + q0 + 'Z';
+  }
+
+  function render(section, plan) {
+    var active = plan.slots.filter(function (s) { return !s.done; }).sort(function (x, y) { return y.pt - x.pt; });
+    var done = plan.slots.filter(function (s) { return s.done; });
+    var order = active.concat(done);                         // активные по Priority ↓, затем выполненные
+    var used = order.reduce(function (a, s) { return a + s.slot; }, 0);
+    var left = active.reduce(function (a, s) { return a + s.slot; }, 0);
+    var doneMin = done.reduce(function (a, s) { return a + s.slot; }, 0);
+    var free = plan.total - used;
+    var max = Math.max.apply(null, active.map(function (s) { return s.pt; }).concat([0]));
+    var dayPt = active.reduce(function (a, s) { return a + s.pt; }, 0);
+
+    /* секторы */
+    var a = -Math.PI / 2, paths = '';
+    order.forEach(function (s) {
+      var a1 = a + s.slot / plan.total * 2 * Math.PI;
+      paths += '<path class="day-chart__sector w-' + s.w + (s.done ? ' day-chart__sector--done' : '') + '" data-id="' + s.id + '" d="' + arc(a, a1) + '"><title>' + s.name + ' — ' + hm(s.slot) + '</title></path>';
+      a = a1;
+    });
+    if (free >= 5) {
+      paths += '<path class="day-chart__sector day-chart__sector--free" data-id="free" d="' + arc(a, a + free / plan.total * 2 * Math.PI) + '"><title>Свободно — ' + hm(free) + '</title></path>';
+    }
+
+    var label = 'План на ' + hm(plan.total) + ': ' + order.map(function (s) { return s.name + ' ' + words(s.slot) + (s.done ? ', выполнено' : ''); }).join('; ') + (free >= 5 ? '; свободно ' + words(free) : '');
+
+    var summary =
+      '<li><span class="day-chart__swatch day-chart__swatch--plan"></span>В работе: ' + tasksWord(active.length) + '<b>' + hm(left) + '</b></li>' +
+      (done.length ? '<li><span class="day-chart__swatch" style="--sw: var(--color-day-done)"></span>Выполнено: ' + done.length + '<b>' + hm(doneMin) + '</b></li>' : '') +
+      (free >= 5 ? '<li><span class="day-chart__swatch day-chart__swatch--free"></span>Свободно<b>' + hm(free) + '</b></li>' : '') +
+      '<li title="Сумма приоритетов невыполненных задач плана" style="color: var(--color-text-muted)"><svg class="icon icon--sm"><use href="#i-zap"/></svg>Приоритет дня (осталось)<b style="color: var(--color-text)">' + num(dayPt) + '</b></li>';
+
+    var note = '';
+    if (plan.outside) {
+      note = '<p class="day-chart__note"><svg class="icon icon--sm"><use href="#i-info"/></svg><span>Ещё ' + tasksWord(plan.outside) + ' не в плане: не хватило времени (каждой нужно от 0:15) или они появились позже.</span><button class="btn btn--ghost" type="button" data-open-sheet>Изменить план</button></p>';
+    } else if (free >= 5) {
+      note = '<p class="day-chart__note"><svg class="icon icon--sm"><use href="#i-info"/></svg><span>Всё, что нужно сегодня, помещается. Свободные ' + hm(free) + ' — на новое дело или отдых.</span></p>';
+    }
+
+    var html =
+      '<div class="day-chart">' +
+        '<figure class="day-chart__figure">' +
+          '<svg class="day-chart__svg" viewBox="0 0 240 240" role="img" aria-label="' + label.replace(/"/g, '&quot;') + '">' +
+            '<circle class="day-chart__track" cx="120" cy="120" r="' + (R + r) / 2 + '" stroke-width="' + (R - r) + '"/>' + paths +
+          '</svg>' +
+          '<figcaption class="day-chart__center" aria-live="polite">' +
+            '<span class="day-chart__value">' + hm(left) + '</span><span class="day-chart__label">осталось из ' + hm(plan.total) + '</span>' +
+          '</figcaption>' +
+        '</figure>' +
+        '<ul class="day-chart__summary">' + summary + '</ul>' + note +
+      '</div>' +
+      '<div class="section-title"><h2>По приоритету</h2>' +
+        '<button class="btn btn--ghost" type="button" data-open-sheet><svg class="icon icon--sm"><use href="#i-sliders"/></svg>Изменить план</button></div>' +
+      '<ul class="task-list">' + order.map(function (s) {
+        var lvl = s.done ? 'p-low' : s.pt >= 0.6 * max ? 'p-high' : s.pt >= 0.25 * max ? 'p-mid' : 'p-low';
+        var lvlName = { 'p-high': 'высокий', 'p-mid': 'средний', 'p-low': 'низкий' }[lvl];
+        return '<li class="task-card w-' + s.w + '" data-id="' + s.id + '">' +
+          '<article class="task task--slot w-' + s.w + ' ' + lvl + (s.done ? ' task--done' : '') + '">' +
+            '<label class="checkbox"><input type="checkbox"' + (s.done ? ' checked' : '') + ' aria-labelledby="n-' + s.id + '"><span class="checkbox__box"><svg class="icon icon--xs"><use href="#i-check"/></svg></span></label>' +
+            '<div class="task__body">' +
+              '<div class="task__top"><p class="task__name" id="n-' + s.id + '">' + s.name + '</p>' +
+                '<span class="slot-time"><b aria-hidden="true">' + hm(s.slot) + '</b><span aria-hidden="true"> сегодня</span><span class="visually-hidden">В плане на сегодня: ' + words(s.slot) + '</span></span></div>' +
+              '<div class="task__meta"><span class="task__facts">' +
+                '<span class="task__fact"><svg class="icon icon--xs"><use href="#i-folder"/></svg>' + s.group + '</span>' +
+                '<span class="task__fact"><svg class="icon icon--xs"><use href="#i-clock"/></svg><span aria-hidden="true">всего ' + hm(s.te) + '</span><span class="visually-hidden">Время на выполнение: ' + words(s.te) + '</span></span>' +
+                '<span class="task__fact deadline' + (s.soon && !s.done ? ' deadline--soon' : '') + '"><svg class="icon icon--xs"><use href="#i-flag"/></svg>' + s.deadline + '</span>' +
+                (s.pct ? '<span class="task__fact">' + s.pct + '%</span>' : '') +
+              '</span>' +
+              (s.done ? '' : '<span class="priority-chip" aria-label="Приоритет ' + num(s.pt) + ', ' + lvlName + '"><svg class="icon"><use href="#i-zap"/></svg>' + num(s.pt) + '</span>') +
+              '</div>' +
+            '</div>' +
+          '</article></li>';
+      }).join('') + '</ul>';
+    section.innerHTML = html;
+
+    /* Связь «сектор ↔ задача»: наведение/тап подсвечивает пару и меняет центр кольца */
+    var chart = section.querySelector('.day-chart');
+    var list = section.querySelector('.task-list');
+    var center = section.querySelector('.day-chart__center');
+    var defaultCenter = center.innerHTML;
+    var pinned = null;
+    function focus(id) {
+      chart.classList.toggle('day-chart--focus', !!id);
+      list.classList.toggle('task-list--focus', !!id && id !== 'free');
+      section.querySelectorAll('.day-chart__sector').forEach(function (p) { p.classList.toggle('day-chart__sector--active', p.dataset.id === id); });
+      list.querySelectorAll('.task-card').forEach(function (c) { c.classList.toggle('task-card--active', c.dataset.id === id); });
+      if (!id) { center.innerHTML = defaultCenter; return; }
+      if (id === 'free') { center.innerHTML = '<span class="day-chart__value">' + hm(free) + '</span><span class="day-chart__label">свободно</span>'; return; }
+      var s = order.filter(function (x) { return x.id === id; })[0];
+      center.innerHTML = '<span class="day-chart__name">' + s.name + '</span><span class="day-chart__value" style="font-size: var(--text-xl)">' + hm(s.slot) + '</span><span class="day-chart__label">' + (s.done ? 'выполнено' : 'сегодня · ' + s.group) + '</span>';
+    }
+    section.querySelectorAll('.day-chart__sector').forEach(function (p) {
+      p.addEventListener('mouseenter', function () { if (!pinned) focus(p.dataset.id); });
+      p.addEventListener('mouseleave', function () { if (!pinned) focus(null); });
+      p.addEventListener('click', function (e) { e.stopPropagation(); pinned = pinned === p.dataset.id ? null : p.dataset.id; focus(pinned); });
+    });
+    list.querySelectorAll('.task-card').forEach(function (c) {
+      c.addEventListener('mouseenter', function () { if (!pinned) focus(c.dataset.id); });
+      c.addEventListener('mouseleave', function () { if (!pinned) focus(null); });
+      c.addEventListener('focusin', function () { if (!pinned) focus(c.dataset.id); });
+      c.addEventListener('focusout', function () { if (!pinned) focus(null); });
+    });
+    document.addEventListener('click', function (e) { if (pinned && !e.target.closest('.day-chart__sector')) { pinned = null; focus(null); } });
+  }
+
+  document.querySelectorAll('[data-plan]').forEach(function (sec) { render(sec, PLANS[sec.dataset.plan]); });
+
+  /* ---------- Панель состояний макета ---------- */
+  var views = document.querySelectorAll('[data-view]:not([data-view="sheet"])');
+  var sheet = document.querySelector('[data-view="sheet"]');
+  var buttons = document.querySelectorAll('.mock-panel [data-set]');
+  var switcher = document.querySelector('.date-switcher');
+  var subtitle = document.getElementById('subtitle');
+  function toggleSheet(on) { sheet.toggleAttribute('data-active', on); document.querySelector('[data-set="sheet"]').setAttribute('aria-pressed', on); }
+  buttons.forEach(function (b) {
+    b.addEventListener('click', function () {
+      var v = b.dataset.set;
+      if (v === 'sheet') { toggleSheet(!sheet.hasAttribute('data-active')); return; }
+      views.forEach(function (el) { el.toggleAttribute('data-active', el.dataset.view === v); });
+      switcher.style.display = v === 'loading' ? 'none' : '';
+      subtitle.style.visibility = PLANS[v] ? '' : 'hidden';
+      if (PLANS[v]) subtitle.textContent = PLANS[v].subtitle;
+      buttons.forEach(function (x) { if (x.dataset.set !== 'sheet') x.setAttribute('aria-pressed', x === b); });
+    });
+  });
+  document.addEventListener('click', function (e) { if (e.target.closest('[data-open-sheet]')) toggleSheet(true); });
+  sheet.addEventListener('click', function (e) {
+    if (e.target === sheet || e.target.closest('.sheet__head .btn, .sheet__actions .btn')) toggleSheet(false);
+  });
+  document.querySelector('[data-theme-toggle]').addEventListener('click', function () {
+    var root = document.documentElement;
+    var dark = root.dataset.theme === 'dark' || (!root.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches);
+    root.dataset.theme = dark ? 'light' : 'dark';
+  });
+  // Пресеты времени подставляют значение в поле Ч:ММ
+  document.querySelectorAll('.time-field').forEach(function (f) {
+    var input = f.querySelector('input');
+    var chips = f.querySelectorAll('.chip');
+    function sync() { chips.forEach(function (c) { c.setAttribute('aria-pressed', c.textContent === input.value); }); }
+    chips.forEach(function (c) { c.addEventListener('click', function () { input.value = c.textContent; sync(); }); });
+    input.addEventListener('input', sync);
+  });
+})();
+</script>
+</body>
+</html>

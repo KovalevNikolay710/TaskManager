@@ -1,0 +1,299 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Задача — TaskManager (макет)</title>
+  <link rel="stylesheet" href="../tokens.css">
+  <link rel="stylesheet" href="../components.css">
+  <style>
+    /* Только для макета: показ элементов по состоянию (во фронтенд не переносить) */
+    [data-when]:not(.is-shown) { display: none !important; }
+  </style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M3 6.5l1.8 1.8L8 5M3 13.5l1.8 1.8L8 12M11 7h10M11 14h10M11 20h10M3.5 20h1"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4l2 2.5h9A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m8 12.5 2.8 2.8L16.5 9.5"/></symbol>
+  <symbol id="i-undo" viewBox="0 0 24 24"><path d="M4 9h11a5 5 0 0 1 0 10H9M4 9l4-4M4 9l4 4"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 12.5A1.5 1.5 0 0 0 8.5 21h7a1.5 1.5 0 0 0 1.5-1.5L18 7M9 7V4.5A1.5 1.5 0 0 1 10.5 3h3A1.5 1.5 0 0 1 15 4.5V7"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3zM12 10v4M12 17h.01"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4.5L3 9M3 4v5h5M4 13a8 8 0 0 0 14.5 4.5L21 15M21 20v-5h-5"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20.5 20.5 16 16"/></symbol>
+</svg>
+
+<div class="app">
+
+  <aside class="side-nav" aria-label="Основная навигация">
+    <p class="side-nav__brand">TaskManager</p>
+    <a class="side-nav__item" href="day.html"><svg class="icon"><use href="#i-calendar"/></svg>День</a>
+    <a class="side-nav__item" href="all-tasks.html" aria-current="page"><svg class="icon"><use href="#i-list"/></svg>Все задачи</a>
+    <a class="side-nav__item" href="groups.html"><svg class="icon"><use href="#i-folder"/></svg>Группы</a>
+    <button class="side-nav__profile" type="button" aria-label="Профиль">
+      <span class="avatar-btn__circle">Я</span>
+      <span><span class="side-nav__profile-name">Профиль</span><span class="side-nav__profile-sub">Пользователь #1</span></span>
+    </button>
+  </aside>
+
+  <main class="app__main">
+    <div class="app__content">
+
+      <header class="page-header">
+        <a class="btn btn--icon" href="all-tasks.html" aria-label="Назад"><svg class="icon"><use href="#i-left"/></svg></a>
+        <h1 class="page-header__title">Задача</h1>
+      </header>
+
+      <!-- ================= Основное содержимое (активная / изменена / выполнена) ================= -->
+      <form class="form" id="task-form" novalidate onsubmit="return false" data-when="active dirty done">
+
+        <!-- Название — редактируется на месте -->
+        <div>
+          <label class="visually-hidden" for="t-name">Название задачи</label>
+          <textarea class="title-input" id="t-name" rows="1" maxlength="200">Подготовить отчёт по ТИПИС</textarea>
+        </div>
+
+        <!-- Статус: активная -->
+        <button class="btn btn--secondary btn--block" type="button" data-when="active dirty">
+          <svg class="icon icon--sm" style="color:var(--color-success)"><use href="#i-check"/></svg>Отметить выполненной
+        </button>
+        <!-- Статус: выполнена -->
+        <div class="status-banner" data-when="done" role="status">
+          <svg class="icon"><use href="#i-check-circle"/></svg>
+          <span class="status-banner__body">
+            <span class="status-banner__title">Выполнена</span>
+            <span class="status-banner__sub">Отмечена сегодня, 11:05</span>
+          </span>
+          <button class="btn btn--secondary" type="button"><svg class="icon icon--sm"><use href="#i-undo"/></svg>Вернуть в работу</button>
+        </div>
+
+        <!-- Приоритет -->
+        <section class="priority-card p-high" aria-labelledby="pc" data-when="active dirty">
+          <div class="priority-card__head">
+            <span class="priority-card__label" id="pc">Приоритет</span>
+            <span class="priority-chip" aria-label="Приоритет 16,2, высокий"><svg class="icon"><use href="#i-zap"/></svg>16,2</span>
+            <span class="priority-card__rank">1-я из 9 активных</span>
+          </div>
+          <p class="priority-card__text">Чем ближе дедлайн и больше осталось работы, тем выше задача в списке.</p>
+          <span class="priority-card__next" data-when="dirty">После сохранения ≈ 12,6 <svg class="icon icon--xs"><use href="#i-arrow-right"/></svg> 2-я из 9</span>
+          <details class="disclosure">
+            <summary>Из чего складывается<svg class="icon icon--sm"><use href="#i-chevron"/></svg></summary>
+            <ul class="factors">
+              <li class="factor"><span class="factor__op"></span><span>Вес группы<span class="factor__sub">«Учёба»</span></span><span class="factor__value">3</span></li>
+              <li class="factor"><span class="factor__op">×</span><span>Время на выполнение<span class="factor__sub">3:00</span></span><span class="factor__value">180 мин</span></li>
+              <li class="factor"><span class="factor__op">÷</span><span>Часов до дедлайна<span class="factor__sub">на момент расчёта, вчера 21:40</span></span><span class="factor__value">20</span></li>
+              <li class="factor"><span class="factor__op">×</span><span>Осталось сделать<span class="factor__sub">выполнено 40%</span></span><span class="factor__value">0,6</span></li>
+              <li class="factor factor--total"><span class="factor__op">=</span><span>Приоритет</span><span class="factor__value">16,2</span></li>
+            </ul>
+            <p class="formula">Pt = Pg × Te ÷ Tl × %in</p>
+          </details>
+        </section>
+        <section class="priority-card priority-card--done" aria-label="Приоритет" data-when="done">
+          <div class="priority-card__head"><span class="priority-card__label">Приоритет</span><span class="badge">0</span></div>
+          <p class="priority-card__text" style="margin-bottom: var(--space-3)">Выполненные задачи не участвуют в очереди и стоят внизу своей группы.</p>
+        </section>
+
+        <!-- Прогресс -->
+        <section class="form-card" aria-labelledby="c-progress">
+          <div class="percent">
+            <div class="percent__head">
+              <label class="form-card__title" id="c-progress" for="t-pct">Выполнено</label>
+              <output class="percent__value" for="t-pct" id="t-pct-out">40%</output>
+            </div>
+            <input class="range" id="t-pct" type="range" min="0" max="100" step="5" value="40" style="--value:40%" aria-describedby="t-pct-hint">
+            <div class="percent__steps" role="group" aria-label="Быстрый выбор прогресса">
+              <button class="step" type="button" aria-pressed="false" data-v="0">0%</button>
+              <button class="step" type="button" aria-pressed="false" data-v="25">25%</button>
+              <button class="step" type="button" aria-pressed="false" data-v="50">50%</button>
+              <button class="step" type="button" aria-pressed="false" data-v="75">75%</button>
+              <button class="step" type="button" aria-pressed="false" data-v="100">100%</button>
+            </div>
+            <span class="field__hint" id="t-pct-hint" data-when="active dirty">На 100% задача станет выполненной.</span>
+            <span class="field__hint" data-when="done">Чтобы изменить прогресс, верните задачу в работу.</span>
+          </div>
+        </section>
+
+        <!-- Срок и объём -->
+        <section class="form-card" aria-labelledby="c2">
+          <h2 class="form-card__title" id="c2">Срок и объём</h2>
+          <fieldset class="field" style="border:0;margin:0;padding:0" aria-describedby="t-dl-hint">
+            <legend class="field__label" style="padding:0">Дедлайн</legend>
+            <div class="field__row">
+              <input class="input" id="t-date" type="date" value="2026-09-25" aria-label="Дата дедлайна">
+              <input class="input" id="t-time" type="time" value="10:00" aria-label="Время дедлайна">
+            </div>
+            <span class="field__hint deadline--soon" id="t-dl-hint"><svg class="icon icon--xs"><use href="#i-flag"/></svg>завтра, 10:00 — через 20 ч</span>
+          </fieldset>
+          <div class="time-field">
+            <label class="field__label" for="t-te" style="margin:0">Время на выполнение</label>
+            <span class="time-input"><input id="t-te" type="text" inputmode="numeric" placeholder="0:00" value="3:00"><span class="time-input__unit">ч:мм</span></span>
+          </div>
+        </section>
+
+        <!-- Группа -->
+        <section class="form-card" aria-labelledby="c3">
+          <h2 class="form-card__title" id="c3">Группа</h2>
+          <div class="chips" role="radiogroup" aria-labelledby="c3">
+            <button class="chip chip--weight w-4" type="button" role="radio" aria-checked="false" aria-label="Английский, вес 4"><span class="chip__dot" aria-hidden="true"></span>Английский<span class="chip__weight" aria-hidden="true">×4</span></button>
+            <button class="chip chip--weight w-3" type="button" role="radio" aria-checked="true" aria-label="Учёба, вес 3"><span class="chip__dot" aria-hidden="true"></span>Учёба<span class="chip__weight" aria-hidden="true">×3</span></button>
+            <button class="chip chip--weight w-2" type="button" role="radio" aria-checked="false" aria-label="Работа, вес 2"><span class="chip__dot" aria-hidden="true"></span>Работа<span class="chip__weight" aria-hidden="true">×2</span></button>
+            <button class="chip chip--weight w-2" type="button" role="radio" aria-checked="false" aria-label="Хобби, вес 2"><span class="chip__dot" aria-hidden="true"></span>Хобби<span class="chip__weight" aria-hidden="true">×2</span></button>
+            <button class="chip chip--weight w-1" type="button" role="radio" aria-checked="false" aria-label="Дом, вес 1"><span class="chip__dot" aria-hidden="true"></span>Дом<span class="chip__weight" aria-hidden="true">×1</span></button>
+            <button class="chip chip--weight w-1" type="button" role="radio" aria-checked="false" aria-label="Спорт, вес 1"><span class="chip__dot" aria-hidden="true"></span>Спорт<span class="chip__weight" aria-hidden="true">×1</span></button>
+            <button class="chip chip--weight w-1" type="button" role="radio" aria-checked="false" aria-label="Без группы, вес 1"><span class="chip__dot" aria-hidden="true" style="background: var(--color-border-strong)"></span>Без группы</button>
+            <button class="chip chip--add" type="button"><svg class="icon"><use href="#i-plus"/></svg>Новая группа</button>
+          </div>
+        </section>
+
+        <!-- Описание -->
+        <section class="form-card" aria-labelledby="c4">
+          <label class="form-card__title" id="c4" for="t-desc">Описание</label>
+          <textarea class="textarea" id="t-desc" rows="3" placeholder="Детали, ссылки, что именно сдать">Раздел 3: анализ требований и диаграммы вариантов использования. Шаблон — в LMS, сдать до пары у Петрова.</textarea>
+        </section>
+
+        <p class="meta-note">Создана 20 сентября, 09:12 · изменена вчера, 21:40</p>
+        <div class="danger-zone">
+          <button class="btn btn--danger-ghost" type="button" data-open-delete><svg class="icon icon--sm"><use href="#i-trash"/></svg>Удалить задачу</button>
+        </div>
+
+        <!-- Панель сохранения — только при несохранённых изменениях -->
+        <div class="action-bar" data-when="dirty">
+          <span class="action-bar__note">Есть несохранённые изменения</span>
+          <button class="btn btn--secondary" type="button">Отменить</button>
+          <button class="btn btn--primary" type="submit">Сохранить</button>
+        </div>
+      </form>
+
+      <!-- ================= Загрузка ================= -->
+      <section data-when="loading" aria-busy="true" aria-label="Загрузка задачи" style="display:grid; gap: var(--space-4)">
+        <div class="skeleton" style="height:28px; width:80%; margin-top: var(--space-2)"></div>
+        <div class="skeleton" style="height:44px; border-radius: var(--radius-md)"></div>
+        <div class="form-card"><div class="skeleton" style="height:16px;width:40%"></div><div class="skeleton" style="height:12px;width:75%"></div></div>
+        <div class="form-card"><div class="skeleton" style="height:16px;width:30%"></div><div class="skeleton" style="height:8px;border-radius:var(--radius-full)"></div></div>
+        <div class="form-card"><div class="skeleton" style="height:16px;width:35%"></div><div class="skeleton" style="height:44px"></div><div class="skeleton" style="height:44px;width:120px"></div></div>
+      </section>
+
+      <!-- ================= Не найдена ================= -->
+      <section data-when="notfound">
+        <div class="state">
+          <div class="state__icon"><svg class="icon"><use href="#i-search"/></svg></div>
+          <h2 class="state__title">Задача не найдена</h2>
+          <p class="state__text">Возможно, её уже удалили или ссылка устарела.</p>
+          <a class="btn btn--primary" href="all-tasks.html" style="text-decoration:none"><svg class="icon icon--sm"><use href="#i-list"/></svg>К списку задач</a>
+        </div>
+      </section>
+
+      <!-- ================= Ошибка ================= -->
+      <section data-when="error">
+        <div class="state state--error" role="alert">
+          <div class="state__icon"><svg class="icon"><use href="#i-alert"/></svg></div>
+          <h2 class="state__title">Не удалось загрузить задачу</h2>
+          <p class="state__text">Проверьте, что сервер запущен, и попробуйте ещё раз.</p>
+          <p class="state__detail">Не удалось связаться с сервером</p>
+          <button class="btn btn--secondary" type="button"><svg class="icon icon--sm"><use href="#i-refresh"/></svg>Повторить</button>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ============ Toast: ошибка сохранения ============ -->
+  <div class="toast" role="status" data-when="toast" style="bottom: calc(76px + env(safe-area-inset-bottom) + var(--space-2))">
+    Не удалось сохранить изменения
+    <button class="btn btn--ghost" type="button">Повторить</button>
+  </div>
+
+  <!-- ============ Sheet: подтверждение удаления ============ -->
+  <div class="sheet-backdrop" data-view="sheet">
+    <div class="sheet" role="alertdialog" aria-modal="true" aria-labelledby="del-title" aria-describedby="del-text">
+      <div class="sheet__grip"></div>
+      <div class="sheet__head">
+        <h2 class="sheet__title" id="del-title">Удалить задачу?</h2>
+        <button class="btn btn--icon" type="button" aria-label="Закрыть"><svg class="icon"><use href="#i-x"/></svg></button>
+      </div>
+      <p id="del-text" style="margin:0; color: var(--color-text-muted)">«Подготовить отчёт по ТИПИС» удалится вместе с прогрессом и пропадёт из плана на день. Отменить это нельзя.</p>
+      <div class="sheet__actions">
+        <button class="btn btn--secondary" type="button">Отмена</button>
+        <button class="btn btn--danger" type="button">Удалить</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mock-panel" aria-hidden="true">
+  <span class="mock-panel__label">Макет · состояние</span>
+  <button data-set="active" aria-pressed="true">Активная</button>
+  <button data-set="dirty">Изменена</button>
+  <button data-set="done">Выполнена</button>
+  <button data-set="loading">Загрузка</button>
+  <button data-set="notfound">Не найдена</button>
+  <button data-set="error">Ошибка</button>
+  <button data-toast>+ Ошибка сохранения</button>
+  <button data-sheet>+ Удаление</button>
+  <button data-theme-toggle>Тема</button>
+</div>
+<script>
+  (function () {
+    var $ = function (id) { return document.getElementById(id); };
+    var range = $('t-pct');
+    function setPct(v) {
+      range.value = v; range.style.setProperty('--value', v + '%'); $('t-pct-out').textContent = v + '%';
+      document.querySelectorAll('.step').forEach(function (s) { s.setAttribute('aria-pressed', String(s.dataset.v) === String(v)); });
+    }
+    range.addEventListener('input', function () { setPct(range.value); });
+    document.querySelectorAll('.step').forEach(function (s) { s.addEventListener('click', function () { setPct(s.dataset.v); }); });
+
+    var toastOn = false;
+    function apply(state) {
+      var done = state === 'done';
+      $('t-name').classList.toggle('title-input--done', done);
+      setPct(done ? 100 : state === 'dirty' ? 60 : 40);
+      $('t-te').value = state === 'dirty' ? '3:30' : '3:00';
+      range.disabled = done;
+      document.querySelectorAll('.step').forEach(function (s) { s.disabled = done; });
+      document.querySelectorAll('[data-when]').forEach(function (el) {
+        var list = el.dataset.when.split(' ');
+        el.classList.toggle('is-shown', list.indexOf(state) !== -1 || (el.dataset.when === 'toast' && toastOn));
+      });
+      document.querySelectorAll('.mock-panel [data-set]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.set === state); });
+      current = state;
+    }
+    var current = 'active';
+    document.querySelectorAll('.mock-panel [data-set]').forEach(function (b) {
+      b.addEventListener('click', function () { apply(b.dataset.set); });
+    });
+    document.querySelector('.mock-panel [data-toast]').addEventListener('click', function (e) {
+      // Ошибка сохранения бывает только при несохранённых изменениях — показываем поверх «Изменена»
+      toastOn = !toastOn; e.target.setAttribute('aria-pressed', toastOn); apply(toastOn ? 'dirty' : current);
+    });
+    apply('active');
+
+    var sheet = document.querySelector('[data-view="sheet"]');
+    function toggleSheet(on) {
+      sheet.toggleAttribute('data-active', on);
+      document.querySelector('.mock-panel [data-sheet]').setAttribute('aria-pressed', on);
+    }
+    document.querySelector('.mock-panel [data-sheet]').addEventListener('click', function () { toggleSheet(!sheet.hasAttribute('data-active')); });
+    document.querySelector('[data-open-delete]').addEventListener('click', function () { toggleSheet(true); });
+    sheet.addEventListener('click', function (e) {
+      if (e.target === sheet || e.target.closest('.sheet__head .btn, .sheet__actions .btn')) toggleSheet(false);
+    });
+    document.querySelector('[data-theme-toggle]').addEventListener('click', function () {
+      var root = document.documentElement;
+      var dark = root.dataset.theme === 'dark' || (!root.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches);
+      root.dataset.theme = dark ? 'light' : 'dark';
+    });
+  })();
+</script>
+</body>
+</html>

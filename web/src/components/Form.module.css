@@ -1,0 +1,295 @@
+/* Формы экранов «Новая задача», «Задача», «Группы» — design/components.css, раздел «Form». */
+
+.form {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.card {
+  display: grid;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: var(--space-4);
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: var(--font-weight-semibold);
+}
+
+.field {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.label {
+  margin: 0;
+  padding: 0;
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+.optional {
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+}
+
+.hint {
+  display: block;
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+
+.hint > svg {
+  vertical-align: -3px;
+  margin-right: 2px;
+}
+
+.hintError {
+  color: var(--color-danger);
+}
+
+.hintWarning {
+  color: var(--color-warning);
+}
+
+.hintSoon {
+  color: var(--color-warning);
+  font-weight: var(--font-weight-medium);
+}
+
+.hintOverdue {
+  color: var(--color-danger);
+  font-weight: var(--font-weight-medium);
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: var(--space-2);
+}
+
+.input,
+.textarea {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: var(--size-touch);
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-md);
+  outline: none;
+  background: var(--color-surface-sunken);
+  color: var(--color-text);
+  font: inherit;
+  font-size: var(--text-md);
+}
+
+.input[type='date'],
+.input[type='time'] {
+  font-variant-numeric: tabular-nums;
+}
+
+.textarea {
+  min-height: 88px;
+  padding: var(--space-3);
+  line-height: var(--line-height-normal);
+  resize: vertical;
+  field-sizing: content;
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: var(--color-text-muted);
+}
+
+.input:focus,
+.textarea:focus {
+  box-shadow: 0 0 0 2px var(--color-focus);
+}
+
+.inputError,
+.inputError:focus {
+  box-shadow: 0 0 0 2px var(--color-danger);
+}
+
+.input:disabled,
+.textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.link {
+  color: var(--color-accent);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ---------- Chip (пресеты, GroupPicker) ---------- */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.chip {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  border-radius: var(--radius-full);
+  box-shadow: inset 0 0 0 1px var(--color-border);
+  background: var(--color-surface);
+  font-size: var(--text-sm);
+  font-weight: var(--font-weight-medium);
+}
+
+/* Зона нажатия 44px */
+.chip::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
+}
+
+.chip[aria-pressed='true'],
+.chip[aria-checked='true'] {
+  background: var(--color-accent-soft);
+  color: var(--color-accent);
+  box-shadow: inset 0 0 0 1.5px var(--color-accent);
+}
+
+.chip:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.chipName {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.chipWeight {
+  margin-left: 6px;
+  font-size: var(--text-xs);
+  font-weight: var(--font-weight-regular);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.chip[aria-checked='true'] .chipWeight {
+  color: inherit;
+}
+
+/* Чип группы в цвете веса (.w-N): точка слева, выбранный — фон, обводка и текст ступени */
+.chipDot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: var(--radius-full);
+  background: var(--w);
+}
+
+/* «Без группы» = вес 1, но нейтрально, чтобы отличаться от настоящей группы ×1 */
+.chipDotBase {
+  background: var(--color-border-strong);
+}
+
+.chipWeighted[aria-checked='true'] {
+  background: var(--w-soft);
+  color: var(--w-text);
+  box-shadow: inset 0 0 0 1.5px var(--w);
+}
+
+.chipAdd {
+  gap: 4px;
+  box-shadow: none;
+  border: 1px dashed var(--color-border-strong);
+  color: var(--color-accent);
+}
+
+.chipSkeleton {
+  width: 88px;
+  box-shadow: none;
+  background: var(--color-surface-sunken);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chipSkeleton {
+    animation: none;
+  }
+}
+
+/* ---------- TimeInput ---------- */
+.timeField {
+  display: grid;
+  gap: var(--space-2);
+  justify-items: start;
+}
+
+.timeInput {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: var(--size-touch);
+  padding: 0 var(--space-3);
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-md);
+}
+
+.timeInput:focus-within {
+  box-shadow: 0 0 0 2px var(--color-focus);
+}
+
+.timeInput input {
+  width: 64px;
+  border: 0;
+  background: none;
+  outline: none;
+  text-align: center;
+  font: inherit;
+  font-size: var(--text-lg);
+  font-weight: var(--font-weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--color-text);
+}
+
+.timeInput input::placeholder {
+  color: var(--color-text-muted);
+  font-weight: var(--font-weight-regular);
+}
+
+.timeInput input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.timeInputError,
+.timeInputError:focus-within {
+  box-shadow: 0 0 0 2px var(--color-danger);
+}
+
+.unit {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+

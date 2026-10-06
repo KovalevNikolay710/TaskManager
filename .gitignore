@@ -1,0 +1,6 @@
+web/node_modules/
+# Сборка фронтенда не коммитится, но папка нужна для go:embed (web/embed.go)
+web/dist/*
+!web/dist/.gitkeep
+.claude/settings.local.json
+.claude/worktrees/

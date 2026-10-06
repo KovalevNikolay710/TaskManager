@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Новая задача — TaskManager (макет)</title>
+  <link rel="stylesheet" href="../tokens.css">
+  <link rel="stylesheet" href="../components.css">
+  <style>
+    /* Только для макета: показ элементов по состоянию формы (во фронтенд не переносить) */
+    [data-when]:not(.is-shown) { display: none !important; }
+  </style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16" rx="2.5"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M3 6.5l1.8 1.8L8 5M3 13.5l1.8 1.8L8 12M11 7h10M11 14h10M11 20h10M3.5 20h1"/></symbol>
+  <symbol id="i-folder" viewBox="0 0 24 24"><path d="M3 6.5A1.5 1.5 0 0 1 4.5 5h4l2 2.5h9A1.5 1.5 0 0 1 21 9v9.5a1.5 1.5 0 0 1-1.5 1.5h-15A1.5 1.5 0 0 1 3 18.5z"/></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 21V4M5 4h11l-2 4 2 4H5"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2 4 14h7l-1 8 9-12h-7l1-8z"/></symbol>
+  <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3 2 20h20L12 3zM12 10v4M12 17h.01"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 11a8 8 0 0 0-14.5-4.5L3 9M3 4v5h5M4 13a8 8 0 0 0 14.5 4.5L21 15M21 20v-5h-5"/></symbol>
+</svg>
+
+<div class="app">
+
+  <!-- SideNav (десктоп): на вложенных экранах /tasks/* подсвечен «Все задачи» -->
+  <aside class="side-nav" aria-label="Основная навигация">
+    <p class="side-nav__brand">TaskManager</p>
+    <a class="side-nav__item" href="day.html"><svg class="icon"><use href="#i-calendar"/></svg>День</a>
+    <a class="side-nav__item" href="all-tasks.html" aria-current="page"><svg class="icon"><use href="#i-list"/></svg>Все задачи</a>
+    <a class="side-nav__item" href="groups.html"><svg class="icon"><use href="#i-folder"/></svg>Группы</a>
+    <button class="side-nav__profile" type="button" aria-label="Профиль">
+      <span class="avatar-btn__circle">Я</span>
+      <span><span class="side-nav__profile-name">Профиль</span><span class="side-nav__profile-sub">Пользователь #1</span></span>
+    </button>
+  </aside>
+
+  <main class="app__main">
+    <div class="app__content">
+
+      <header class="page-header">
+        <a class="btn btn--icon" href="all-tasks.html" aria-label="Назад"><svg class="icon"><use href="#i-left"/></svg></a>
+        <h1 class="page-header__title">Новая задача</h1>
+      </header>
+
+      <form class="form" id="task-form" novalidate onsubmit="return false" aria-labelledby="form-title">
+        <span id="form-title" class="visually-hidden">Новая задача</span>
+
+        <!-- Ошибка сервера: над формой, фокус переводится сюда -->
+        <div class="alert" role="alert" tabindex="-1" data-when="server">
+          <svg class="icon icon--sm"><use href="#i-alert"/></svg>
+          <div class="alert__body">
+            <p class="alert__title">Не удалось создать задачу</p>
+            <p class="alert__text">Не удалось связаться с сервером. Всё, что вы ввели, сохранено — попробуйте ещё раз.</p>
+          </div>
+        </div>
+
+        <!-- ===== Что сделать ===== -->
+        <section class="form-card" aria-labelledby="c1">
+          <h2 class="form-card__title" id="c1">Что сделать</h2>
+
+          <div class="field">
+            <label class="field__label" for="f-name">Название</label>
+            <input class="input" id="f-name" type="text" maxlength="200" autocomplete="off"
+                   placeholder="Например, подготовить отчёт по ТИПИС" aria-describedby="f-name-err" required>
+            <span class="field__hint field__hint--error" id="f-name-err" data-when="errors">Введите название задачи</span>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="f-desc">Описание <span class="field__optional">— необязательно</span></label>
+            <textarea class="textarea" id="f-desc" rows="3" placeholder="Детали, ссылки, что именно сдать"></textarea>
+          </div>
+        </section>
+
+        <!-- ===== Когда и сколько ===== -->
+        <section class="form-card" aria-labelledby="c2">
+          <h2 class="form-card__title" id="c2">Срок и объём</h2>
+
+          <fieldset class="field" style="border:0;margin:0;padding:0" aria-describedby="f-dl-hint f-dl-err">
+            <legend class="field__label" style="padding:0">Дедлайн</legend>
+            <div class="field__row">
+              <input class="input" id="f-date" type="date" aria-label="Дата дедлайна">
+              <input class="input" id="f-time" type="time" aria-label="Время дедлайна">
+            </div>
+            <div class="chips" role="group" aria-label="Быстрый выбор дедлайна">
+              <button class="chip" type="button" aria-pressed="false">Сегодня, 21:00</button>
+              <button class="chip" type="button" aria-pressed="false">Завтра, 18:00</button>
+              <button class="chip" type="button" aria-pressed="false">Через 3 дня</button>
+              <button class="chip" type="button" aria-pressed="false">Через неделю</button>
+            </div>
+            <span class="field__hint deadline--soon" id="f-dl-hint" data-when="filled submitting server"><svg class="icon icon--xs"><use href="#i-flag"/></svg>завтра, 10:00 — через 20 ч</span>
+            <span class="field__hint" data-when="empty">Выберите дату и время или нажмите вариант выше. Не раньше чем через час.</span>
+            <span class="field__hint field__hint--error" id="f-dl-err" data-when="errors">Дедлайн уже прошёл. Выберите время хотя бы на час позже текущего.</span>
+          </fieldset>
+
+          <div class="time-field">
+            <label class="field__label" for="f-te" style="margin:0">Время на выполнение</label>
+            <span class="time-input" id="f-te-box"><input id="f-te" type="text" inputmode="numeric" placeholder="0:00" aria-describedby="f-te-hint f-te-err"><span class="time-input__unit">ч:мм</span></span>
+            <div class="chips" role="group" aria-label="Быстрый выбор времени">
+              <button class="chip" type="button" aria-pressed="false">0:30</button>
+              <button class="chip" type="button" aria-pressed="false">1:00</button>
+              <button class="chip" type="button" aria-pressed="false">2:00</button>
+              <button class="chip" type="button" aria-pressed="false">4:00</button>
+            </div>
+            <span class="field__hint" id="f-te-hint" data-when="empty filled submitting server">Сколько чистого времени займёт работа, например 1:30.</span>
+            <span class="field__hint field__hint--error" id="f-te-err" data-when="errors">Введите время в формате ч:мм, например 1:30</span>
+          </div>
+        </section>
+
+        <!-- ===== Группа ===== -->
+        <section class="form-card" aria-labelledby="c3">
+          <h2 class="form-card__title" id="c3">Группа</h2>
+          <div class="field">
+            <div class="chips" role="radiogroup" aria-labelledby="c3" id="group-chips">
+              <button class="chip chip--weight w-4" type="button" role="radio" aria-checked="false" data-group="4" aria-label="Английский, вес 4"><span class="chip__dot" aria-hidden="true"></span>Английский<span class="chip__weight" aria-hidden="true">×4</span></button>
+              <button class="chip chip--weight w-3" type="button" role="radio" aria-checked="false" data-group="3" aria-label="Учёба, вес 3"><span class="chip__dot" aria-hidden="true"></span>Учёба<span class="chip__weight" aria-hidden="true">×3</span></button>
+              <button class="chip chip--weight w-2" type="button" role="radio" aria-checked="false" data-group="2" aria-label="Работа, вес 2"><span class="chip__dot" aria-hidden="true"></span>Работа<span class="chip__weight" aria-hidden="true">×2</span></button>
+              <button class="chip chip--weight w-2" type="button" role="radio" aria-checked="false" data-group="2" aria-label="Хобби, вес 2"><span class="chip__dot" aria-hidden="true"></span>Хобби<span class="chip__weight" aria-hidden="true">×2</span></button>
+              <button class="chip chip--weight w-1" type="button" role="radio" aria-checked="false" data-group="1" aria-label="Дом, вес 1"><span class="chip__dot" aria-hidden="true"></span>Дом<span class="chip__weight" aria-hidden="true">×1</span></button>
+              <button class="chip chip--weight w-1" type="button" role="radio" aria-checked="false" data-group="1" aria-label="Спорт, вес 1"><span class="chip__dot" aria-hidden="true"></span>Спорт<span class="chip__weight" aria-hidden="true">×1</span></button>
+              <button class="chip chip--weight w-1" type="button" role="radio" aria-checked="false" data-group="0" aria-label="Без группы, вес 1"><span class="chip__dot" aria-hidden="true" style="background: var(--color-border-strong)"></span>Без группы</button>
+              <button class="chip chip--add" type="button" data-open-sheet><svg class="icon"><use href="#i-plus"/></svg>Новая группа</button>
+            </div>
+            <span class="field__hint">Цвет и ×N — вес группы: он умножает приоритет задачи. <a href="groups.html" style="color:var(--color-accent)">Управлять группами</a></span>
+          </div>
+        </section>
+
+        <!-- ===== Предпросмотр приоритета ===== -->
+        <section class="priority-card p-high" aria-labelledby="pp" data-when="filled submitting server">
+          <div class="priority-card__head">
+            <span class="priority-card__label" id="pp">Приоритет</span>
+            <span class="p-high"><span class="priority-chip" aria-label="Приоритет 22,5, высокий"><svg class="icon"><use href="#i-zap"/></svg>22,5</span></span>
+            <span class="priority-card__rank">встанет 1-й из 10</span>
+          </div>
+          <p class="priority-card__text">Задача окажется первой в списке: срок близко, а работы много.</p>
+          <details class="disclosure">
+            <summary>Из чего складывается<svg class="icon icon--sm"><use href="#i-chevron"/></svg></summary>
+            <ul class="factors">
+              <li class="factor"><span class="factor__op"></span><span>Вес группы<span class="factor__sub">«Учёба»</span></span><span class="factor__value">3</span></li>
+              <li class="factor"><span class="factor__op">×</span><span>Время на выполнение<span class="factor__sub">2:30</span></span><span class="factor__value">150 мин</span></li>
+              <li class="factor"><span class="factor__op">÷</span><span>Часов до дедлайна<span class="factor__sub">завтра, 10:00</span></span><span class="factor__value">20</span></li>
+              <li class="factor"><span class="factor__op">×</span><span>Осталось сделать<span class="factor__sub">выполнено 0%</span></span><span class="factor__value">1,0</span></li>
+              <li class="factor factor--total"><span class="factor__op">=</span><span>Приоритет</span><span class="factor__value">22,5</span></li>
+            </ul>
+            <p class="formula">Pt = Pg × Te ÷ Tl × %in</p>
+          </details>
+        </section>
+        <section class="priority-card" aria-label="Приоритет" data-when="empty errors">
+          <div class="priority-card__head"><span class="priority-card__label">Приоритет</span></div>
+          <p class="priority-card__text" style="margin-bottom: var(--space-3)">Укажите дедлайн и время на выполнение — покажем, каким по счёту задача встанет в списке.</p>
+        </section>
+
+        <!-- ===== Панель действий ===== -->
+        <div class="action-bar">
+          <span class="action-bar__note">Задача сразу встанет в список по приоритету</span>
+          <a class="btn btn--secondary" href="all-tasks.html" id="btn-cancel" style="text-decoration:none">Отмена</a>
+          <button class="btn btn--primary" type="submit" data-when="empty filled errors server">Создать задачу</button>
+          <button class="btn btn--primary" type="button" disabled aria-busy="true" data-when="submitting" style="opacity:1"><span class="spinner" aria-hidden="true"></span>Создаём…</button>
+        </div>
+      </form>
+
+    </div>
+  </main>
+
+  <!-- ============ Sheet: новая группа ============ -->
+  <div class="sheet-backdrop" data-view="sheet">
+    <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+      <div class="sheet__grip"></div>
+      <div class="sheet__head">
+        <h2 class="sheet__title" id="sheet-title">Новая группа</h2>
+        <button class="btn btn--icon" type="button" aria-label="Закрыть"><svg class="icon"><use href="#i-x"/></svg></button>
+      </div>
+      <form class="form" onsubmit="return false" style="gap: var(--space-6)">
+        <div class="field">
+          <label class="field__label" for="g-name">Название</label>
+          <input class="input" id="g-name" type="text" maxlength="60" value="Английский" autocomplete="off" placeholder="Например, учёба">
+        </div>
+        <div class="field weight-scale w-2" data-weight-scale>
+          <div class="weight-scale__head"><span class="field__label" id="g-w-l">Вес в приоритете</span><output class="weight-scale__value" id="g-w-v" aria-hidden="true">×2</output></div>
+          <div class="weight-scale__track" role="slider" tabindex="0" aria-labelledby="g-w-l" aria-describedby="g-w-h" aria-valuemin="1" aria-valuemax="10" aria-valuenow="2" aria-valuetext="×2">
+            <span class="weight-scale__bar w-1 weight-scale__bar--on" style="--n:1" data-n="1"><i class="weight-scale__mark"></i></span><span class="weight-scale__bar w-2 weight-scale__bar--on weight-scale__bar--current" style="--n:2" data-n="2"><i class="weight-scale__mark"></i></span><span class="weight-scale__bar w-3" style="--n:3" data-n="3"><i class="weight-scale__mark"></i></span><span class="weight-scale__bar w-4" style="--n:4" data-n="4"><i class="weight-scale__mark"></i></span><span class="weight-scale__bar w-5" style="--n:5" data-n="5"></span><span class="weight-scale__bar w-6" style="--n:6" data-n="6"></span><span class="weight-scale__bar w-7" style="--n:7" data-n="7"></span><span class="weight-scale__bar w-8" style="--n:8" data-n="8"></span><span class="weight-scale__bar w-9" style="--n:9" data-n="9"></span><span class="weight-scale__bar w-10" style="--n:10" data-n="10"></span>
+          </div>
+          <div class="weight-scale__legend"><i></i>уже заняты: ×4 Английский · ×3 Учёба · ×2 Работа, Хобби · ×1 Дом, Спорт</div>
+          <span class="field__hint" id="g-w-h">Задачи группы будут в 2 раза важнее задач без группы. Встанет на одну ступень с «Работой» и «Хобби».</span>
+        </div>
+      </form>
+      <div class="sheet__actions">
+        <button class="btn btn--secondary" type="button">Отмена</button>
+        <button class="btn btn--primary" type="button">Создать группу</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="mock-panel" aria-hidden="true">
+  <span class="mock-panel__label">Макет · состояние формы</span>
+  <button data-set="empty">Пусто</button>
+  <button data-set="filled" aria-pressed="true">Заполнено</button>
+  <button data-set="errors">Ошибки</button>
+  <button data-set="submitting">Отправка</button>
+  <button data-set="server">Ошибка сервера</button>
+  <button data-sheet>+ Новая группа</button>
+  <button data-theme-toggle>Тема</button>
+</div>
+<script>
+  (function () {
+    var filled = { name: 'Подготовить отчёт по ТИПИС', desc: 'Раздел 3: анализ требований и диаграммы вариантов использования. Шаблон — в LMS.', date: '2026-09-25', time: '10:00', te: '2:30', group: 'Учёба' };
+    var states = {
+      empty: { name: '', desc: '', date: '', time: '', te: '', group: 'Без группы' },
+      filled: filled,
+      errors: { name: '', desc: '', date: '2026-09-24', time: '13:00', te: '2:75', group: 'Учёба' },
+      submitting: filled,
+      server: filled
+    };
+    var $ = function (id) { return document.getElementById(id); };
+    function apply(state) {
+      var s = states[state];
+      $('f-name').value = s.name; $('f-desc').value = s.desc;
+      $('f-date').value = s.date; $('f-time').value = s.time; $('f-te').value = s.te;
+      document.querySelectorAll('#group-chips [role="radio"]').forEach(function (c) {
+        c.setAttribute('aria-checked', c.textContent.replace(/×\d+$/, '') === s.group);
+      });
+      var err = state === 'errors';
+      $('f-name').classList.toggle('input--error', err); $('f-name').setAttribute('aria-invalid', err);
+      $('f-date').classList.toggle('input--error', err); $('f-time').classList.toggle('input--error', err);
+      $('f-te-box').classList.toggle('time-input--error', err);
+      var busy = state === 'submitting';
+      document.querySelectorAll('#task-form input, #task-form textarea, #task-form .chip').forEach(function (el) { el.disabled = busy; });
+      $('btn-cancel').style.pointerEvents = busy ? 'none' : ''; $('btn-cancel').style.opacity = busy ? 0.5 : '';
+      document.querySelectorAll('[data-when]').forEach(function (el) {
+        el.classList.toggle('is-shown', el.dataset.when.split(' ').indexOf(state) !== -1);
+      });
+      document.querySelectorAll('.mock-panel [data-set]').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.set === state); });
+    }
+    document.querySelectorAll('.mock-panel [data-set]').forEach(function (b) {
+      b.addEventListener('click', function () { apply(b.dataset.set); });
+    });
+    apply('filled');
+
+    // Выбор группы (radiogroup)
+    document.querySelectorAll('#group-chips [role="radio"]').forEach(function (c) {
+      c.addEventListener('click', function () {
+        document.querySelectorAll('#group-chips [role="radio"]').forEach(function (x) { x.setAttribute('aria-checked', x === c); });
+      });
+    });
+    // Пресеты времени
+    document.querySelectorAll('.time-field .chip').forEach(function (c) {
+      c.addEventListener('click', function () { $('f-te').value = c.textContent; });
+    });
+
+    var sheet = document.querySelector('[data-view="sheet"]');
+    function toggleSheet(on) {
+      sheet.toggleAttribute('data-active', on);
+      document.querySelector('.mock-panel [data-sheet]').setAttribute('aria-pressed', on);
+    }
+    document.querySelector('.mock-panel [data-sheet]').addEventListener('click', function () { toggleSheet(!sheet.hasAttribute('data-active')); });
+    document.querySelector('[data-open-sheet]').addEventListener('click', function () { toggleSheet(true); });
+    sheet.addEventListener('click', function (e) {
+      if (e.target === sheet || e.target.closest('.sheet__head .btn, .sheet__actions .btn')) toggleSheet(false);
+    });
+    document.querySelector('[data-theme-toggle]').addEventListener('click', function () {
+      var root = document.documentElement;
+      var dark = root.dataset.theme === 'dark' || (!root.dataset.theme && matchMedia('(prefers-color-scheme: dark)').matches);
+      root.dataset.theme = dark ? 'light' : 'dark';
+    });
+    /* ---------- WeightScale: тап/перетаскивание по столбикам и клавиатура ---------- */
+  document.querySelectorAll('[data-weight-scale]').forEach(function (root) {
+    var track = root.querySelector('.weight-scale__track');
+    var out = root.querySelector('.weight-scale__value');
+    function set(v) {
+      v = Math.max(1, Math.min(10, v));
+      root.className = root.className.replace(/\bw-\d+\b/, 'w-' + v);
+      track.querySelectorAll('.weight-scale__bar').forEach(function (b, i) {
+        b.classList.toggle('weight-scale__bar--on', i + 1 <= v);
+        b.classList.toggle('weight-scale__bar--current', i + 1 === v);
+      });
+      out.textContent = '×' + v;
+      track.setAttribute('aria-valuenow', v);
+      track.setAttribute('aria-valuetext', '×' + v);
+    }
+    function fromPointer(e) { var r = track.getBoundingClientRect(); set(Math.floor((e.clientX - r.left) / r.width * 10) + 1); }
+    track.addEventListener('pointerdown', function (e) { track.setPointerCapture(e.pointerId); fromPointer(e); });
+    track.addEventListener('pointermove', function (e) { if (track.hasPointerCapture(e.pointerId)) fromPointer(e); });
+    track.addEventListener('keydown', function (e) {
+      var v = +track.getAttribute('aria-valuenow');
+      var map = { ArrowLeft: v - 1, ArrowDown: v - 1, ArrowRight: v + 1, ArrowUp: v + 1, Home: 1, End: 10 };
+      if (e.key in map) { e.preventDefault(); set(map[e.key]); }
+    });
+  });
+})();
+</script>
+</body>
+</html>

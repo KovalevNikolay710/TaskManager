@@ -1,0 +1,33 @@
+.skeleton {
+  flex: none;
+  background: var(--color-surface-sunken);
+  border-radius: var(--radius-sm);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.row {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.lines {
+  flex: 1;
+  display: grid;
+  gap: 6px;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}

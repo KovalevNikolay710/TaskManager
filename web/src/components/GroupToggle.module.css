@@ -1,0 +1,44 @@
+/* GroupToggle — design/components.css, «GroupToggle»: чип в цветах ступени выбранной группы */
+.toggle {
+  max-width: 62%;
+  background: var(--w-soft, var(--color-surface-sunken));
+  color: var(--w-text, var(--color-text));
+  box-shadow: inset 0 0 0 1.5px var(--w, var(--color-border-strong));
+}
+
+.toggle:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.weight {
+  color: inherit;
+}
+
+.chevron {
+  width: 16px;
+  height: 16px;
+  margin-left: var(--space-1);
+  transition: transform var(--duration-normal) var(--easing-standard);
+}
+
+.toggle[aria-expanded='true'] .chevron {
+  transform: rotate(180deg);
+}
+
+.skeleton {
+  width: 96px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
+}
