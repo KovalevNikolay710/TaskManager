@@ -35,6 +35,7 @@ Layers are strict: handler → service → repository. Handlers never touch the 
 
 ```bash
 go build ./... && go vet ./... && go test ./...      # backend check
+TEST_DATABASE_URL="host=localhost port=5434 user=postgres password=12345678 dbname=task_manager_test sslmode=disable" go test ./...  # + DB integration tests (skipped without it)
 cd web && npm test && npm run build && npm run lint  # frontend check
 docker compose up -d db                              # Postgres only: localhost:5434, postgres/12345678, task_manager_db
 DB_HOST=localhost DB_PORT=5434 DB_USER=postgres DB_PASSWORD=12345678 DB_NAME=task_manager_db go run ./cmd/taskManager
