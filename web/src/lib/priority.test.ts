@@ -40,8 +40,8 @@ describe('hoursUntil', () => {
 
 describe('queuePlace', () => {
   const task = (id: number, priority: number, status: 1 | 2 = 1): Task => ({
-    TaskId: id, UserId: 1, GroupId: 0, GroupPriorty: 1, DeadLine: '', TimeForExecution: 60, Priority: priority,
-    NumberOfHoursUntilDL: 1, PercentOfCompleting: status === 2 ? 100 : 0, Status: status, Name: `t${id}`,
+    TaskId: id, UserId: 1, GroupId: 0, GroupPriority: 1, Deadline: '', TimeForExecution: 60, Priority: priority,
+    HoursUntilDeadline: 1, PercentOfCompleting: status === 2 ? 100 : 0, Status: status, Name: `t${id}`,
     Description: '', CreatedAt: '', UpdatedAt: '',
   })
 

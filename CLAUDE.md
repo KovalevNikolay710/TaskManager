@@ -10,7 +10,7 @@ Talk to the user in Russian. Agent docs (this file, skills, agent briefs) are En
 Pt = Pg * Te / Tl * %in
 ```
 
-`Pg` group weight (`Task.GroupPriorty` ← `Group.GroupPriority`, 1–10) · `Te` time to execute, minutes (`TimeForExecution`) · `Tl` hours until deadline (`NumberOfHoursUntilDL`, recomputed from now on every change, overdue → 1) · `%in` = `(100 - PercentOfCompleting) / 100`. Implemented in `Task.Recalculate(now)`, `internal/models/priority.go` — the only place priority is computed. Task lists are always shown sorted by `Priority` desc.
+`Pg` group weight (`Task.GroupPriority` ← `Group.GroupPriority`, 1–10) · `Te` time to execute, minutes (`TimeForExecution`) · `Tl` hours until deadline (`HoursUntilDeadline`, recomputed from now on every change, overdue → 1) · `%in` = `(100 - PercentOfCompleting) / 100`. Implemented in `Task.Recalculate(now)`, `internal/models/priority.go` — the only place priority is computed. Task lists are always shown sorted by `Priority` desc.
 
 Entities: **Task** (status 1 active / 2 done; `Status = 2` ⇔ 100%), **Group** (weight 1–10, `GroupId = 0` = no group), **Day** (day plan: minutes per task in `Day.Slots`), **NotificationSettings** / push subscriptions. No users/auth yet — `userId` is passed explicitly.
 
@@ -49,7 +49,7 @@ Run the checks above before calling a task done.
 
 - Identifiers in English; comments, logs and error messages in Russian (match existing code).
 - Wrap errors: `fmt.Errorf("...: %w", err)`. Log with `log/slog`, structured fields.
-- API contract: requests camelCase, responses are model fields as-is (PascalCase, models have no json tags) — change only together with `web/src/api/types.ts`. Errors are `{"error": "..."}`; empty lists are `[]`.
+- API contract: requests camelCase, responses are models with explicit PascalCase `json` tags — change only together with `web/src/api/types.ts`. Errors are `{"error": "..."}`; empty lists are `[]`.
 - Time-dependent logic takes `now` as a parameter (testable).
 - Commits: small, one logical change, English messages. Gitflow — never commit to `develop`/`main` directly.
 

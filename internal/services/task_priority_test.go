@@ -51,7 +51,7 @@ func TestCalculateTaskPriorty(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			task := &models.Task{GroupPriorty: tt.pg, TimeForExecution: tt.te, NumberOfHoursUntilDL: tt.tl, PercentOfCompleting: tt.percent}
+			task := &models.Task{GroupPriority: tt.pg, TimeForExecution: tt.te, HoursUntilDeadline: tt.tl, PercentOfCompleting: tt.percent}
 			task.CalculatePriority()
 			if math.Abs(task.Priority-tt.want) > 1e-9 {
 				t.Errorf("Pt = %v, ожидалось %v", task.Priority, tt.want)
@@ -62,7 +62,7 @@ func TestCalculateTaskPriorty(t *testing.T) {
 
 func TestCalculateTaskPriortyMonotonic(t *testing.T) {
 	pt := func(tl, percent int) float64 {
-		task := &models.Task{GroupPriorty: 2, TimeForExecution: 100, NumberOfHoursUntilDL: tl, PercentOfCompleting: percent}
+		task := &models.Task{GroupPriority: 2, TimeForExecution: 100, HoursUntilDeadline: tl, PercentOfCompleting: percent}
 		task.CalculatePriority()
 		return task.Priority
 	}
@@ -99,11 +99,11 @@ func TestRefreshTaskPriorty(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			task := &models.Task{GroupPriorty: 3, TimeForExecution: 120, PercentOfCompleting: 0,
-				DeadLine: tt.deadline, NumberOfHoursUntilDL: tt.staleTl}
+			task := &models.Task{GroupPriority: 3, TimeForExecution: 120, PercentOfCompleting: 0,
+				Deadline: tt.deadline, HoursUntilDeadline: tt.staleTl}
 			task.Recalculate(exampleNow)
-			if task.NumberOfHoursUntilDL != tt.wantTl {
-				t.Errorf("Tl = %d, ожидалось %d", task.NumberOfHoursUntilDL, tt.wantTl)
+			if task.HoursUntilDeadline != tt.wantTl {
+				t.Errorf("Tl = %d, ожидалось %d", task.HoursUntilDeadline, tt.wantTl)
 			}
 			if math.IsInf(task.Priority, 0) || math.IsNaN(task.Priority) {
 				t.Fatalf("Pt = %v — деление на ноль", task.Priority)
@@ -126,27 +126,27 @@ func TestNewPlanCandidate(t *testing.T) {
 		wantWork float64
 		wantDays int
 	}{
-		{"сегодня: Tl 10 -> 1 день", models.Task{TimeForExecution: 100, NumberOfHoursUntilDL: 10}, today, 100, 1},
-		{"сегодня: Tl 24 -> 1 день", models.Task{TimeForExecution: 100, NumberOfHoursUntilDL: 24}, today, 100, 1},
-		{"сегодня: Tl 25 -> 2 дня", models.Task{TimeForExecution: 100, NumberOfHoursUntilDL: 25}, today, 100, 2},
-		{"W учитывает процент выполнения", models.Task{TimeForExecution: 200, PercentOfCompleting: 25, NumberOfHoursUntilDL: 5}, today, 150, 1},
-		{"выполнена: W = 0", models.Task{TimeForExecution: 200, PercentOfCompleting: 100, NumberOfHoursUntilDL: 5}, today, 0, 1},
-		{"Tl = 0 даёт минимум 1 день", models.Task{TimeForExecution: 60, NumberOfHoursUntilDL: 0}, today, 60, 1},
-		{"будущий день: часы от начала дня", models.Task{TimeForExecution: 60, DeadLine: tomorrow.Add(49 * time.Hour)}, tomorrow, 60, 3},
-		{"будущий день: дедлайн раньше начала дня -> 1 день", models.Task{TimeForExecution: 60, DeadLine: tomorrow.Add(-time.Hour)}, tomorrow, 60, 1},
+		{"сегодня: Tl 10 -> 1 день", models.Task{TimeForExecution: 100, HoursUntilDeadline: 10}, today, 100, 1},
+		{"сегодня: Tl 24 -> 1 день", models.Task{TimeForExecution: 100, HoursUntilDeadline: 24}, today, 100, 1},
+		{"сегодня: Tl 25 -> 2 дня", models.Task{TimeForExecution: 100, HoursUntilDeadline: 25}, today, 100, 2},
+		{"W учитывает процент выполнения", models.Task{TimeForExecution: 200, PercentOfCompleting: 25, HoursUntilDeadline: 5}, today, 150, 1},
+		{"выполнена: W = 0", models.Task{TimeForExecution: 200, PercentOfCompleting: 100, HoursUntilDeadline: 5}, today, 0, 1},
+		{"Tl = 0 даёт минимум 1 день", models.Task{TimeForExecution: 60, HoursUntilDeadline: 0}, today, 60, 1},
+		{"будущий день: часы от начала дня", models.Task{TimeForExecution: 60, Deadline: tomorrow.Add(49 * time.Hour)}, tomorrow, 60, 3},
+		{"будущий день: дедлайн раньше начала дня -> 1 день", models.Task{TimeForExecution: 60, Deadline: tomorrow.Add(-time.Hour)}, tomorrow, 60, 1},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			task := tt.task
 			task.TaskId = 7
 			task.Priority = 4.5
-			task.DeadLine = tt.task.DeadLine
+			task.Deadline = tt.task.Deadline
 			c := newPlanCandidate(&task, tt.dayStart, exampleNow)
 			if c.Work != tt.wantWork || c.Days != tt.wantDays {
 				t.Errorf("W=%v D=%d, ожидалось W=%v D=%d", c.Work, c.Days, tt.wantWork, tt.wantDays)
 			}
-			if c.Priority != 4.5 || !c.DeadLine.Equal(tt.task.DeadLine) {
-				t.Errorf("Priority/DeadLine не скопированы: %v, %v", c.Priority, c.DeadLine)
+			if c.Priority != 4.5 || !c.Deadline.Equal(tt.task.Deadline) {
+				t.Errorf("Priority/Deadline не скопированы: %v, %v", c.Priority, c.Deadline)
 			}
 			if c.TaskId != 7 {
 				t.Errorf("TaskId = %d, ожидалось 7", c.TaskId)
@@ -164,9 +164,9 @@ func TestSortPlanCandidates(t *testing.T) {
 		want []int64
 	}{
 		{"по приоритету убывание", []PlanCandidate{{TaskId: 1, Priority: 1}, {TaskId: 2, Priority: 3}, {TaskId: 3, Priority: 2}}, []int64{2, 3, 1}},
-		{"равный Pt: ранний дедлайн первым", []PlanCandidate{{TaskId: 1, Priority: 5, DeadLine: d2}, {TaskId: 2, Priority: 5, DeadLine: d1}}, []int64{2, 1}},
-		{"равные Pt и дедлайн: меньший TaskId", []PlanCandidate{{TaskId: 9, Priority: 5, DeadLine: d1}, {TaskId: 4, Priority: 5, DeadLine: d1}}, []int64{4, 9}},
-		{"Pt равны в пределах эпсилон", []PlanCandidate{{TaskId: 1, Priority: 1.0 + 1e-12, DeadLine: d2}, {TaskId: 2, Priority: 1.0, DeadLine: d1}}, []int64{2, 1}},
+		{"равный Pt: ранний дедлайн первым", []PlanCandidate{{TaskId: 1, Priority: 5, Deadline: d2}, {TaskId: 2, Priority: 5, Deadline: d1}}, []int64{2, 1}},
+		{"равные Pt и дедлайн: меньший TaskId", []PlanCandidate{{TaskId: 9, Priority: 5, Deadline: d1}, {TaskId: 4, Priority: 5, Deadline: d1}}, []int64{4, 9}},
+		{"Pt равны в пределах эпсилон", []PlanCandidate{{TaskId: 1, Priority: 1.0 + 1e-12, Deadline: d2}, {TaskId: 2, Priority: 1.0, Deadline: d1}}, []int64{2, 1}},
 		{"пустой список", nil, []int64{}},
 		{"один элемент", []PlanCandidate{{TaskId: 1}}, []int64{1}},
 	}
@@ -203,7 +203,7 @@ func checkSlotInvariants(t *testing.T, total int, slots []PlanSlot) {
 
 func TestAllocateDayTimeEdgeCases(t *testing.T) {
 	mk := func(id int64, pt, work float64, days int) PlanCandidate {
-		return PlanCandidate{TaskId: id, Priority: pt, DeadLine: exampleNow.Add(time.Duration(id) * time.Hour), Work: work, Days: days}
+		return PlanCandidate{TaskId: id, Priority: pt, Deadline: exampleNow.Add(time.Duration(id) * time.Hour), Work: work, Days: days}
 	}
 	tests := []struct {
 		name  string
@@ -240,7 +240,7 @@ func TestAllocateDayTimeInvariants(t *testing.T) {
 	// для задач с одинаковой работой и сроком (больший Pt не получает меньше).
 	cands := []PlanCandidate{}
 	for i := int64(1); i <= 8; i++ {
-		cands = append(cands, PlanCandidate{TaskId: i, Priority: float64(i), DeadLine: exampleNow.Add(time.Hour), Work: 120, Days: 2})
+		cands = append(cands, PlanCandidate{TaskId: i, Priority: float64(i), Deadline: exampleNow.Add(time.Hour), Work: 120, Days: 2})
 	}
 	for total := 15; total <= 960; total += 5 {
 		slots := AllocateDayTime(total, cands)
@@ -257,7 +257,7 @@ func TestAllocateDayTimeInvariants(t *testing.T) {
 func TestAllocateDayTimeLargeInput(t *testing.T) {
 	cands := make([]PlanCandidate, 10000)
 	for i := range cands {
-		cands[i] = PlanCandidate{TaskId: int64(i + 1), Priority: float64(i%50 + 1), DeadLine: exampleNow.Add(time.Duration(i) * time.Minute), Work: float64(30 + i%200), Days: 1 + i%5}
+		cands[i] = PlanCandidate{TaskId: int64(i + 1), Priority: float64(i%50 + 1), Deadline: exampleNow.Add(time.Duration(i) * time.Minute), Work: float64(30 + i%200), Days: 1 + i%5}
 	}
 	slots := AllocateDayTime(960, cands)
 	if len(slots) > 960/planMinSlot {

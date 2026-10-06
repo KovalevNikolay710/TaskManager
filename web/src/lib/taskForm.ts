@@ -30,7 +30,7 @@ export type TaskField = 'name' | 'deadline' | 'duration'
 export type TaskFormErrors = Partial<Record<TaskField, string>>
 
 export function taskToFormValues(task: Task): TaskFormValues {
-  const deadline = new Date(task.DeadLine)
+  const deadline = new Date(task.Deadline)
   return {
     name: task.Name,
     description: task.Description,

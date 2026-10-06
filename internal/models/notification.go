@@ -4,24 +4,24 @@ import "time"
 
 // PushSubscription — подписка одного устройства (браузера) на push.
 type PushSubscription struct {
-	SubscriptionId int64  `gorm:"primaryKey;autoIncrement"`
-	UserId         int64  `gorm:"index;not null"`
-	Endpoint       string `gorm:"uniqueIndex;not null"`
-	P256dh         string `gorm:"not null"`
-	Auth           string `gorm:"not null"`
-	UserAgent      string
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	SubscriptionId int64     `gorm:"primaryKey;autoIncrement" json:"SubscriptionId"`
+	UserId         int64     `gorm:"index;not null" json:"UserId"`
+	Endpoint       string    `gorm:"uniqueIndex;not null" json:"Endpoint"`
+	P256dh         string    `gorm:"not null" json:"-"`
+	Auth           string    `gorm:"not null" json:"-"`
+	UserAgent      string    `json:"UserAgent"`
+	CreatedAt      time.Time `json:"CreatedAt"`
+	UpdatedAt      time.Time `json:"UpdatedAt"`
 }
 
 // PushSubscriptionResponse — подписка в ответе API: без ключей шифрования P256dh и Auth.
 type PushSubscriptionResponse struct {
-	SubscriptionId int64
-	UserId         int64
-	Endpoint       string
-	UserAgent      string
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
+	SubscriptionId int64     `json:"SubscriptionId"`
+	UserId         int64     `json:"UserId"`
+	Endpoint       string    `json:"Endpoint"`
+	UserAgent      string    `json:"UserAgent"`
+	CreatedAt      time.Time `json:"CreatedAt"`
+	UpdatedAt      time.Time `json:"UpdatedAt"`
 }
 
 // NewPushSubscriptionResponse убирает из подписки ключи шифрования.
@@ -49,18 +49,18 @@ const (
 
 // NotificationSettings — настройки напоминаний пользователя (одна строка на пользователя).
 type NotificationSettings struct {
-	UserId              int64  `gorm:"primaryKey;autoIncrement:false"`
-	MorningEnabled      bool   `gorm:"not null;default:true"`
-	MorningTime         string `gorm:"not null;default:'08:00'"` // ЧЧ:ММ, местное время
-	EveningEnabled      bool   `gorm:"not null;default:true"`
-	EveningTime         string `gorm:"not null;default:'21:00'"`
-	DeadlineEnabled     bool   `gorm:"not null;default:true"`
-	DeadlineHoursBefore int    `gorm:"not null;default:3"`
-	QuietEnabled        bool   `gorm:"not null;default:true"`
-	QuietFrom           string `gorm:"not null;default:'23:00'"` // ЧЧ:ММ; начало тихих часов (только для «Дедлайн скоро»)
-	QuietTo             string `gorm:"not null;default:'07:00'"` // ЧЧ:ММ; конец; QuietFrom > QuietTo — интервал через полночь
-	Timezone            string // IANA, например "Europe/Moscow"; пусто — часовой пояс сервера
-	UpdatedAt           time.Time
+	UserId              int64     `gorm:"primaryKey;autoIncrement:false" json:"UserId"`
+	MorningEnabled      bool      `gorm:"not null;default:true" json:"MorningEnabled"`
+	MorningTime         string    `gorm:"not null;default:'08:00'" json:"MorningTime"` // ЧЧ:ММ, местное время
+	EveningEnabled      bool      `gorm:"not null;default:true" json:"EveningEnabled"`
+	EveningTime         string    `gorm:"not null;default:'21:00'" json:"EveningTime"`
+	DeadlineEnabled     bool      `gorm:"not null;default:true" json:"DeadlineEnabled"`
+	DeadlineHoursBefore int       `gorm:"not null;default:3" json:"DeadlineHoursBefore"`
+	QuietEnabled        bool      `gorm:"not null;default:true" json:"QuietEnabled"`
+	QuietFrom           string    `gorm:"not null;default:'23:00'" json:"QuietFrom"` // ЧЧ:ММ; начало тихих часов (только для «Дедлайн скоро»)
+	QuietTo             string    `gorm:"not null;default:'07:00'" json:"QuietTo"`   // ЧЧ:ММ; конец; QuietFrom > QuietTo — интервал через полночь
+	Timezone            string    `json:"Timezone"`                                  // IANA, например "Europe/Moscow"; пусто — часовой пояс сервера
+	UpdatedAt           time.Time `json:"UpdatedAt"`
 }
 
 // DefaultNotificationSettings — настройки пользователя, у которого ещё нет строки в БД.
@@ -81,10 +81,10 @@ func DefaultNotificationSettings(userId int64) NotificationSettings {
 
 // VapidKeys — ключи VAPID сервера (одна строка). Создаются автоматически при первом запуске.
 type VapidKeys struct {
-	Id         int64  `gorm:"primaryKey;autoIncrement:false"` // всегда 1
-	PublicKey  string `gorm:"not null"`                       // base64url
-	PrivateKey string `gorm:"not null"`
-	CreatedAt  time.Time
+	Id         int64     `gorm:"primaryKey;autoIncrement:false" json:"Id"` // всегда 1
+	PublicKey  string    `gorm:"not null" json:"PublicKey"`                // base64url
+	PrivateKey string    `gorm:"not null" json:"-"`
+	CreatedAt  time.Time `json:"CreatedAt"`
 }
 
 // VapidKeysID — единственная строка таблицы vapid_keys.
@@ -98,7 +98,7 @@ const (
 )
 
 // NotificationLog — отправленное напоминание: защищает от повторов, в том числе после перезапуска сервера.
-// Key — локальная дата YYYY-MM-DD для утра и вечера, DeadLine в RFC3339 (UTC) для дедлайна.
+// Key — локальная дата YYYY-MM-DD для утра и вечера, Deadline в RFC3339 (UTC) для дедлайна.
 type NotificationLog struct {
 	LogId  int64  `gorm:"primaryKey;autoIncrement"`
 	UserId int64  `gorm:"not null;uniqueIndex:idx_notification_log_unique,priority:1"`

@@ -12,15 +12,15 @@ func HoursUntilDeadline(deadline, now time.Time) int {
 }
 
 // CalculatePriority считает приоритет по уже сохранённым в задаче полям: Pt = Pg * Te / Tl * %in.
-// Tl (NumberOfHoursUntilDL) должен быть ≥ 1; для пересчёта от текущего времени используйте Recalculate.
+// Tl (HoursUntilDeadline) должен быть ≥ 1; для пересчёта от текущего времени используйте Recalculate.
 func (t *Task) CalculatePriority() {
-	t.Priority = float64(t.GroupPriorty) * float64(t.TimeForExecution) / float64(t.NumberOfHoursUntilDL) * float64(100-t.PercentOfCompleting) / float64(100)
+	t.Priority = float64(t.GroupPriority) * float64(t.TimeForExecution) / float64(t.HoursUntilDeadline) * float64(100-t.PercentOfCompleting) / float64(100)
 }
 
 // Recalculate — единственная точка пересчёта: Tl от now и приоритет задачи.
 // Для просроченной задачи (и задачи, до дедлайна которой меньше часа) Tl = 1:
 // приоритет максимальный для её параметров и без деления на ноль.
 func (t *Task) Recalculate(now time.Time) {
-	t.NumberOfHoursUntilDL = max(HoursUntilDeadline(t.DeadLine, now), MinHoursUntilDeadline)
+	t.HoursUntilDeadline = max(HoursUntilDeadline(t.Deadline, now), MinHoursUntilDeadline)
 	t.CalculatePriority()
 }

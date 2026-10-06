@@ -26,7 +26,7 @@ const (
 type PlanCandidate struct {
 	TaskId   int64
 	Priority float64   // Pt, уже пересчитанный от текущего момента
-	DeadLine time.Time // для порядка при равных Pt
+	Deadline time.Time // для порядка при равных Pt
 	Work     float64   // W — оставшаяся работа, минуты
 	Days     int       // D — дней до дедлайна, ≥ 1
 }
@@ -38,17 +38,17 @@ type PlanSlot struct {
 }
 
 // newPlanCandidate считает W и D задачи для плана, начинающегося в dayStart.
-// Для плана на сегодня (dayStart ≤ now) H — это Tl задачи (NumberOfHoursUntilDL, уже пересчитанный),
+// Для плана на сегодня (dayStart ≤ now) H — это Tl задачи (HoursUntilDeadline, уже пересчитанный),
 // для будущего дня — целые часы от начала дня до дедлайна.
 func newPlanCandidate(task *models.Task, dayStart, now time.Time) PlanCandidate {
-	hours := task.NumberOfHoursUntilDL
+	hours := task.HoursUntilDeadline
 	if dayStart.After(now) {
-		hours = max(models.HoursUntilDeadline(task.DeadLine, dayStart), models.MinHoursUntilDeadline)
+		hours = max(models.HoursUntilDeadline(task.Deadline, dayStart), models.MinHoursUntilDeadline)
 	}
 	return PlanCandidate{
 		TaskId:   task.TaskId,
 		Priority: task.Priority,
-		DeadLine: task.DeadLine,
+		Deadline: task.Deadline,
 		Work:     float64(task.TimeForExecution) * float64(100-task.PercentOfCompleting) / 100,
 		Days:     max(1, int(math.Ceil(float64(hours)/24))),
 	}
@@ -65,8 +65,8 @@ func sortPlanCandidates(candidates []PlanCandidate) {
 		if !samePriority(a.Priority, b.Priority) {
 			return a.Priority > b.Priority
 		}
-		if !a.DeadLine.Equal(b.DeadLine) {
-			return a.DeadLine.Before(b.DeadLine)
+		if !a.Deadline.Equal(b.Deadline) {
+			return a.Deadline.Before(b.Deadline)
 		}
 		return a.TaskId < b.TaskId
 	})

@@ -187,7 +187,7 @@ func (serv *ReminderServiceImpl) checkUser(ctx context.Context, s models.Notific
 	for _, task := range due {
 		entry := &models.NotificationLog{
 			UserId: s.UserId, Kind: models.NotificationKindDeadline, TaskId: task.TaskId,
-			Key: deadlineLogKey(task.DeadLine), SentAt: now,
+			Key: deadlineLogKey(task.Deadline), SentAt: now,
 		}
 		recorded, err := serv.LogRepo.TryRecord(entry)
 		if err != nil {
@@ -200,7 +200,7 @@ func (serv *ReminderServiceImpl) checkUser(ctx context.Context, s models.Notific
 	}
 	if len(fresh) >= deadlineSummaryFrom {
 		msg := deadlineSummaryMessage(fresh, s.DeadlineHoursBefore, now, loc)
-		latest := fresh[len(fresh)-1].DeadLine
+		latest := fresh[len(fresh)-1].Deadline
 		opts := PushOptions{TTL: latest.Sub(now), Urgency: urgencyHigh, Topic: msg.Tag}
 		if serv.deliver(ctx, s.UserId, msg, opts, entries...) {
 			stats.Summary++
@@ -209,7 +209,7 @@ func (serv *ReminderServiceImpl) checkUser(ctx context.Context, s models.Notific
 	}
 	for i, task := range fresh {
 		msg := deadlineMessage(task, now, loc)
-		opts := PushOptions{TTL: task.DeadLine.Sub(now), Urgency: urgencyHigh, Topic: msg.Tag}
+		opts := PushOptions{TTL: task.Deadline.Sub(now), Urgency: urgencyHigh, Topic: msg.Tag}
 		if serv.deliver(ctx, s.UserId, msg, opts, entries[i]) {
 			stats.Deadline++
 		}

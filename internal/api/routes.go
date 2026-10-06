@@ -28,7 +28,7 @@ func RegisterTaskRoutes(router *gin.Engine, taskService *services.TaskServiceImp
 		taskRoutes.GET("/:id", taskHandler.GetTaskById)
 		taskRoutes.POST("/update/:id", taskHandler.UpdateTask)
 		taskRoutes.DELETE("/:id", taskHandler.DeleteTask)
-		taskRoutes.POST("/user/:user_id", taskHandler.GetTasksByUserID)
+		taskRoutes.GET("/user/:user_id", taskHandler.GetTasksByUserID)
 	}
 
 	dayRoutes := apiRoutes.Group("/days")

@@ -61,7 +61,7 @@ export function tasksOutsidePlan(day: Day, tasks: readonly Task[]): number {
   const planned = new Set((day.Slots ?? []).map((slot) => slot.TaskId))
   for (const task of day.Tasks ?? []) planned.add(task.TaskId)
   const dayStart = Date.parse(day.Date)
-  return tasks.filter((t) => !isDone(t) && Date.parse(t.DeadLine) > dayStart && !planned.has(t.TaskId)).length
+  return tasks.filter((t) => !isDone(t) && Date.parse(t.Deadline) > dayStart && !planned.has(t.TaskId)).length
 }
 
 /** Текстовая замена диаграммы: «План на 6:00: Отчёт 1 час 25 минут; …; свободно 2 часа 55 минут». */

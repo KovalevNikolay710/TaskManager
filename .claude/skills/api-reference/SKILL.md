@@ -14,8 +14,8 @@ All routes live under `/api` (`internal/api/routes.go`); other GET paths serve t
 | POST | `/api/tasks/` | create task |
 | GET | `/api/tasks/:id` | task by id |
 | POST | `/api/tasks/update/:id` | partial update: `name`, `description`, `deadline`, `timeForExecution`, `percentOfCompleting` (0–100), `groupId` (0 = no group), `status` (1 reopen, 2 done) |
-| DELETE | `/api/tasks/:id` | delete task (+ its `day_tasks`, `group_tasks` rows) |
-| POST | `/api/tasks/user/:user_id` | user's tasks; optional body filter `{status, groupId, date}` |
+| DELETE | `/api/tasks/:id` | delete task (+ its `day_tasks` rows) |
+| GET | `/api/tasks/user/:user_id` | user's tasks; optional query filter `?status=&groupId=&date=` (`date` RFC3339, only tasks with deadline later; bad value → 400) |
 | POST | `/api/days/` | create day and build plan: `{date, userId, timeForTasks}` (15–960 min); time split among active tasks |
 | GET | `/api/days/:id` | stored plan (reading never rebuilds) |
 | POST | `/api/days/update/:id` | rebuild plan: `{timeForTasks}` (optional, 15–960); done tasks keep their minutes |
@@ -38,15 +38,16 @@ All routes live under `/api` (`internal/api/routes.go`); other GET paths serve t
 
 ## Contract
 
-- Requests are camelCase (`userId`, `deadline`); **responses are model fields as-is** (`TaskId`, `UserId`, `DeadLine`, `Priority`) — models have no json tags. Change only in sync with `web/src/api/types.ts`.
+- Requests are camelCase (`userId`, `deadline`); **responses are model fields with explicit PascalCase `json` tags** (`TaskId`, `UserId`, `Deadline`, `HoursUntilDeadline`, `GroupPriority`, `Priority`) — renaming a Go field no longer changes the wire name, but changing a tag must go together with `web/src/api/types.ts`. Secrets are `json:"-"` (`P256dh`, `Auth`, VAPID private key).
 - Dates RFC3339. Delete = `DELETE` method.
 - Errors: `{"error": "<string>"}`. Codes: 201 created, 400 bad input/validation, 404 not found, 409 conflict (group name taken), 410 stale push subscription, 500 other. Business errors are declared in `internal/services/errors.go`; handlers answer via `respondError` / `respondBindingError` (`internal/api/handlers/errors.go`).
 - Empty lists → 200 `[]` (never 404 or `null`).
 
 ## Domain rules
 
-- Deadline must be ≥ 1 h from now. `NumberOfHoursUntilDL` (Tl) is recomputed from now on every task change; overdue → Tl = 1.
+- Deadline must be ≥ 1 h from now. `HoursUntilDeadline` (Tl) is recomputed from now on every task change; overdue → Tl = 1.
 - `Status = 2` ⇔ `PercentOfCompleting = 100`. Update with both: `percentOfCompleting: 100` wins over `status: 1`; otherwise `status` is applied last. `Task.GroupId = 0` = no group.
+- Group membership has one source: `Task.GroupId` (the legacy many2many join table was migrated into it and dropped by `internal/repository/migrations.go`). `Group.Tasks` in responses is filled by the repository from `tasks.group_id`; it is not a GORM relation.
 - Group weight 1–10; group name unique per user, case-insensitive, trimmed.
 - Durations (`TimeForExecution`, `Day.TimeForTasks`) are minutes; the UI shows `h:mm`.
 

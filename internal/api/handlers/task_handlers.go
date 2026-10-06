@@ -89,13 +89,11 @@ func (handler *TaskHandler) GetTasksByUserID(context *gin.Context) {
 		return
 	}
 
-	// Тело с фильтром необязательно: без него или с неверным JSON отдаём все задачи пользователя
+	// Фильтр необязателен: без query-параметров отдаём все задачи пользователя
 	var filter models.TaskFilter
-	if err := context.ShouldBindJSON(&filter); err != nil {
-		handler.Logger.Warn("Фильтр не предоставлен или ошибка при привязке",
-			slog.Int64("userId", userId),
-			slog.String("error", err.Error()))
-		filter = models.TaskFilter{}
+	if err := context.ShouldBindQuery(&filter); err != nil {
+		respondBindingError(context, handler.Logger, err)
+		return
 	}
 
 	tasks, err := handler.TaskService.GetTasksByUserID(userId, filter)
