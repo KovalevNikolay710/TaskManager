@@ -4,6 +4,7 @@ import (
 	"TaskManager/internal/models"
 	"errors"
 	"fmt"
+	"time"
 
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
@@ -96,4 +97,14 @@ func insertSlots(tx *gorm.DB, dayID int64, slots []models.DayTask) error {
 		return fmt.Errorf("ошибка при сохранении плана дня: %w", err)
 	}
 	return nil
+}
+
+// FindByUserAndDateRange возвращает дни пользователя с Date в [from, to) вместе с задачами плана.
+func (rep *DayRepositoryImpl) FindByUserAndDateRange(userID int64, from, to time.Time) ([]*models.Day, error) {
+	var days []*models.Day
+	if err := rep.db.Where("user_id = ? AND date >= ? AND date < ?", userID, from, to).
+		Preload("Tasks").Preload("Slots").Find(&days).Error; err != nil {
+		return nil, fmt.Errorf("ошибка при поиске дней пользователя %d: %w", userID, err)
+	}
+	return days, nil
 }

@@ -29,7 +29,7 @@ Pt = Pg * Te / Tl * %in
 ## Структура
 
 ```
-cmd/taskManager/main.go      точка входа, сборка зависимостей, gin на :8080
+cmd/taskManager/main.go      точка входа, сборка зависимостей, gin на :8080, планировщик напоминаний, штатная остановка по SIGTERM
 internal/models/             GORM-модели и DTO запросов (*CreateRequest, *UpdateRequest)
 internal/repository/         доступ к БД; GenericRepository[T] + специфичные методы
 internal/services/           бизнес-логика; GenericService[T] для GetByID/Delete
@@ -68,11 +68,17 @@ design/                      дизайн-система и макеты экр�
 | DELETE | `/api/groups/:id` | удалить группу; её задачи переходят в «без группы» с пересчётом приоритета |
 | GET | `/api/groups/tasks/:id` | задачи группы |
 | GET | `/api/groups/user/:user_id` | группы пользователя |
+| GET | `/api/push/key` | публичный VAPID-ключ: `{"PublicKey": "…"}` (base64url) |
+| POST | `/api/push/subscribe` | подписка устройства (upsert по `endpoint`): `{userId, endpoint, keys: {p256dh, auth}, userAgent}`; 201 — новая, 200 — обновлена; ответ без `P256dh`/`Auth` |
+| DELETE | `/api/push/subscribe` | удалить подписку устройства: `{userId, endpoint}`; 404 — нет такой |
+| POST | `/api/push/test` | тестовое уведомление: `{userId, endpoint?}` (без `endpoint` — на все устройства) → `{"Sent": N}`; 404 — подписки нет, 410 — push-сервис её отклонил, подписка удалена |
+| GET | `/api/notifications/settings/:user_id` | настройки напоминаний; строки ещё нет — 200 со значениями по умолчанию |
+| POST | `/api/notifications/settings/:user_id` | частичное обновление (upsert): `morningEnabled`, `morningTime`, `eveningEnabled`, `eveningTime`, `deadlineEnabled`, `deadlineHoursBefore` (1–24), `quietEnabled`, `quietFrom`, `quietTo`, `timezone`; время — `ЧЧ:ММ` |
 
 Особенности, о которых надо помнить:
 - Запросы принимают camelCase (`userId`, `deadline`, ...), а **ответы отдают поля моделей как есть** (`TaskId`, `UserId`, `DeadLine`, `Priority`...) — у моделей нет json-тегов. Менять это можно только синхронно с фронтендом.
 - Даты — RFC3339.
-- Ошибки: `{"error": "..."}`, `error` всегда строка. Коды: 201 — создание, 400 — ошибка ввода или валидации, 404 — нет сущности, 409 — конфликт (имя группы занято), 500 — прочее. Бизнес-ошибки объявлены в `internal/services/errors.go`, обработчики отвечают через `respondError` / `respondBindingError` (`internal/api/handlers/errors.go`).
+- Ошибки: `{"error": "..."}`, `error` всегда строка. Коды: 201 — создание, 400 — ошибка ввода или валидации, 404 — нет сущности, 409 — конфликт (имя группы занято), 410 — push-подписка устарела, 500 — прочее. Бизнес-ошибки объявлены в `internal/services/errors.go`, обработчики отвечают через `respondError` / `respondBindingError` (`internal/api/handlers/errors.go`).
 - Пустые списки отдаются как 200 `[]` (не 404 и не `null`).
 - `Task.GroupId = 0` означает «без группы».
 - Длительности (`TimeForExecution`, `Day.TimeForTasks`) хранятся в минутах; фронтенд показывает их как `ч:мм`.
@@ -84,6 +90,9 @@ design/                      дизайн-система и макеты экр�
 - Вес группы — 1–10; имя группы уникально у пользователя без учёта регистра и пробелов по краям.
 - Дедлайн — не раньше чем через час. `NumberOfHoursUntilDL` (Tl) пересчитывается от текущего времени при каждом изменении задачи; у просроченной задачи Tl = 1.
 - `Status = 2` тогда и только тогда, когда `PercentOfCompleting = 100`.
+- Push-напоминания — `design/screens/profile.md`. VAPID-ключи: `VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY` из окружения (в БД не пишутся), иначе строка `vapid_keys` в БД, иначе сервер создаёт пару сам при старте. `VAPID_SUBJECT` — по умолчанию `mailto:admin@localhost`. Смена ключей ломает существующие подписки (push-сервис отвечает 403 — подписка удаляется). Приватный ключ не логируется. Адрес подписки принимается только от известных push-сервисов (FCM, Mozilla, Apple, Windows; домены — `pushServiceHosts` в `internal/services/push_services.go`), свои домены — через `PUSH_ENDPOINT_HOSTS` (через запятую).
+- Планировщик (`ReminderServiceImpl.Run`, `internal/services/reminder_services.go`) раз в минуту проверяет утро, вечер и «Дедлайн скоро» для пользователей с подписками; правила и тексты — чистые функции в `internal/services/reminders.go` (время и пояс — параметрами). Повторы отсекает `notification_log` (уникальный индекс `UserId, Kind, TaskId, Key`; запись — до отправки). Push-сервис ответил 404/410/403 — подписка удаляется.
+- Время в настройках напоминаний — местное по `NotificationSettings.Timezone` (IANA; пусто — пояс сервера). База часовых поясов встроена в бинарник (`import _ "time/tzdata"` в `main.go`): в образе alpine её нет.
 
 ## Команды
 

@@ -51,6 +51,10 @@ func Connect() {
 		&models.Task{},
 		&models.Day{},
 		&models.DayTask{},
+		&models.PushSubscription{},
+		&models.NotificationSettings{},
+		&models.VapidKeys{},
+		&models.NotificationLog{},
 	)
 
 	if err != nil {

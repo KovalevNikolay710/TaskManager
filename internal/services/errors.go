@@ -11,6 +11,8 @@ var (
 	ErrKindInvalidInput = errors.New("неверные данные")
 	// ErrKindConflict — запрос противоречит существующим данным (409)
 	ErrKindConflict = errors.New("конфликт с существующими данными")
+	// ErrKindGone — сущность была, но больше не действует (410)
+	ErrKindGone = errors.New("больше не действует")
 )
 
 // Error — ошибка, понятная пользователю: текст без технических подробностей и вид для выбора статуса.
@@ -42,4 +44,15 @@ var (
 	ErrGroupOwner     = newError(ErrKindInvalidInput, "группа принадлежит другому пользователю")
 	ErrEmptyGroupName = newError(ErrKindInvalidInput, "название группы не может быть пустым")
 	ErrGroupNameTaken = newError(ErrKindConflict, "группа с таким названием уже есть")
+
+	// Push-уведомления и настройки напоминаний (design/screens/profile.md)
+	ErrSubscriptionNotFound = newError(ErrKindNotFound, "Подписка не найдена")
+	// ErrSubscriptionGone — push-сервис ответил 404/410/403, подписка удалена
+	ErrSubscriptionGone        = newError(ErrKindGone, "Подписка устарела")
+	ErrInvalidEndpoint         = newError(ErrKindInvalidInput, "Неверный адрес подписки: ожидается https://")
+	ErrInvalidSubscriptionKeys = newError(ErrKindInvalidInput, "Неверные ключи подписки")
+	ErrInvalidClockTime        = newError(ErrKindInvalidInput, "Неверное время: ожидается ЧЧ:ММ, например 08:00")
+	ErrInvalidDeadlineHours    = newError(ErrKindInvalidInput, "За сколько часов: от 1 до 24")
+	ErrQuietHoursEqual         = newError(ErrKindInvalidInput, "Тихие часы: начало и конец не могут совпадать")
+	ErrUnknownTimezone         = newError(ErrKindInvalidInput, "Неизвестный часовой пояс")
 )
