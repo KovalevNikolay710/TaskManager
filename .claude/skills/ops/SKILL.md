@@ -16,6 +16,10 @@ docker compose up --build        # whole app: http://localhost:8080 (UI + API)
 - DB and app containers use `TZ=Europe/Moscow`; data persists in volume `db_data`.
 - **Worktree branches** run as the same project: `docker compose -p taskmanager up --build` from the worktree dir. Without `-p` the project is named after the directory: `container_name: manager_db` collides, and the DB would be a fresh empty one.
 
+## Integration tests
+
+Service-level tests run against a real Postgres and are skipped without `TEST_DATABASE_URL`. Create the DB once: `docker exec manager_db psql -U postgres -c "CREATE DATABASE task_manager_test"`; then run with `TEST_DATABASE_URL="host=localhost port=5434 user=postgres password=12345678 dbname=task_manager_test sslmode=disable" go test ./...`. Tables are truncated per test, so DB tests live in one package (`internal/services`) and never use `t.Parallel`.
+
 ## Single binary
 
 `cd web && npm run build`, then `go build ./...` — `web/embed.go` embeds `web/dist`. Without a frontend build Go still compiles (`web/dist/.gitkeep` is committed) but serves only the API.
