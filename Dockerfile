@@ -1,4 +1,5 @@
-# syntax=docker/dockerfile:1
+# Без строки «# syntax=…»: встроенный в Docker 23+ фронтенд уже умеет RUN --mount,
+# а директива заставляла бы при каждой сборке скачивать образ docker/dockerfile с Docker Hub.
 
 # 1. Фронтенд: собираем web/dist
 FROM node:lts-alpine AS web
