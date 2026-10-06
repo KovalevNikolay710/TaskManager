@@ -1,97 +1,26 @@
 # Все задачи
+Mockup `all-tasks.html` holds exact copy for all states (switcher panel is mockup-only). Code is the source of truth. **Purpose:** full task list by group; mark done; search. **Route:** `/all-tasks`.
 
-Макет: `design/screens/all-tasks.html` (в правом верхнем углу есть панель переключения состояний макета: данные, поиск, загрузка, пусто, ошибка, toast, тема; во фронтенд её не переносить).
-Компоненты и форматы описаны в `design/system.md`, значения берутся из `design/tokens.css`, эталонная вёрстка — `design/components.css`.
+## Data (`userId` = `CURRENT_USER_ID`, PascalCase responses)
+- `GET /api/groups/user/:id` -> `Group[]` (`GroupId`, `Name`, `GroupPriority`).
+- `POST /api/tasks/user/:id` `{}` -> `Task[]` (`Name`, `Description`, `DeadLine`, `TimeForExecution`, `PercentOfCompleting`, `Priority`, `Status`, `GroupId`, `UpdatedAt`). Never pass `status` in the filter.
 
-## Назначение
-Полный список задач пользователя, разложенный по группам. Здесь пользователь видит, что важнее всего внутри каждой области жизни, отмечает выполненное и ищет задачу по названию.
+## Rules
+- Sections by `GroupPriority` desc, then name; "Без группы" last (`GroupId = 0` or unknown group); empty groups hidden.
+- In a group: active by `Priority` desc, then completed by `UpdatedAt` desc. Priority level is relative to max over **all** active tasks on the screen.
+- Subtitle "9 активных · 2 выполнено"; counter "1 / 4".
+- Search: client-side on `Name` + `Description`, case and "ё/е" insensitive, debounce 150 ms; groups without matches hidden, all expanded.
+- Collapsed groups in `localStorage` `tm.collapsedGroups`. Refetch on `visibilitychange` / return from other screens.
 
-## Данные
+## Actions
+- Check: `POST /api/tasks/update/:id` `{"percentOfCompleting": 100}`; uncheck `{"status": 1}`. Replace card with the response; error -> rollback + Toast "Не удалось отметить задачу" + "Повторить".
+- Tap card -> `/tasks/:TaskId`; Fab / "Новая задача" / `N` -> QuickAddSheet; "Группы" -> `/groups`; avatar -> `/profile`.
 
-Пока пользователей нет: `userId = 1`, константа в конфиге фронтенда (`VITE_USER_ID`, по умолчанию `1`).
+## Components
+[AppHeader](../components/AppHeader.md), [AvatarButton](../components/AvatarButton.md), [SearchField](../components/SearchField.md), [GroupSection](../components/GroupSection.md), [TaskRow](../components/TaskRow.md), [Fab](../components/Fab.md), [BottomNav](../components/BottomNav.md), [Skeleton](../components/Skeleton.md), [EmptyState](../components/EmptyState.md), [ErrorState](../components/ErrorState.md), [Toast](../components/Toast.md).
 
-Загрузка — два параллельных запроса:
-1. `GET /api/groups/user/1` → массив `Group`.
-2. `POST /api/tasks/user/1` с телом `{}` → массив `Task` (все задачи, любой статус).
-   **Не передавать `status` в фильтре**: сейчас в репозитории при `status != 0` дополнительно применяется `group_id = groupId`, и без `groupId` вернётся пустой список (см. «Требуется от бэкенда»).
+## States
+Loading (search + 2 groups skeleton); empty (0 tasks, search hidden, "Добавить задачу" opens quick add); error (retry both requests); search empty ("Сбросить поиск"); check pending/error.
 
-Ответы отдают поля моделей без json-тегов, т.е. в PascalCase.
-
-| Что показываем | Источник (эндпоинт) | Поле ответа | Формат |
-|---|---|---|---|
-| Название группы | `GET /api/groups/user/:user_id` | `Group.Name` | как есть |
-| Бейдж веса группы | то же | `Group.GroupPriority` | «×3» в цветах ступени: фон `--color-weight-N-soft`, обводка `--color-weight-N`, текст `--color-weight-N-text` (класс `.w-N`) |
-| Порядок групп | то же | `Group.GroupPriority` | по убыванию, затем `Name`; «Без группы» — последней |
-| Принадлежность задачи группе | `POST /api/tasks/user/:user_id` | `Task.GroupId` ↔ `Group.GroupId` | задача без совпадающей группы (или `GroupId = 0`) → секция «Без группы» |
-| Счётчик группы «1 / 4» | вычисляется | `Task.Status` | выполнено (`Status = 2`) / всего в группе |
-| Подзаголовок экрана «9 активных · 2 выполнено» | вычисляется | `Task.Status` | со склонением |
-| Название задачи | `POST /api/tasks/user/:user_id` | `Task.Name` | до 2 строк, многоточие |
-| Время на выполнение | то же | `Task.TimeForExecution` (минуты) | `Ч:ММ`: «0:45», «1:30», «3:00»; для скринридера — словами («1 час 30 минут») |
-| Дедлайн | то же | `Task.DeadLine` (RFC3339) | `DeadlineLabel`: «сегодня, 18:00», «через 3 дня», «просрочено на 2 ч»; < 24 ч — warning-цвет, прошёл — danger |
-| Прогресс | то же | `Task.PercentOfCompleting` | «40%», только если 0 < % < 100 |
-| Приоритет (число и уровень) | то же | `Task.Priority` | `PriorityIndicator`, «16,2»; уровень high/mid/low относительно максимума среди **всех активных** задач экрана (не внутри группы). Относительные пороги утверждены |
-| Выполнена ли | то же | `Task.Status` (1 — активна, 2 — выполнена) | чекбокс отмечен + приглушённая карточка |
-| Порядок задач в группе | то же | `Task.Priority`, `Task.Status`, `Task.UpdatedAt` | активные по `Priority` ↓; затем выполненные по `UpdatedAt` ↓ |
-
-`Task.Description`, `Task.NumberOfHoursUntilDL`, `Task.GroupPriorty` на этом экране не показываются.
-
-## Компоненты
-
-Из `system.md`: `AppShell`, `AppHeader`, `AvatarButton`, `SearchField`, `GroupSection`, `TaskRow`, `Checkbox`, `PriorityIndicator`, `DeadlineLabel`, `Fab`, `BottomNav` / `SideNav`, `Skeleton`, `EmptyState`, `ErrorState`, `Toast`, `Button`.
-
-Новых компонентов нет.
-
-Структура сверху вниз:
-1. `AppHeader`: «Все задачи», подзаголовок-счётчик, справа icon-кнопка «Группы» (только мобильный) и `AvatarButton` (на десктопе вместо них — кнопка «Новая задача»; «Группы» — пункт `SideNav`).
-2. `SearchField`.
-3. `GroupSection` × N, внутри `TaskRow`.
-4. `Fab` (мобильный), `BottomNav` с активным пунктом «Все задачи».
-
-## Состояния
-
-| Состояние | Когда | Вид |
-|---|---|---|
-| Загрузка | пока не пришли оба ответа | skeleton: поле поиска + 2 группы (заголовок + 3 и 2 строки). Шапка и навигация видны сразу, подзаголовок пустой |
-| Данные | есть хотя бы одна задача | как в макете |
-| Пусто | задач 0 (групп может быть сколько угодно) | `EmptyState`: иконка inbox, «Задач пока нет», «Добавьте первую задачу с дедлайном и оценкой времени — мы сами расставим приоритеты.», primary «Добавить задачу» (открывает `QuickAddSheet`). Поле поиска скрыто. Пустые группы не показываются |
-| Ошибка | любой из запросов вернул ошибку сети или 5xx | `ErrorState`: «Не удалось загрузить задачи», подсказка, мелко — текст из `{"error": "..."}`, кнопка «Повторить» (повторяет оба запроса) |
-| Поиск | в поле поиска есть текст | показываются только совпавшие задачи, группы без совпадений скрыты, в счётчике группы — «N найдено», совпадение выделено `<mark>`. Сворачивание групп на время поиска отключено (все раскрыты) |
-| Поиск: пусто | совпадений нет | `EmptyState` с иконкой лупы: «Ничего не найдено», «По запросу «…» задач нет…», secondary «Сбросить поиск» |
-| Отметка в процессе | после нажатия чекбокса до ответа | `Checkbox` в состоянии pending (в макете — задача «Ревью пулл-реквеста»), карточка на месте |
-| Ошибка отметки | запрос обновления упал | чекбокс возвращается в исходное состояние, `Toast` «Не удалось отметить задачу» с действием «Повторить» |
-
-Особый случай: `GET /api/groups/user/:id` сейчас отвечает **404 `{"error": "Группы пользователя не найдены"}`**, когда групп нет. Это **не ошибка** — трактовать как пустой массив групп (все задачи попадут в «Без группы»).
-
-## Действия
-
-| Действие пользователя | Что происходит (эндпоинт, тело запроса) | Результат в UI |
-|---|---|---|
-| Отметить задачу выполненной (чекбокс) | `POST /api/tasks/update/:TaskId`, тело `{"percentOfCompleting": 100}` — бэкенд ставит `Status = 2` и пересчитывает `Priority` (становится 0) | pending → карточка приглушается, зачёркивается и с анимацией (`--duration-normal`) переезжает вниз группы; счётчики обновляются; уровни приоритета пересчитываются (изменился максимум). Карточку заменить объектом из ответа |
-| Снять отметку | `POST /api/tasks/update/:TaskId`, тело `{"status": 1}`: бэкенд возвращает задачу в работу и сбрасывает 100% в 0 (п. 1 «Требуется от бэкенда» уже сделан) | задача возвращается в активные на место по `Priority` |
-| Ввести текст в поиск | без запросов; фильтр на клиенте по `Name` и `Description`, без учёта регистра и «ё/е», debounce 150 мс | см. состояние «Поиск» |
-| Очистить поиск (×, Esc, «Сбросить поиск») | — | полный список, фокус остаётся в поле |
-| Нажать на заголовок группы | — | группа сворачивается/разворачивается; состояние в `localStorage` (`tm.collapsedGroups` — массив `GroupId`) |
-| Нажать на карточку задачи (вне чекбокса) | — | переход на экран задачи `/tasks/:TaskId` (`design/screens/task.md`) |
-| Нажать `Fab` / «Новая задача» (десктоп) / клавиша `N` (десктоп) | — | открывается `QuickAddSheet` «Быстрая задача» (`design/screens/quick-add.md`). Новые задачи появляются в списке под листом с подсветкой; после закрытия — `Toast`. Полная форма `/tasks/new` — по «Подробнее» в листе |
-| Нажать «Группы» (icon-кнопка в шапке, мобильный) / «Группы» в `SideNav` (десктоп) | — | переход на `/groups` (`design/screens/groups.md`) |
-| Нажать `AvatarButton` / профиль в `SideNav` | — | переход на `/profile` (`design/screens/profile.md`: пользователь и уведомления) |
-| «День» в навигации | — | переход на экран «Задачи на день» (`/day`) |
-| «Повторить» в ошибке | повтор обоих запросов загрузки | skeleton → данные/ошибка |
-
-Обновление данных: при возврате на вкладку браузера (`visibilitychange`) и при переходе с экрана «День» — перезапросить список, т.к. приоритет зависит от времени до дедлайна.
-
-## Адаптивность
-
-- < 960px: как в макете — шапка прилипает, `Fab` справа над `BottomNav`, контент на всю ширину с полями 16px.
-- ≥ 960px: слева `SideNav` (240px) с пунктами «День» / «Все задачи» и блоком профиля внизу; `BottomNav` и `Fab` скрыты; в шапке — primary «Новая задача» (открывает `QuickAddSheet` в виде диалога); контент центрирован, `max-width: 720px`, поля 32px. Hover на карточках.
-- Карточка задачи: если мета-строка не помещается, факты переносятся на вторую строку, чип приоритета остаётся прижатым вправо.
-
-## Требуется от бэкенда
-
-1. **Возврат задачи в работу.** `TaskUpdateRequest` не принимает `status`, а `percentOfCompleting: 0` игнорируется (`> 0`). Нужно: принимать `status` (1 | 2) в `POST /api/tasks/update/:id`; при `status = 1` — `Status = 1`, `PercentOfCompleting` сбрасывать (например, в 0 или прежнее значение < 100) и пересчитывать `Priority`.
-2. **Баг фильтра `POST /api/tasks/user/:user_id`.** В `TaskRepositoryImpl.FindByUserID` условие для `group_id` проверяет `filter.Status` вместо `filter.GroupId`. Экран обходит это, не передавая `status`, но баг ломает и формирование дня (там передаётся `status = 1`).
-3. **«Без группы» неотличима.** У `Task.GroupId` gorm-тег `default:1`: задача без группы сохраняется с `GroupId = 1`, то есть попадает в первую группу. Нужно `default:0` (или nullable) — тогда фронт сможет показывать секцию «Без группы».
-4. **Актуальный приоритет.** `NumberOfHoursUntilDL` и `Priority` считаются только при создании/обновлении; со временем приоритет «стареет», и порядок перестаёт отражать срочность. Нужно пересчитывать их при выдаче списка (или периодически). Отдельно: `UpdateTask` при смене `DeadLine` не пересчитывает `NumberOfHoursUntilDL`.
-5. **Сортировка на сервере (желательно).** Отдавать `POST /api/tasks/user/:user_id` уже отсортированным по `Priority DESC`. Фронт всё равно сортирует сам, но это упростит другие клиенты.
-6. **Пустой список групп — 200 `[]`, а не 404** в `GET /api/groups/user/:user_id` (и аналогично в `GET /api/groups/tasks/:id`). До исправления фронт трактует этот 404 как пусто.
-7. **Профиль.** Сущности User и эндпоинтов нет; имя/инициалы на аватаре — заглушка «Я». Понадобится `GET /users/me` (имя, e-mail) вместе с авторизацией.
+## Responsive
+>= 960px: SideNav, primary "Новая задача" in header, no Fab/BottomNav, column 720px.

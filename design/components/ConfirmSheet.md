@@ -1,0 +1,2 @@
+# ConfirmSheet
+[Sheet](Sheet.md) to confirm an irreversible action: `role="alertdialog"`, question title ("Удалить задачу?"), consequence text `--color-text-muted` (what disappears and what happens to dependents), buttons "Отмена" (secondary, default focus) and a danger button with a verb ("Удалить", "Удалить группу", "Выйти без сохранения"). While the request runs: loading state on the danger button; no close by backdrop. Error: [Alert](Alert.md) inside, Sheet stays open.

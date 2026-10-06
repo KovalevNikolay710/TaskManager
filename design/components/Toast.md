@@ -1,0 +1,2 @@
+# Toast
+Bottom centre above [BottomNav](BottomNav.md) (desktop: bottom right); bg `--color-text`, text `--color-bg`, `--radius-md`, `--shadow-lg`, 4 s (longer where a screen says so). May contain a ghost action ("Повторить"). `role="status"`. Used for background-action errors ("Не удалось отметить задачу") and confirmations after navigation ("Задача создана" + "Открыть", "Задача удалена"). On screens with [ActionBar](ActionBar.md) it rises above the bar.
