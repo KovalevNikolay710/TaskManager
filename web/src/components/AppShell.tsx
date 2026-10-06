@@ -5,9 +5,9 @@ import { AvatarCircle } from './AvatarButton'
 import styles from './AppShell.module.css'
 import { Icon, type IconName } from './Icon'
 
-type Section = 'day' | 'all-tasks' | 'groups'
+type Section = 'day' | 'all-tasks' | 'groups' | 'profile'
 
-const SIDE_NAV_ITEMS: Array<{ to: string; label: string; icon: IconName; section: Section }> = [
+const SIDE_NAV_ITEMS: Array<{ to: string; label: string; icon: IconName; section: Exclude<Section, 'profile'> }> = [
   { to: '/day', label: 'День', icon: 'calendar', section: 'day' },
   { to: '/all-tasks', label: 'Все задачи', icon: 'list', section: 'all-tasks' },
   { to: '/groups', label: 'Группы', icon: 'folder', section: 'groups' },
@@ -16,11 +16,12 @@ const SIDE_NAV_ITEMS: Array<{ to: string; label: string; icon: IconName; section
 // В BottomNav только два главных экрана: «Группы» — раздел внутри «Все задачи» (system.md, «Карта экранов»)
 const BOTTOM_NAV_ITEMS = SIDE_NAV_ITEMS.filter((item) => item.section !== 'groups')
 
-/** Раздел по маршруту: экраны задачи относятся к «Все задачи». */
+/** Раздел по маршруту: экраны задачи относятся к «Все задачи»; у профиля в BottomNav активного пункта нет. */
 function sectionOf(pathname: string): Section | null {
   if (pathname.startsWith('/day')) return 'day'
   if (pathname.startsWith('/all-tasks') || pathname.startsWith('/tasks')) return 'all-tasks'
   if (pathname.startsWith('/groups')) return 'groups'
+  if (pathname.startsWith('/profile')) return 'profile'
   return null
 }
 
@@ -46,7 +47,7 @@ export function AppShell({ children, floating, bottomNav = true }: AppShellProps
             {item.label}
           </Link>
         ))}
-        <Link to="/profile" className={styles.profile} aria-label="Профиль">
+        <Link to="/profile" className={styles.profile} aria-label="Профиль" aria-current={section === 'profile' ? 'page' : undefined}>
           <AvatarCircle />
           <span>
             <span className={styles.profileName}>Профиль</span>

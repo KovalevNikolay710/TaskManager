@@ -1,0 +1,98 @@
+/* Зона нажатия 56×44, трек 48×28 */
+.switch {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  width: calc(var(--size-switch-w) + var(--space-2));
+  height: var(--size-touch);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-full);
+  background: none;
+  cursor: pointer;
+}
+
+.track {
+  position: relative;
+  width: var(--size-switch-w);
+  height: var(--size-switch-h);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-sunken);
+  box-shadow: inset 0 0 0 1.5px var(--color-border-strong);
+  transition: background var(--duration-fast) var(--easing-standard);
+}
+
+.thumb {
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  background: var(--color-border-strong);
+  transition:
+    transform var(--duration-normal) var(--easing-standard),
+    background var(--duration-fast);
+}
+
+.switch[aria-checked='true'] .track {
+  background: var(--color-accent);
+  box-shadow: none;
+}
+
+.switch[aria-checked='true'] .thumb {
+  transform: translateX(20px);
+  background: var(--color-text-inverse);
+}
+
+.switch:focus-visible {
+  outline: none;
+}
+
+.switch:focus-visible .track {
+  outline: 2px solid var(--color-focus);
+  outline-offset: 2px;
+}
+
+.switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pending {
+  cursor: progress;
+}
+
+.pending .track {
+  background: var(--color-accent);
+  box-shadow: none;
+}
+
+/* Бегунок уже в положении «вкл.» — пользователь видит, что его действие принято */
+.pending .thumb {
+  transform: translateX(20px);
+  background: var(--color-text-inverse);
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pending .thumb {
+    animation: none;
+  }
+
+  .thumb,
+  .track {
+    transition: none;
+  }
+}

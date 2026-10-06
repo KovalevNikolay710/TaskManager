@@ -133,3 +133,77 @@ export interface GroupReorderRequest {
   userId: number
   groups: Array<{ groupId: number; groupPriority: number }>
 }
+
+// --- Push-уведомления и напоминания (design/screens/profile.md, «Эндпоинты») ---
+
+/** Публичный VAPID-ключ сервера, base64url. */
+export interface PushKey {
+  PublicKey: string
+}
+
+/** Подписка устройства, как её хранит сервер (ключи p256dh/auth в ответ не попадают). */
+export interface PushSubscriptionInfo {
+  SubscriptionId: number
+  UserId: number
+  Endpoint: string
+  UserAgent: string
+  CreatedAt: string
+  UpdatedAt: string
+}
+
+/** Подписка устройства: subscription.toJSON() + userId и userAgent. Upsert по endpoint. */
+export interface PushSubscribeRequest {
+  userId: number
+  endpoint: string
+  keys: { p256dh: string; auth: string }
+  userAgent: string
+}
+
+export interface PushUnsubscribeRequest {
+  userId: number
+  endpoint: string
+}
+
+/** Тестовое уведомление; без endpoint — на все устройства пользователя. */
+export interface PushTestRequest {
+  userId: number
+  endpoint?: string
+}
+
+export interface PushTestResponse {
+  Sent: number
+}
+
+/** Настройки напоминаний пользователя (одни на все устройства). Время — «ЧЧ:ММ» в Timezone. */
+export interface NotificationSettings {
+  UserId: number
+  MorningEnabled: boolean
+  MorningTime: string
+  EveningEnabled: boolean
+  EveningTime: string
+  DeadlineEnabled: boolean
+  /** 1–24 */
+  DeadlineHoursBefore: number
+  /** Тихие часы действуют только на «Дедлайн скоро» */
+  QuietEnabled: boolean
+  QuietFrom: string
+  /** QuietFrom > QuietTo — интервал через полночь */
+  QuietTo: string
+  /** IANA, например "Europe/Moscow"; пусто — часовой пояс сервера */
+  Timezone: string
+  UpdatedAt: string
+}
+
+/** Частичное обновление настроек: передаются только изменённые поля. */
+export interface NotificationSettingsUpdateRequest {
+  morningEnabled?: boolean
+  morningTime?: string
+  eveningEnabled?: boolean
+  eveningTime?: string
+  deadlineEnabled?: boolean
+  deadlineHoursBefore?: number
+  quietEnabled?: boolean
+  quietFrom?: string
+  quietTo?: string
+  timezone?: string
+}

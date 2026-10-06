@@ -132,6 +132,11 @@
     background: var(--color-surface-sunken);
   }
 
+  /* На экране «Профиль» блок профиля — активный пункт SideNav */
+  .profile[aria-current='page'] {
+    background: var(--color-accent-soft);
+  }
+
   .profileName {
     font-weight: var(--font-weight-medium);
   }
