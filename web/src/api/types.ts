@@ -1,5 +1,4 @@
-// Типы ответов API. Повторяют поля Go-моделей из internal/models как есть:
-// у моделей нет json-тегов, поэтому имена в PascalCase (включая опечатку GroupPriorty).
+// Типы ответов API. Повторяют json-теги Go-моделей из internal/models (PascalCase).
 
 export const TaskStatus = {
   Active: 1,
@@ -12,13 +11,13 @@ export interface Task {
   UserId: number
   /** 0 — задача без группы */
   GroupId: number
-  GroupPriorty: number
+  GroupPriority: number
   /** RFC3339 */
-  DeadLine: string
+  Deadline: string
   /** Минуты */
   TimeForExecution: number
   Priority: number
-  NumberOfHoursUntilDL: number
+  HoursUntilDeadline: number
   PercentOfCompleting: number
   Status: TaskStatus
   Name: string

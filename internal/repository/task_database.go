@@ -48,7 +48,7 @@ func (r *TaskRepositoryImpl) FindByUserID(userID int64, filter models.TaskFilter
 	}
 
 	if !filter.Date.IsZero() {
-		query = query.Where("dead_line > ?", filter.Date)
+		query = query.Where("deadline > ?", filter.Date)
 	}
 
 	if err := query.Find(&tasks).Error; err != nil {
@@ -58,74 +58,29 @@ func (r *TaskRepositoryImpl) FindByUserID(userID int64, filter models.TaskFilter
 	return tasks, nil
 }
 
-// CreateInGroup создаёт задачу и, если GroupId != 0, связь в group_tasks — в одной транзакции,
-// чтобы Task.GroupId и состав группы не расходились.
-func (r *TaskRepositoryImpl) CreateInGroup(task *models.Task) (*models.Task, error) {
-	err := r.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Create(task).Error; err != nil {
-			return fmt.Errorf("ошибка при создании задачи: %w", err)
-		}
-		if task.GroupId == 0 {
-			return nil
-		}
-		group := &models.Group{GroupId: task.GroupId}
-		if err := tx.Model(group).Association("Tasks").Append(task); err != nil {
-			return fmt.Errorf("ошибка при добавлении задачи в группу %d: %w", task.GroupId, err)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return task, nil
-}
-
 // taskUpdateFields — поля, которые меняет обновление задачи. Select нужен, чтобы записать и нулевые значения
 // (GroupId = 0, PercentOfCompleting = 0), а остальные колонки (UserId, CreatedAt) не трогать.
 func taskUpdateFields() []string {
 	return []string{
-		"Name", "Description", "DeadLine", "TimeForExecution", "PercentOfCompleting", "Status",
-		"GroupId", "GroupPriorty", "NumberOfHoursUntilDL", "Priority", "UpdatedAt",
+		"Name", "Description", "Deadline", "TimeForExecution", "PercentOfCompleting", "Status",
+		"GroupId", "GroupPriority", "HoursUntilDeadline", "Priority", "UpdatedAt",
 	}
 }
 
-// UpdateWithGroup сохраняет задачу; если groupChanged — заменяет её связь в group_tasks
-// на task.GroupId (0 — без связи). Всё в одной транзакции, чтобы Task.GroupId и состав группы не расходились.
-func (r *TaskRepositoryImpl) UpdateWithGroup(task *models.Task, groupChanged bool) (*models.Task, error) {
-	err := r.db.Transaction(func(tx *gorm.DB) error {
-		if err := tx.Model(task).Select(taskUpdateFields()).Updates(task).Error; err != nil {
-			return fmt.Errorf("ошибка при обновлении задачи: %w", err)
-		}
-		if !groupChanged {
-			return nil
-		}
-		if err := tx.Exec("DELETE FROM group_tasks WHERE task_task_id = ?", task.TaskId).Error; err != nil {
-			return fmt.Errorf("ошибка при удалении связи задачи %d с группой: %w", task.TaskId, err)
-		}
-		if task.GroupId == 0 {
-			return nil
-		}
-		if err := tx.Exec("INSERT INTO group_tasks (group_group_id, task_task_id) VALUES (?, ?) ON CONFLICT DO NOTHING",
-			task.GroupId, task.TaskId).Error; err != nil {
-			return fmt.Errorf("ошибка при добавлении задачи %d в группу %d: %w", task.TaskId, task.GroupId, err)
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, err
+// UpdateFields сохраняет поля задачи из taskUpdateFields, в том числе нулевые значения.
+func (r *TaskRepositoryImpl) UpdateFields(task *models.Task) (*models.Task, error) {
+	if err := r.db.Model(task).Select(taskUpdateFields()).Updates(task).Error; err != nil {
+		return nil, fmt.Errorf("ошибка при обновлении задачи: %w", err)
 	}
 	return task, nil
 }
 
-// DeleteWithLinks удаляет задачу вместе с её связями в day_tasks и group_tasks в одной транзакции.
-// Связи удаляются явно, не полагаясь на ON DELETE CASCADE: в старых базах его может не быть.
+// DeleteWithLinks удаляет задачу вместе с её строками в планах дней (day_tasks) в одной транзакции.
+// Строки удаляются явно, не полагаясь на ON DELETE CASCADE: в старых базах его может не быть.
 func (r *TaskRepositoryImpl) DeleteWithLinks(taskID int64) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Exec("DELETE FROM day_tasks WHERE task_task_id = ?", taskID).Error; err != nil {
 			return fmt.Errorf("ошибка при удалении задачи %d из планов дней: %w", taskID, err)
-		}
-		if err := tx.Exec("DELETE FROM group_tasks WHERE task_task_id = ?", taskID).Error; err != nil {
-			return fmt.Errorf("ошибка при удалении связи задачи %d с группой: %w", taskID, err)
 		}
 		if err := tx.Delete(&models.Task{}, taskID).Error; err != nil {
 			return fmt.Errorf("ошибка при удалении задачи %d: %w", taskID, err)

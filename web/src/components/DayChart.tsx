@@ -114,7 +114,7 @@ export function DayChart({ summary, groupNames, focus, onHover, pinned, onPin, n
               key={item.task.TaskId}
               className={cx(
                 styles.sector,
-                weightClass(item.task.GroupPriorty),
+                weightClass(item.task.GroupPriority),
                 item.done && styles.sectorDone,
                 focus === id && styles.sectorActive,
               )}

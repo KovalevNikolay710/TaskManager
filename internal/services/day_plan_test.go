@@ -37,12 +37,12 @@ func candidates(ids ...int64) []PlanCandidate {
 				continue
 			}
 			task := &models.Task{
-				TaskId:               e.id,
-				GroupPriorty:         e.pg,
-				TimeForExecution:     e.te,
-				PercentOfCompleting:  e.percent,
-				NumberOfHoursUntilDL: e.hours,
-				DeadLine:             exampleNow.Add(time.Duration(e.hours) * time.Hour),
+				TaskId:              e.id,
+				GroupPriority:       e.pg,
+				TimeForExecution:    e.te,
+				PercentOfCompleting: e.percent,
+				HoursUntilDeadline:  e.hours,
+				Deadline:            exampleNow.Add(time.Duration(e.hours) * time.Hour),
 			}
 			task.CalculatePriority()
 			result = append(result, newPlanCandidate(task, exampleNow.Truncate(24*time.Hour), exampleNow))

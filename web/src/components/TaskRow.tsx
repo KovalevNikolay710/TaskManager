@@ -34,7 +34,7 @@ interface TaskRowProps {
 export function TaskRow({ task, level, groupName, query = '', pending = false, divider = false, highlighted = false, slot, onToggle, onOpen }: TaskRowProps) {
   const done = isDone(task)
   const nameId = `task-name-${task.TaskId}`
-  const deadline = describeDeadline(task.DeadLine)
+  const deadline = describeDeadline(task.Deadline)
   const showProgress = task.PercentOfCompleting > 0 && task.PercentOfCompleting < 100
 
   return (

@@ -31,7 +31,7 @@ web/src/
 
 - Every request goes through `api/client.ts`: base path from `import.meta.env.VITE_API_URL` (default empty — same origin), JSON, `{"error": "..."}` becomes an `Error` with that text.
 - `/api` is prepended once in `BASE_URL` in `client.ts`; resource files write paths without it (`/tasks/user/1`). In dev Vite proxies `/api` to `http://localhost:8080`.
-- `api/types.ts` mirrors the **real** Go response fields (`TaskId`, `DeadLine`, `Priority`...); requests are camelCase like the `*Request` DTOs. Check against `internal/models/` and the `api-reference` skill.
+- `api/types.ts` mirrors the **real** Go response fields (`TaskId`, `Deadline`, `HoursUntilDeadline`, `Priority`...); requests are camelCase like the `*Request` DTOs. Check against `internal/models/` and the `api-reference` skill.
 - `userId` is explicit (no auth): single source `api/user.ts`, `CURRENT_USER_ID = 1`.
 - Sorting tasks by `Priority` desc lives in one helper, not in components.
 

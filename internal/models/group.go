@@ -3,14 +3,15 @@ package models
 import "time"
 
 type Group struct {
-	GroupId       int64  `gorm:"primaryKey;autoIncrement"`
-	GroupPriority uint64 `gorm:"not null"`
-	UserId        int64  `gorm:"not null;index"`
-	Name          string `gorm:"not null"`
-	Description   string
-	CreatedAt     time.Time `gorm:"autoCreateTime"`
-	UpdatedAt     time.Time `gorm:"autoUpdateTime"`
-	Tasks         []*Task   `gorm:"many2many:group_tasks;constraint:OnDelete:CASCADE;"`
+	GroupId       int64     `gorm:"primaryKey;autoIncrement" json:"GroupId"`
+	GroupPriority uint64    `gorm:"not null" json:"GroupPriority"`
+	UserId        int64     `gorm:"not null;index" json:"UserId"`
+	Name          string    `gorm:"not null" json:"Name"`
+	Description   string    `json:"Description"`
+	CreatedAt     time.Time `gorm:"autoCreateTime" json:"CreatedAt"`
+	UpdatedAt     time.Time `gorm:"autoUpdateTime" json:"UpdatedAt"`
+	// Tasks — задачи группы по Task.GroupId; не колонка и не связь GORM: репозиторий заполняет поле запросом
+	Tasks []*Task `gorm:"-" json:"Tasks"`
 }
 
 type GroupCreateRequest struct {

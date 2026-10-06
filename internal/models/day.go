@@ -14,28 +14,28 @@ const (
 )
 
 type Day struct {
-	DayId  int64     `gorm:"primaryKey;autoIncrement"`
-	UserId int64     `gorm:"not null;index:idx_days_user_date,priority:1"`
-	Date   time.Time `gorm:"not null;index:idx_days_user_date,priority:2"`
+	DayId  int64     `gorm:"primaryKey;autoIncrement" json:"DayId"`
+	UserId int64     `gorm:"not null;index:idx_days_user_date,priority:1" json:"UserId"`
+	Date   time.Time `gorm:"not null;index:idx_days_user_date,priority:2" json:"Date"`
 	// TimeForTasks — сколько минут пользователь готов отдать задачам в этот день (100% диаграммы);
 	// время делится между задачами плана (Slots), остаток — свободное время
-	TimeForTasks int `gorm:"not null;default:0"`
+	TimeForTasks int `gorm:"not null;default:0" json:"TimeForTasks"`
 	// AmountOfTasks — число задач в плане (len(Slots)) на момент сборки; фронт не читает
-	AmountOfTasks    int     `gorm:"not null;default:0"`
-	PriorityOfTheDay float64 `gorm:"not null;default:0"` // Сумма Priority невыполненных задач плана
-	Status           uint16  `gorm:"not null;default:0"`
-	UpdatedAt        time.Time
-	Tasks            []*Task `gorm:"many2many:day_tasks;constraint:OnDelete:CASCADE;"` // Каскадное удаление
+	AmountOfTasks    int       `gorm:"not null;default:0" json:"AmountOfTasks"`
+	PriorityOfTheDay float64   `gorm:"not null;default:0" json:"PriorityOfTheDay"` // Сумма Priority невыполненных задач плана
+	Status           uint16    `gorm:"not null;default:0" json:"Status"`
+	UpdatedAt        time.Time `json:"UpdatedAt"`
+	Tasks            []*Task   `gorm:"many2many:day_tasks;constraint:OnDelete:CASCADE;" json:"Tasks"` // Каскадное удаление
 	// Slots — та же таблица day_tasks: сколько минут выделено каждой задаче плана
-	Slots []DayTask `gorm:"foreignKey:DayId;constraint:OnDelete:CASCADE;"`
+	Slots []DayTask `gorm:"foreignKey:DayId;constraint:OnDelete:CASCADE;" json:"Slots"`
 }
 
 // DayTask — задача в плане дня и выделенное ей время.
 // Колонки названы так, как GORM назвал их для many2many day_tasks, чтобы старые планы сохранились.
 type DayTask struct {
-	DayId   int64 `gorm:"primaryKey;column:day_day_id"`
-	TaskId  int64 `gorm:"primaryKey;column:task_task_id"`
-	Minutes int   `gorm:"not null;default:0"` // выделено на этот день, минуты
+	DayId   int64 `gorm:"primaryKey;column:day_day_id" json:"DayId"`
+	TaskId  int64 `gorm:"primaryKey;column:task_task_id" json:"TaskId"`
+	Minutes int   `gorm:"not null;default:0" json:"Minutes"` // выделено на этот день, минуты
 }
 
 type DayCreateRequest struct {

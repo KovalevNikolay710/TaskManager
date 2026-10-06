@@ -9,7 +9,7 @@ Go bottom-up and copy the style of the neighbouring code. Reference implementati
 
 ## 1. Model — `internal/models/<entity>.go`
 
-- GORM model: primary key `<Entity>Id int64 gorm:"primaryKey;autoIncrement"`, `UserId` with `gorm:"not null;index"`, `CreatedAt`/`UpdatedAt`.
+- GORM model (returned by the API: explicit PascalCase `json:"Field"` tags on every field): primary key `<Entity>Id int64 gorm:"primaryKey;autoIncrement"`, `UserId` with `gorm:"not null;index"`, `CreatedAt`/`UpdatedAt`.
 - Request DTOs beside it: `<Entity>CreateRequest` (`binding:"required"` on mandatory fields), `<Entity>UpdateRequest`; json tags camelCase.
 - Register a new model in `db.AutoMigrate(...)` in `internal/repository/database.go`.
 
@@ -31,7 +31,7 @@ func NewXRepository(db *gorm.DB) *XRepositoryImpl {
 
 ## 3. Service — `internal/services/<entity>_services.go`
 
-- Validation and business rules (e.g. recalc priority via `calculateTaskPriorty` whenever a formula field changes).
+- Validation and business rules (e.g. recalc priority via `Task.Recalculate` whenever a formula field changes).
 - `slog` logs with structured fields.
 
 ## 4. Handler — `internal/api/handlers/<entity>_handler(s).go`

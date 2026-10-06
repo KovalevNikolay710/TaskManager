@@ -24,11 +24,11 @@ func TestTaskRecalculate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// устаревший Tl должен быть перезаписан
-			task := &Task{GroupPriorty: 3, TimeForExecution: 120, PercentOfCompleting: tt.percent,
-				DeadLine: tt.deadline, NumberOfHoursUntilDL: 99, Priority: 12345}
+			task := &Task{GroupPriority: 3, TimeForExecution: 120, PercentOfCompleting: tt.percent,
+				Deadline: tt.deadline, HoursUntilDeadline: 99, Priority: 12345}
 			task.Recalculate(now)
-			if task.NumberOfHoursUntilDL != tt.wantTl {
-				t.Errorf("Tl = %d, ожидалось %d", task.NumberOfHoursUntilDL, tt.wantTl)
+			if task.HoursUntilDeadline != tt.wantTl {
+				t.Errorf("Tl = %d, ожидалось %d", task.HoursUntilDeadline, tt.wantTl)
 			}
 			if math.Abs(task.Priority-tt.wantPt) > 1e-9 {
 				t.Errorf("Pt = %v, ожидалось %v", task.Priority, tt.wantPt)

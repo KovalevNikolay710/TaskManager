@@ -287,9 +287,9 @@ export function TaskPage() {
 
     let next: string | undefined
     if (dirty) {
-      const deadline = combineDateTime(values.date, values.time) ?? new Date(source.DeadLine)
+      const deadline = combineDateTime(values.date, values.time) ?? new Date(source.Deadline)
       const minutes = parseDuration(values.duration) ?? source.TimeForExecution
-      const weight = values.groupId === source.GroupId ? source.GroupPriorty : groupWeight(values.groupId, groups)
+      const weight = values.groupId === source.GroupId ? source.GroupPriority : groupWeight(values.groupId, groups)
       // Бэкенд пересчитывает Tl при каждом сохранении, для просроченной задачи Tl = 1
       const hours = Math.max(hoursUntil(deadline, now), 1)
       if (values.percent === 100) {
@@ -311,9 +311,9 @@ export function TaskPage() {
         next={next}
         factors={priorityFactorRows({
           groupName: groupLabel(source.GroupId, groups),
-          groupWeight: source.GroupPriorty,
+          groupWeight: source.GroupPriority,
           minutes: source.TimeForExecution,
-          hours: source.NumberOfHoursUntilDL,
+          hours: source.HoursUntilDeadline,
           hoursSub: `на момент расчёта, ${formatMetaDate(source.UpdatedAt, now)}`,
           percent: source.PercentOfCompleting,
         })}

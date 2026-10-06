@@ -31,7 +31,7 @@ export function useUpdateGroup() {
     },
     onSuccess: (group, { input }) => {
       queryClient.setQueryData<Group[]>(queryKeys.groups, (groups) => groups?.map((g) => (g.GroupId === group.GroupId ? group : g)))
-      // Сервер пересчитал GroupPriorty и Priority всех задач группы
+      // Сервер пересчитал GroupPriority и Priority всех задач группы
       if (input.groupPriority !== undefined) {
         void queryClient.invalidateQueries({ queryKey: queryKeys.tasks })
         void queryClient.invalidateQueries({ queryKey: queryKeys.days })
@@ -80,7 +80,7 @@ export function useReorderGroups() {
     },
     onSuccess: (groups) => {
       queryClient.setQueryData<Group[]>(queryKeys.groups, groups)
-      // Сервер пересчитал GroupPriorty и Priority задач затронутых групп
+      // Сервер пересчитал GroupPriority и Priority задач затронутых групп
       void queryClient.invalidateQueries({ queryKey: queryKeys.tasks })
       void queryClient.invalidateQueries({ queryKey: queryKeys.days })
       void queryClient.invalidateQueries({ queryKey: ['task'] })

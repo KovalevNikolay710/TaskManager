@@ -4,22 +4,60 @@ import (
 	"fmt"
 	"log/slog"
 
+	"TaskManager/internal/models"
+
 	"gorm.io/gorm"
 )
 
-// Разовая чистка связей задач с группами после старых версий:
+// columnRenames — переименования колонок tasks (поля Task переименованы без опечаток и сокращений).
+var columnRenames = []struct{ table, oldName, newName string }{
+	{"tasks", "group_priorty", "group_priority"},
+	{"tasks", "dead_line", "deadline"},
+	{"tasks", "number_of_hours_until_dl", "hours_until_deadline"},
+}
+
+// renameColumns переименовывает колонки старых версий в одной транзакции. Идемпотентно: переименовывается
+// только если старая колонка есть, а новой нет. Выполняется до AutoMigrate, иначе он создал бы пустые новые колонки.
+func renameColumns(db *gorm.DB, logger *slog.Logger) error {
+	return db.Transaction(func(tx *gorm.DB) error {
+		migrator := tx.Migrator()
+		for _, rename := range columnRenames {
+			if !migrator.HasColumn(rename.table, rename.oldName) {
+				continue
+			}
+			if migrator.HasColumn(rename.table, rename.newName) {
+				// Обе колонки есть — данные старой не переносятся автоматически, нужна ручная проверка
+				logger.Warn("Старая колонка осталась рядом с новой, переименование пропущено",
+					slog.String("table", rename.table),
+					slog.String("old", rename.oldName),
+					slog.String("new", rename.newName))
+				continue
+			}
+			if err := migrator.RenameColumn(rename.table, rename.oldName, rename.newName); err != nil {
+				return fmt.Errorf("ошибка при переименовании колонки %s.%s в %s: %w",
+					rename.table, rename.oldName, rename.newName, err)
+			}
+			logger.Info("Колонка переименована",
+				slog.String("table", rename.table),
+				slog.String("from", rename.oldName),
+				slog.String("to", rename.newName))
+		}
+		return nil
+	})
+}
+
+// Раньше состав группы хранился дважды: в tasks.group_id и в join-таблице group_tasks (GORM называет её колонки
+// group_group_id / task_task_id). Теперь источник один — tasks.group_id. Миграция выполняется только пока таблица
+// group_tasks существует и заканчивается её удалением, поэтому повторный запуск ничего не делает.
+//
+// Перед переносом убираются однозначные ошибки старых версий:
 //   - с тега `default:1` (коммит 3ec619c) задача без группы сохранялась с group_id = 1;
-//   - POST /tasks/ с groupId ставил group_id, но не создавал строку в group_tasks;
 //   - ранние версии не проверяли, что группа существует и принадлежит пользователю;
 //   - удаление группы оставляло у задач group_id удалённой группы.
-//
-// Меняется только то, что однозначно ошибочно. Запросы идемпотентны: повторный запуск ничего не меняет,
-// поэтому чистка выполняется при каждом старте, сразу после AutoMigrate.
-// Колонки join-таблицы GORM называет group_group_id / task_task_id.
 
 // Отвязка задачи от группы: при смене множителя группы Pg на 1 приоритет Pt = Pg * Te / Tl * %in
 // делится на старый Pg — так же, как при удалении группы в сервисе.
-const detachTaskSet = `group_id = 0, priority = priority / GREATEST(group_priorty, 1), group_priorty = 1`
+const detachTaskSet = `group_id = 0, priority = t.priority / GREATEST(t.group_priority, 1), group_priority = 1`
 
 var taskGroupRepairs = []struct {
 	name string
@@ -45,28 +83,31 @@ var taskGroupRepairs = []struct {
 					SELECT 1 FROM group_tasks gt WHERE gt.group_group_id = t.group_id AND gt.task_task_id = t.task_id)`,
 	},
 	{
-		name: "связи задачи с группой другого пользователя",
-		sql: `DELETE FROM group_tasks gt
-			USING groups g, tasks t
-			WHERE gt.group_group_id = g.group_id AND gt.task_task_id = t.task_id AND g.user_id <> t.user_id`,
-	},
-	{
-		// Дефолт давал только group_id = 1, поэтому любой другой group_id без связи назначен явно
-		// через POST /tasks/ — достаточно добавить недостающую связь.
-		name: "недостающие связи в group_tasks",
-		sql: `INSERT INTO group_tasks (group_group_id, task_task_id)
-			SELECT t.group_id, t.task_id FROM tasks t
-			JOIN groups g ON g.group_id = t.group_id AND g.user_id = t.user_id
-			WHERE t.group_id <> 1 AND NOT EXISTS (
-				SELECT 1 FROM group_tasks gt WHERE gt.group_group_id = t.group_id AND gt.task_task_id = t.task_id)
-			ON CONFLICT DO NOTHING`,
+		// Задача без группы, но с единственной связью в group_tasks с существующей группой того же пользователя:
+		// переносим группу в group_id и подгоняем множитель и приоритет под вес группы.
+		// Задачи с несколькими связями неоднозначны и остаются без группы.
+		name: "перенос единственной связи group_tasks в group_id",
+		sql: `UPDATE tasks t SET group_id = l.group_id, group_priority = l.weight,
+				priority = t.priority / GREATEST(t.group_priority, 1) * l.weight
+			FROM (
+				SELECT gt.task_task_id AS task_id, MIN(g.group_id) AS group_id, MIN(g.group_priority) AS weight
+				FROM group_tasks gt
+				JOIN groups g ON g.group_id = gt.group_group_id
+				JOIN tasks t2 ON t2.task_id = gt.task_task_id AND t2.user_id = g.user_id
+				GROUP BY gt.task_task_id
+				HAVING COUNT(*) = 1
+			) l
+			WHERE t.task_id = l.task_id AND t.group_id = 0`,
 	},
 }
 
-// RepairTaskGroups приводит tasks.group_id и group_tasks к согласованному состоянию по однозначным правилам
-// и сообщает в лог о том, что автоматически решить нельзя.
-func RepairTaskGroups(db *gorm.DB, logger *slog.Logger) error {
-	err := db.Transaction(func(tx *gorm.DB) error {
+// MigrateGroupTasks переносит членство в группах из group_tasks в tasks.group_id и удаляет group_tasks.
+// Всё в одной транзакции; если таблицы нет — ничего не делает.
+func MigrateGroupTasks(db *gorm.DB, logger *slog.Logger) error {
+	if !db.Migrator().HasTable("group_tasks") {
+		return nil
+	}
+	return db.Transaction(func(tx *gorm.DB) error {
 		for _, repair := range taskGroupRepairs {
 			result := tx.Exec(repair.sql)
 			if result.Error != nil {
@@ -78,37 +119,65 @@ func RepairTaskGroups(db *gorm.DB, logger *slog.Logger) error {
 					slog.Int64("rows", result.RowsAffected))
 			}
 		}
+
+		if err := resolveGroupLinkConflicts(tx, logger); err != nil {
+			return err
+		}
+
+		if err := tx.Migrator().DropTable("group_tasks"); err != nil {
+			return fmt.Errorf("ошибка при удалении таблицы group_tasks: %w", err)
+		}
+		logger.Info("Таблица group_tasks удалена: состав групп определяет tasks.group_id")
 		return nil
 	})
-	if err != nil {
-		return err
-	}
+}
 
-	// group_id = 1 без связи у задачи, созданной после группы 1: это либо дефолт БД,
-	// либо явный POST /tasks/ с groupId = 1 — различить нельзя, поэтому только сообщаем
-	var ambiguous []int64
-	if err := db.Raw(`SELECT t.task_id FROM tasks t
-		WHERE t.group_id = 1 AND NOT EXISTS (
-			SELECT 1 FROM group_tasks gt WHERE gt.group_group_id = 1 AND gt.task_task_id = t.task_id)
-		ORDER BY t.task_id`).Scan(&ambiguous).Error; err != nil {
-		return fmt.Errorf("ошибка при поиске неоднозначных задач группы 1: %w", err)
+// resolveGroupLinkConflicts — конфликт: строка group_tasks указывает на существующую группу пользователя,
+// отличную от ненулевого tasks.group_id задачи. Побеждает group_id: интерфейс всегда показывал группу задачи
+// по нему, а связей в group_tasks у задачи может быть несколько. Данные не меняются; каждая отброшенная связь
+// пишется в лог, чтобы после удаления group_tasks её можно было восстановить вручную.
+func resolveGroupLinkConflicts(tx *gorm.DB, logger *slog.Logger) error {
+	var conflicts []struct {
+		TaskId      int64
+		GroupId     int64
+		LinkGroupId int64
 	}
-	if len(ambiguous) > 0 {
-		logger.Warn("Задачи в группе 1 без связи в group_tasks: неизвестно, назначены ли они в группу явно, оставлены как есть",
-			slog.Any("taskIds", ambiguous))
-	}
-
-	// Связь с группой, отличной от group_id задачи: какая из двух верна, неизвестно
-	var mismatched []int64
-	if err := db.Raw(`SELECT gt.task_task_id FROM group_tasks gt
+	if err := tx.Raw(`SELECT t.task_id, t.group_id, gt.group_group_id AS link_group_id FROM group_tasks gt
 		JOIN tasks t ON t.task_id = gt.task_task_id
-		WHERE gt.group_group_id <> t.group_id
-		ORDER BY gt.task_task_id`).Scan(&mismatched).Error; err != nil {
+		JOIN groups g ON g.group_id = gt.group_group_id AND g.user_id = t.user_id
+		WHERE t.group_id <> 0 AND gt.group_group_id <> t.group_id
+		ORDER BY t.task_id, gt.group_group_id`).Scan(&conflicts).Error; err != nil {
 		return fmt.Errorf("ошибка при поиске расходящихся связей: %w", err)
 	}
-	if len(mismatched) > 0 {
-		logger.Warn("Связь в group_tasks расходится с group_id задачи, оставлено как есть",
-			slog.Any("taskIds", mismatched))
+	for _, conflict := range conflicts {
+		logger.Warn("Связь в group_tasks расходится с group_id задачи, оставлен group_id",
+			slog.Int64("taskId", conflict.TaskId),
+			slog.Int64("groupId", conflict.GroupId),
+			slog.Int64("droppedLinkGroupId", conflict.LinkGroupId))
+	}
+	return nil
+}
+
+// runMigrations — порядок важен: переименования до AutoMigrate, перенос group_tasks после него.
+func runMigrations(db *gorm.DB, logger *slog.Logger) error {
+	if err := renameColumns(db, logger); err != nil {
+		return err
+	}
+	// Своя модель для day_tasks: к связи «день — задача» добавлены минуты плана
+	if err := db.SetupJoinTable(&models.Day{}, "Tasks", &models.DayTask{}); err != nil {
+		return fmt.Errorf("ошибка настройки таблицы day_tasks: %w", err)
+	}
+	if err := db.AutoMigrate(
+		&models.Group{},
+		&models.Task{},
+		&models.Day{},
+		&models.DayTask{},
+		&models.PushSubscription{},
+		&models.NotificationSettings{},
+		&models.VapidKeys{},
+		&models.NotificationLog{},
+	); err != nil {
+		return fmt.Errorf("ошибка миграции схемы: %w", err)
 	}
 	return nil
 }

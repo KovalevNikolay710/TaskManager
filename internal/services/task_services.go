@@ -26,35 +26,35 @@ func (serv TaskServiceImpl) CreateTask(input models.TaskCreateRequest) (task *mo
 	}
 
 	now := time.Now()
-	hours := models.HoursUntilDeadline(input.DeadLine, now)
+	hours := models.HoursUntilDeadline(input.Deadline, now)
 	if hours < models.MinHoursUntilDeadline {
 		serv.Logger.Warn("Неверный дедлайн", slog.Int("hoursUntilDeadline", hours))
 		return nil, ErrInvalidDeadline
 	}
 
-	var groupPriorty uint64 = 1
+	var groupPriority uint64 = 1
 	if input.GroupId != 0 {
 		group, err := serv.findUserGroup(input.GroupId, input.UserID)
 		if err != nil {
 			return nil, err
 		}
-		groupPriorty = group.GroupPriority
+		groupPriority = group.GroupPriority
 	}
 
 	task = &models.Task{
 		UserId:              input.UserID,
 		GroupId:             input.GroupId,
-		GroupPriorty:        groupPriorty,
+		GroupPriority:       groupPriority,
 		Name:                name,
 		Description:         input.Description,
-		DeadLine:            input.DeadLine,
+		Deadline:            input.Deadline,
 		TimeForExecution:    input.TimeForExecution,
 		PercentOfCompleting: input.PercentOfCompleting,
 		Status:              models.StatusActive,
 	}
 	task.Recalculate(now)
 
-	task, err = serv.TaskRepo.CreateInGroup(task)
+	task, err = serv.TaskRepo.Create(task)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при записи задачи: %w", err)
 	}
@@ -99,7 +99,7 @@ func (serv TaskServiceImpl) UpdateTaskForUser(userID, taskID int64, input models
 }
 
 // applyUpdate меняет загруженную задачу (nil — не найдена), пересчитывает Tl от текущего времени
-// и приоритет. Смена группы и связь в group_tasks сохраняются вместе с задачей в одной транзакции.
+// и приоритет. Группа задачи (GroupId) сохраняется вместе с остальными полями.
 func (serv TaskServiceImpl) applyUpdate(task *models.Task, input models.TaskUpdateRequest) (*models.Task, error) {
 	if task == nil {
 		return nil, ErrTaskNotFound
@@ -123,11 +123,11 @@ func (serv TaskServiceImpl) applyUpdate(task *models.Task, input models.TaskUpda
 		task.TimeForExecution = *input.TimeForExecution
 	}
 
-	if input.DeadLine != nil {
-		if models.HoursUntilDeadline(*input.DeadLine, now) < models.MinHoursUntilDeadline {
+	if input.Deadline != nil {
+		if models.HoursUntilDeadline(*input.Deadline, now) < models.MinHoursUntilDeadline {
 			return nil, ErrInvalidDeadline
 		}
-		task.DeadLine = *input.DeadLine
+		task.Deadline = *input.Deadline
 	}
 
 	// Инвариант: Status = 2 тогда и только тогда, когда выполнено 100%
@@ -157,23 +157,22 @@ func (serv TaskServiceImpl) applyUpdate(task *models.Task, input models.TaskUpda
 		}
 	}
 
-	groupChanged := input.GroupId != nil && *input.GroupId != task.GroupId
-	if groupChanged {
+	if input.GroupId != nil && *input.GroupId != task.GroupId {
 		task.GroupId = *input.GroupId
-		task.GroupPriorty = 1
+		task.GroupPriority = 1
 		if task.GroupId != 0 {
 			group, err := serv.findUserGroup(task.GroupId, task.UserId)
 			if err != nil {
 				return nil, err
 			}
-			task.GroupPriorty = group.GroupPriority
+			task.GroupPriority = group.GroupPriority
 		}
 	}
 
 	task.Recalculate(now)
 	task.UpdatedAt = now
 
-	updatedTask, err := serv.TaskRepo.UpdateWithGroup(task, groupChanged)
+	updatedTask, err := serv.TaskRepo.UpdateFields(task)
 	if err != nil {
 		return nil, fmt.Errorf("ошибка при обновлении задачи: %w", err)
 	}

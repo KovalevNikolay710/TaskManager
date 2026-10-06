@@ -11,6 +11,7 @@ import (
 	"log/slog"
 	"net/http"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,7 +20,7 @@ import (
 	"github.com/go-playground/validator/v10"
 )
 
-// UseJSONFieldNames заставляет валидатор gin называть поля по json-тегам (deadline, а не DeadLine),
+// UseJSONFieldNames заставляет валидатор gin называть поля по json-тегам (deadline, а не Deadline),
 // чтобы в тексте ошибки были те же имена, что отправляет клиент.
 func UseJSONFieldNames() {
 	validate, ok := binding.Validator.Engine().(*validator.Validate)
@@ -49,6 +50,7 @@ func bindingErrorMessage(err error) string {
 	var typeError *json.UnmarshalTypeError
 	var syntaxError *json.SyntaxError
 	var timeError *time.ParseError
+	var numError *strconv.NumError
 
 	switch {
 	case errors.As(err, &validationErrors):
@@ -59,6 +61,8 @@ func bindingErrorMessage(err error) string {
 		return strings.Join(messages, "; ")
 	case errors.As(err, &timeError):
 		return "неверный формат даты, ожидается RFC3339"
+	case errors.As(err, &numError):
+		return fmt.Sprintf("неверное число «%s» в параметре запроса", numError.Num)
 	case errors.As(err, &typeError):
 		return fmt.Sprintf("неверный тип поля «%s»", typeError.Field)
 	case errors.As(err, &syntaxError), errors.Is(err, io.ErrUnexpectedEOF):

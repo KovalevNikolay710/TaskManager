@@ -68,7 +68,7 @@ func (e *env) newGroup(t *testing.T, user int64, name string, weight uint64) *mo
 func (e *env) newTask(t *testing.T, user int64, name string, groupID int64, te, hours, percent int) *models.Task {
 	t.Helper()
 	task, err := e.tasks.CreateTask(models.TaskCreateRequest{
-		UserID: user, Name: name, DeadLine: inHours(hours), TimeForExecution: te,
+		UserID: user, Name: name, Deadline: inHours(hours), TimeForExecution: te,
 		PercentOfCompleting: percent, GroupId: groupID,
 	})
 	if err != nil {
@@ -91,11 +91,11 @@ func assertTask(t *testing.T, task *models.Task, groupID int64, pg uint64, tl in
 	if task.GroupId != groupID {
 		t.Errorf("GroupId = %d, want %d", task.GroupId, groupID)
 	}
-	if task.GroupPriorty != pg {
-		t.Errorf("GroupPriorty = %d, want %d", task.GroupPriorty, pg)
+	if task.GroupPriority != pg {
+		t.Errorf("GroupPriority = %d, want %d", task.GroupPriority, pg)
 	}
-	if task.NumberOfHoursUntilDL != tl {
-		t.Errorf("NumberOfHoursUntilDL = %d, want %d", task.NumberOfHoursUntilDL, tl)
+	if task.HoursUntilDeadline != tl {
+		t.Errorf("HoursUntilDeadline = %d, want %d", task.HoursUntilDeadline, tl)
 	}
 	if !near(task.Priority, priority) {
 		t.Errorf("Priority = %v, want %v", task.Priority, priority)
@@ -149,11 +149,11 @@ func TestCreateTask_Validation(t *testing.T) {
 		input models.TaskCreateRequest
 		want  error
 	}{
-		{"пустое имя", models.TaskCreateRequest{UserID: 1, Name: "  ", DeadLine: inHours(5), TimeForExecution: 10}, services.ErrEmptyTaskName},
-		{"дедлайн раньше чем через час", models.TaskCreateRequest{UserID: 1, Name: "x", DeadLine: time.Now().Add(30 * time.Minute), TimeForExecution: 10}, services.ErrInvalidDeadline},
-		{"дедлайн в прошлом", models.TaskCreateRequest{UserID: 1, Name: "x", DeadLine: time.Now().Add(-5 * time.Hour), TimeForExecution: 10}, services.ErrInvalidDeadline},
-		{"чужая группа", models.TaskCreateRequest{UserID: 1, Name: "x", DeadLine: inHours(5), TimeForExecution: 10, GroupId: foreign.GroupId}, services.ErrTaskGroupInvalid},
-		{"несуществующая группа", models.TaskCreateRequest{UserID: 1, Name: "x", DeadLine: inHours(5), TimeForExecution: 10, GroupId: 999}, services.ErrTaskGroupInvalid},
+		{"пустое имя", models.TaskCreateRequest{UserID: 1, Name: "  ", Deadline: inHours(5), TimeForExecution: 10}, services.ErrEmptyTaskName},
+		{"дедлайн раньше чем через час", models.TaskCreateRequest{UserID: 1, Name: "x", Deadline: time.Now().Add(30 * time.Minute), TimeForExecution: 10}, services.ErrInvalidDeadline},
+		{"дедлайн в прошлом", models.TaskCreateRequest{UserID: 1, Name: "x", Deadline: time.Now().Add(-5 * time.Hour), TimeForExecution: 10}, services.ErrInvalidDeadline},
+		{"чужая группа", models.TaskCreateRequest{UserID: 1, Name: "x", Deadline: inHours(5), TimeForExecution: 10, GroupId: foreign.GroupId}, services.ErrTaskGroupInvalid},
+		{"несуществующая группа", models.TaskCreateRequest{UserID: 1, Name: "x", Deadline: inHours(5), TimeForExecution: 10, GroupId: 999}, services.ErrTaskGroupInvalid},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -176,7 +176,7 @@ func TestUpdateTask_Recalculates(t *testing.T) {
 
 	// время выполнения и дедлайн
 	deadline := inHours(20)
-	updated, err := e.tasks.UpdateTask(task.TaskId, models.TaskUpdateRequest{TimeForExecution: ptr(120), DeadLine: &deadline})
+	updated, err := e.tasks.UpdateTask(task.TaskId, models.TaskUpdateRequest{TimeForExecution: ptr(120), Deadline: &deadline})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,7 +209,7 @@ func TestUpdateTask_Recalculates(t *testing.T) {
 		t.Errorf("несуществующая задача: err = %v", err)
 	}
 	past := time.Now().Add(-time.Hour)
-	if _, err := e.tasks.UpdateTask(task.TaskId, models.TaskUpdateRequest{DeadLine: &past}); err != services.ErrInvalidDeadline {
+	if _, err := e.tasks.UpdateTask(task.TaskId, models.TaskUpdateRequest{Deadline: &past}); err != services.ErrInvalidDeadline {
 		t.Errorf("дедлайн в прошлом: err = %v", err)
 	}
 	if _, err := e.tasks.UpdateTask(task.TaskId, models.TaskUpdateRequest{GroupId: gid(999)}); err != services.ErrTaskGroupInvalid {
@@ -226,11 +226,11 @@ func TestUpdateTask_OverdueUsesOneHour(t *testing.T) {
 	taskRepo := repository.NewTaskRepository(db)
 	svc := services.NewTaskService(taskRepo, repository.NewGroupRepository(db), logger)
 
-	task, err := svc.CreateTask(models.TaskCreateRequest{UserID: 1, Name: "x", DeadLine: inHours(5), TimeForExecution: 60})
+	task, err := svc.CreateTask(models.TaskCreateRequest{UserID: 1, Name: "x", Deadline: inHours(5), TimeForExecution: 60})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := db.Model(&models.Task{}).Where("task_id = ?", task.TaskId).Update("dead_line", time.Now().Add(-48*time.Hour)).Error; err != nil {
+	if err := db.Model(&models.Task{}).Where("task_id = ?", task.TaskId).Update("deadline", time.Now().Add(-48*time.Hour)).Error; err != nil {
 		t.Fatal(err)
 	}
 	desc := "обновили"
@@ -362,7 +362,7 @@ func TestDeleteGroup_DetachesTasks(t *testing.T) {
 	}
 }
 
-// Состав группы (Group.Tasks через group_tasks) следует за созданием, сменой группы и удалением задачи.
+// Состав группы (Group.Tasks по Task.GroupId) следует за созданием, сменой группы и удалением задачи.
 func TestGroupMembership_FollowsTask(t *testing.T) {
 	e := newEnv(t)
 	g1 := e.newGroup(t, 1, "G1", 2)
@@ -407,7 +407,7 @@ func TestAddTaskToGroup(t *testing.T) {
 	e := newEnv(t)
 	group := e.newGroup(t, 1, "G", 8)
 	got, err := e.groups.AddTaskToGroup(group.GroupId, models.TaskCreateRequest{
-		UserID: 1, Name: "в группе", DeadLine: inHours(12), TimeForExecution: 60,
+		UserID: 1, Name: "в группе", Deadline: inHours(12), TimeForExecution: 60,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -418,7 +418,7 @@ func TestAddTaskToGroup(t *testing.T) {
 	assertTask(t, e.reload(t, got.Tasks[0].TaskId), group.GroupId, 8, 12, wantPriority(8, 60, 12, 0))
 
 	_, err = e.groups.AddTaskToGroup(group.GroupId, models.TaskCreateRequest{
-		UserID: 2, Name: "чужая", DeadLine: inHours(12), TimeForExecution: 60,
+		UserID: 2, Name: "чужая", Deadline: inHours(12), TimeForExecution: 60,
 	})
 	if err != services.ErrGroupOwner {
 		t.Errorf("чужая группа: err = %v, want ErrGroupOwner", err)

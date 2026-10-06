@@ -297,7 +297,7 @@ function DayPlan({ day, isPast, isToday, outside, groupNames, editOpen, onEditOp
 
       <ul className={cx(styles.taskList, listFocus && styles.taskListFocus)} ref={listRef}>
         {summary.items.map(({ task, minutes }) => {
-          const weight = task.GroupPriorty || 1
+          const weight = task.GroupPriority || 1
           const setFocus = (id: ChartFocus) => {
             if (!summary.oldPlan) setHovered(id)
           }

@@ -20,14 +20,41 @@ func NewGroupRepository(db *gorm.DB) *GroupRepositoryImpl {
 	}
 }
 
-// FindByIDWithTasks возвращает группу вместе с задачами (по group_tasks) или nil, nil, если группы нет.
+// loadTasks заполняет Group.Tasks задачами групп по Task.GroupId (единственный источник состава группы);
+// у группы без задач список пустой, а не nil.
+func (rep *GroupRepositoryImpl) loadTasks(groups ...*models.Group) error {
+	if len(groups) == 0 {
+		return nil
+	}
+	byID := make(map[int64]*models.Group, len(groups))
+	ids := make([]int64, 0, len(groups))
+	for _, group := range groups {
+		group.Tasks = []*models.Task{}
+		byID[group.GroupId] = group
+		ids = append(ids, group.GroupId)
+	}
+	var tasks []*models.Task
+	if err := rep.db.Where("group_id IN ?", ids).Order("task_id").Find(&tasks).Error; err != nil {
+		return fmt.Errorf("ошибка при поиске задач групп в базе данных: %w", err)
+	}
+	for _, task := range tasks {
+		group := byID[task.GroupId]
+		group.Tasks = append(group.Tasks, task)
+	}
+	return nil
+}
+
+// FindByIDWithTasks возвращает группу вместе с задачами (по Task.GroupId) или nil, nil, если группы нет.
 func (rep *GroupRepositoryImpl) FindByIDWithTasks(groupID int64) (*models.Group, error) {
 	var group models.Group
-	if err := rep.db.Preload("Tasks").First(&group, groupID).Error; err != nil {
+	if err := rep.db.First(&group, groupID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("ошибка при поиске группы с задачами в базе данных: %w", err)
+	}
+	if err := rep.loadTasks(&group); err != nil {
+		return nil, err
 	}
 	return &group, nil
 }
@@ -47,8 +74,11 @@ func (rep *GroupRepositoryImpl) FindUserGroup(userID, groupID int64) (*models.Gr
 // GetAllUserGroups возвращает группы пользователя с задачами: клиент показывает их в списке групп.
 func (rep *GroupRepositoryImpl) GetAllUserGroups(userID int64) ([]*models.Group, error) {
 	var groups []*models.Group
-	if err := rep.db.Where("user_id = ?", userID).Preload("Tasks").Find(&groups).Error; err != nil {
+	if err := rep.db.Where("user_id = ?", userID).Find(&groups).Error; err != nil {
 		return nil, fmt.Errorf("ошибка при поиске групп в базе данных: %w", err)
+	}
+	if err := rep.loadTasks(groups...); err != nil {
+		return nil, err
 	}
 	return groups, nil
 }
@@ -66,7 +96,7 @@ func (rep *GroupRepositoryImpl) ExistsByName(userID int64, name string, excludeI
 }
 
 // UpdateWithTasks сохраняет группу и её задачи с уже пересчитанными сервисом весом и приоритетом
-// в одной транзакции. Состав группы (group_tasks) не меняется.
+// в одной транзакции. Состав группы (Task.GroupId) не меняется.
 func (rep *GroupRepositoryImpl) UpdateWithTasks(group *models.Group, tasks []*models.Task, now time.Time) error {
 	return rep.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(group).Select("Name", "Description", "GroupPriority").Updates(group).Error; err != nil {
@@ -111,11 +141,11 @@ func saveTaskGroupFields(tx *gorm.DB, tasks []*models.Task, now time.Time) error
 		args[0] = now // updated_at, первый плейсхолдер в SQL
 		for i, task := range chunk {
 			rows[i] = "(?::bigint, ?::bigint, ?::bigint, ?::bigint, ?::double precision)"
-			args = append(args, task.TaskId, task.GroupId, task.GroupPriorty, task.NumberOfHoursUntilDL, task.Priority)
+			args = append(args, task.TaskId, task.GroupId, task.GroupPriority, task.HoursUntilDeadline, task.Priority)
 		}
-		sql := `UPDATE tasks AS t SET updated_at = ?::timestamptz, group_id = v.group_id, group_priorty = v.group_priorty,
-			number_of_hours_until_dl = v.number_of_hours_until_dl, priority = v.priority
-			FROM (VALUES ` + strings.Join(rows, ", ") + `) AS v(task_id, group_id, group_priorty, number_of_hours_until_dl, priority)
+		sql := `UPDATE tasks AS t SET updated_at = ?::timestamptz, group_id = v.group_id, group_priority = v.group_priority,
+			hours_until_deadline = v.hours_until_deadline, priority = v.priority
+			FROM (VALUES ` + strings.Join(rows, ", ") + `) AS v(task_id, group_id, group_priority, hours_until_deadline, priority)
 			WHERE t.task_id = v.task_id`
 		if err := tx.Exec(sql, args...).Error; err != nil {
 			return fmt.Errorf("ошибка при обновлении задач группы: %w", err)
@@ -125,15 +155,11 @@ func saveTaskGroupFields(tx *gorm.DB, tasks []*models.Task, now time.Time) error
 }
 
 // DeleteDetachingTasks удаляет группу и сохраняет её задачи, уже отвязанные сервисом
-// (GroupId, GroupPriorty, Priority), и связи группы в group_tasks в одной транзакции.
+// (GroupId, GroupPriority, Priority), в одной транзакции.
 func (rep *GroupRepositoryImpl) DeleteDetachingTasks(groupID int64, tasks []*models.Task, now time.Time) error {
 	return rep.db.Transaction(func(tx *gorm.DB) error {
 		if err := saveTaskGroupFields(tx, tasks, now); err != nil {
 			return fmt.Errorf("ошибка при отвязке задач от группы: %w", err)
-		}
-		// Явно, не полагаясь на ON DELETE CASCADE: в старых базах его может не быть
-		if err := tx.Exec("DELETE FROM group_tasks WHERE group_group_id = ?", groupID).Error; err != nil {
-			return fmt.Errorf("ошибка при удалении связей группы: %w", err)
 		}
 		if err := tx.Delete(&models.Group{}, groupID).Error; err != nil {
 			return fmt.Errorf("ошибка при удалении группы: %w", err)

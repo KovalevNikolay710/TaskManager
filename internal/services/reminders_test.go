@@ -126,10 +126,10 @@ func TestQuietHoursEnd(t *testing.T) {
 
 func TestSelectDeadlineTasks(t *testing.T) {
 	tasks := []*models.Task{
-		{TaskId: 1, DeadLine: at(10, 5, 19, 30)},
-		{TaskId: 2, DeadLine: at(10, 5, 18, 0)},
-		{TaskId: 3, DeadLine: at(10, 5, 20, 0)},
-		{TaskId: 4, DeadLine: at(10, 5, 18, 0)},
+		{TaskId: 1, Deadline: at(10, 5, 19, 30)},
+		{TaskId: 2, Deadline: at(10, 5, 18, 0)},
+		{TaskId: 3, Deadline: at(10, 5, 20, 0)},
+		{TaskId: 4, Deadline: at(10, 5, 18, 0)},
 	}
 	everyTask := func(*models.Task, models.NotificationSettings, time.Time) bool { return true }
 	oddTasks := func(task *models.Task, _ models.NotificationSettings, _ time.Time) bool { return task.TaskId%2 == 1 }
@@ -274,10 +274,10 @@ func TestPluralRu(t *testing.T) {
 
 func TestMorningMessage(t *testing.T) {
 	now := at(10, 5, 8, 0)
-	report := &models.Task{TaskId: 2, Name: "Подготовить отчёт по ТИПИС", DeadLine: at(10, 5, 18, 0)}
-	review := &models.Task{TaskId: 1, Name: "Код-ревью задачи по API", DeadLine: at(10, 6, 10, 0)}
-	far := &models.Task{TaskId: 3, Name: "Лабораторная №4 по БД", DeadLine: at(10, 9, 12, 0)}
-	overdue := &models.Task{TaskId: 4, Name: "Просроченная", DeadLine: at(10, 5, 7, 0)}
+	report := &models.Task{TaskId: 2, Name: "Подготовить отчёт по ТИПИС", Deadline: at(10, 5, 18, 0)}
+	review := &models.Task{TaskId: 1, Name: "Код-ревью задачи по API", Deadline: at(10, 6, 10, 0)}
+	far := &models.Task{TaskId: 3, Name: "Лабораторная №4 по БД", Deadline: at(10, 9, 12, 0)}
+	overdue := &models.Task{TaskId: 4, Name: "Просроченная", Deadline: at(10, 5, 7, 0)}
 
 	tests := []struct {
 		name  string
@@ -375,25 +375,25 @@ func TestDeadlineMessage(t *testing.T) {
 	}{
 		{
 			name:      "пример из спецификации",
-			task:      &models.Task{TaskId: 12, Name: "Подготовить отчёт по ТИПИС", DeadLine: at(10, 5, 18, 0), TimeForExecution: 180, PercentOfCompleting: 40},
+			task:      &models.Task{TaskId: 12, Name: "Подготовить отчёт по ТИПИС", Deadline: at(10, 5, 18, 0), TimeForExecution: 180, PercentOfCompleting: 40},
 			wantTitle: "Подготовить отчёт по ТИПИС",
 			wantBody:  "Дедлайн через 2 ч 50 мин — сегодня, 18:00. Осталось ≈ 1:50 работы.",
 		},
 		{
 			name:      "работы больше, чем времени",
-			task:      &models.Task{TaskId: 12, Name: "Подготовить отчёт по ТИПИС", DeadLine: at(10, 5, 18, 0), TimeForExecution: 240},
+			task:      &models.Task{TaskId: 12, Name: "Подготовить отчёт по ТИПИС", Deadline: at(10, 5, 18, 0), TimeForExecution: 240},
 			wantTitle: "Подготовить отчёт по ТИПИС",
 			wantBody:  "Дедлайн через 2 ч 50 мин — сегодня, 18:00. Работы ≈ 4:00 — больше, чем осталось времени.",
 		},
 		{
 			name:      "меньше часа",
-			task:      &models.Task{TaskId: 12, Name: "Пробежка", DeadLine: at(10, 5, 15, 55), TimeForExecution: 30},
+			task:      &models.Task{TaskId: 12, Name: "Пробежка", Deadline: at(10, 5, 15, 55), TimeForExecution: 30},
 			wantTitle: "Пробежка",
 			wantBody:  "Дедлайн через 45 мин — сегодня, 15:55. Осталось ≈ 0:30 работы.",
 		},
 		{
 			name:      "ровно часы, завтра; длинный заголовок до 60 символов",
-			task:      &models.Task{TaskId: 12, Name: "Подготовить отчёт по ТИПИС для кафедры и согласовать с руководителем", DeadLine: at(10, 6, 0, 10), TimeForExecution: 60, PercentOfCompleting: 50},
+			task:      &models.Task{TaskId: 12, Name: "Подготовить отчёт по ТИПИС для кафедры и согласовать с руководителем", Deadline: at(10, 6, 0, 10), TimeForExecution: 60, PercentOfCompleting: 50},
 			wantTitle: "Подготовить отчёт по ТИПИС для кафедры и согласовать с руко…",
 			wantBody:  "Дедлайн через 9 ч — завтра, 00:10. Осталось ≈ 0:30 работы.",
 		},
@@ -416,11 +416,11 @@ func TestDeadlineMessage(t *testing.T) {
 
 func TestDeadlineSummaryMessage(t *testing.T) {
 	now := at(10, 5, 15, 10)
-	report := &models.Task{TaskId: 2, Name: "Подготовить отчёт по ТИПИС", DeadLine: at(10, 5, 18, 0)}
-	review := &models.Task{TaskId: 1, Name: "Код-ревью задачи по API", DeadLine: at(10, 5, 19, 30)}
-	run := &models.Task{TaskId: 4, Name: "Пробежка 5 км", DeadLine: at(10, 5, 20, 0)}
-	night := &models.Task{TaskId: 5, Name: "Купить продукты", DeadLine: at(10, 6, 1, 0)}
-	lab := &models.Task{TaskId: 3, Name: "Лабораторная №4 по БД", DeadLine: at(10, 6, 2, 0)}
+	report := &models.Task{TaskId: 2, Name: "Подготовить отчёт по ТИПИС", Deadline: at(10, 5, 18, 0)}
+	review := &models.Task{TaskId: 1, Name: "Код-ревью задачи по API", Deadline: at(10, 5, 19, 30)}
+	run := &models.Task{TaskId: 4, Name: "Пробежка 5 км", Deadline: at(10, 5, 20, 0)}
+	night := &models.Task{TaskId: 5, Name: "Купить продукты", Deadline: at(10, 6, 1, 0)}
+	lab := &models.Task{TaskId: 3, Name: "Лабораторная №4 по БД", Deadline: at(10, 6, 2, 0)}
 
 	tests := []struct {
 		name        string
@@ -629,7 +629,7 @@ func TestShouldRemindDeadline(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			task := &models.Task{
 				Status:    tt.status,
-				DeadLine:  now.Add(tt.deadlineIn),
+				Deadline:  now.Add(tt.deadlineIn),
 				CreatedAt: now.Add(-tt.createdAgo),
 			}
 			s := models.DefaultNotificationSettings(1)

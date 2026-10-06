@@ -127,7 +127,7 @@ func (s *GroupServiceImpl) UpdateGroupForUser(userID, groupID int64, input model
 	return s.applyGroupUpdate(group, input)
 }
 
-// applyGroupUpdate меняет загруженную группу. При смене веса пересчитывает GroupPriorty и Priority
+// applyGroupUpdate меняет загруженную группу. При смене веса пересчитывает GroupPriority и Priority
 // задач группы; группа и задачи сохраняются в одной транзакции.
 func (s *GroupServiceImpl) applyGroupUpdate(group *models.Group, input models.GroupUpdateRequest) (*models.Group, error) {
 	var err error
@@ -163,7 +163,7 @@ func (s *GroupServiceImpl) applyGroupUpdate(group *models.Group, input models.Gr
 	return s.GetGroupByID(group.GroupId)
 }
 
-// reweighTasks загружает задачи группы и пересчитывает их GroupPriorty и Priority под текущий вес группы.
+// reweighTasks загружает задачи группы и пересчитывает их GroupPriority и Priority под текущий вес группы.
 // Задачи группы берём по Task.GroupId — это то, что видит пользователь.
 func (s *GroupServiceImpl) reweighTasks(group *models.Group, now time.Time) ([]*models.Task, error) {
 	tasks, err := s.TaskRepository.FindByUserID(group.UserId, models.TaskFilter{GroupId: group.GroupId})
@@ -171,7 +171,7 @@ func (s *GroupServiceImpl) reweighTasks(group *models.Group, now time.Time) ([]*
 		return nil, fmt.Errorf("не удалось получить задачи группы %d: %w", group.GroupId, err)
 	}
 	for _, task := range tasks {
-		task.GroupPriorty = group.GroupPriority
+		task.GroupPriority = group.GroupPriority
 		task.Recalculate(now)
 	}
 	return tasks, nil
@@ -231,7 +231,7 @@ func (s *GroupServiceImpl) ReorderGroups(input models.GroupReorderRequest) ([]*m
 	return s.GetAllUserGroups(input.UserId)
 }
 
-// GetAllGroupTasks возвращает задачи группы (по group_tasks) или ErrGroupNotFound.
+// GetAllGroupTasks возвращает задачи группы (по Task.GroupId) или ErrGroupNotFound.
 func (serv *GroupServiceImpl) GetAllGroupTasks(groupId int64) ([]*models.Task, error) {
 	group, err := serv.GetGroupByID(groupId)
 	if err != nil {
@@ -248,7 +248,7 @@ func (serv *GroupServiceImpl) GetAllUserGroups(userID int64) (groups []*models.G
 	return groups, nil
 }
 
-// AddTaskToGroup создаёт задачу сразу в группе: Task.GroupId и связь в group_tasks выставляются вместе.
+// AddTaskToGroup создаёт задачу сразу в группе: Task.GroupId выставляется при создании.
 func (s *GroupServiceImpl) AddTaskToGroup(groupId int64, input models.TaskCreateRequest) (*models.Group, error) {
 	group, err := s.findGroup(groupId)
 	if err != nil {
@@ -293,7 +293,7 @@ func (s *GroupServiceImpl) deleteLoaded(group *models.Group) error {
 	now := time.Now()
 	for _, task := range tasks {
 		task.GroupId = 0
-		task.GroupPriorty = 1
+		task.GroupPriority = 1
 		task.Recalculate(now)
 	}
 

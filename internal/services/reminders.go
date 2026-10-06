@@ -127,7 +127,7 @@ func quietHoursEnd(now time.Time, loc *time.Location, from, to string) (time.Tim
 //
 // Контракт: true, если одновременно
 //   - задача активна: task.Status == models.StatusActive;
-//   - срок впереди, но близко: now < task.DeadLine ≤ now + s.DeadlineHoursBefore часов;
+//   - срок впереди, но близко: now < task.Deadline ≤ now + s.DeadlineHoursBefore часов;
 //   - задача создана не меньше 30 минут назад (task.CreatedAt, константа deadlineMinTaskAge):
 //     пользователь только что сам поставил близкий срок — напоминать сразу бессмысленно,
 //     задача попадёт в окно на одной из следующих ежеминутных проверок.
@@ -138,7 +138,7 @@ func shouldRemindDeadline(task *models.Task, s models.NotificationSettings, now 
 		return false
 	}
 	windowEnd := now.Add(time.Duration(s.DeadlineHoursBefore) * time.Hour)
-	inWindow := now.Before(task.DeadLine) && !task.DeadLine.After(windowEnd)
+	inWindow := now.Before(task.Deadline) && !task.Deadline.After(windowEnd)
 	oldEnough := now.Sub(task.CreatedAt) >= deadlineMinTaskAge
 	return inWindow && oldEnough
 }
@@ -166,7 +166,7 @@ func selectDeadlineTasks(tasks []*models.Task, s models.NotificationSettings, lo
 		}
 	}
 	slices.SortStableFunc(due, func(a, b *models.Task) int {
-		if c := a.DeadLine.Compare(b.DeadLine); c != 0 {
+		if c := a.Deadline.Compare(b.Deadline); c != 0 {
 			return c
 		}
 		return cmp.Compare(a.TaskId, b.TaskId)
@@ -280,17 +280,17 @@ func remainingWorkMinutes(task *models.Task) int {
 func morningMessage(activeTasks []*models.Task, now time.Time, loc *time.Location) PushMessage {
 	var nearest *models.Task
 	for _, task := range activeTasks {
-		if !task.DeadLine.After(now) || calendarDayDiff(now, task.DeadLine, loc) > 1 {
+		if !task.Deadline.After(now) || calendarDayDiff(now, task.Deadline, loc) > 1 {
 			continue
 		}
-		if nearest == nil || task.DeadLine.Before(nearest.DeadLine) {
+		if nearest == nil || task.Deadline.Before(nearest.Deadline) {
 			nearest = task
 		}
 	}
 
 	body := fmt.Sprintf("Активных задач: %d. ", len(activeTasks))
 	if nearest != nil {
-		body += fmt.Sprintf("Ближе всего срок у %s — %s.", quoted(nearest.Name), formatDeadlineLabel(nearest.DeadLine, now, loc))
+		body += fmt.Sprintf("Ближе всего срок у %s — %s.", quoted(nearest.Name), formatDeadlineLabel(nearest.Deadline, now, loc))
 	} else {
 		body += "Сколько времени готовы отдать делам сегодня?"
 	}
@@ -333,14 +333,14 @@ func eveningMessage(planTasks []*models.Task) (PushMessage, bool) {
 	return PushMessage{Title: "Отметьте, что сделали сегодня", Body: body, URL: "/day", Tag: "plan-evening"}, true
 }
 
-// deadlineMessage — «3. Дедлайн скоро» для одной задачи. Время до срока считается от DeadLine и now,
-// а не от сохранённого NumberOfHoursUntilDL.
+// deadlineMessage — «3. Дедлайн скоро» для одной задачи. Время до срока считается от Deadline и now,
+// а не от сохранённого HoursUntilDeadline.
 func deadlineMessage(task *models.Task, now time.Time, loc *time.Location) PushMessage {
-	until := task.DeadLine.Sub(now)
+	until := task.Deadline.Sub(now)
 	untilMinutes := max(int(math.Round(until.Minutes())), 1)
 	work := remainingWorkMinutes(task)
 
-	body := fmt.Sprintf("Дедлайн через %s — %s. ", formatUntil(until), formatDeadlineLabel(task.DeadLine, now, loc))
+	body := fmt.Sprintf("Дедлайн через %s — %s. ", formatUntil(until), formatDeadlineLabel(task.Deadline, now, loc))
 	if work > untilMinutes {
 		body += fmt.Sprintf("Работы ≈ %s — больше, чем осталось времени.", formatDuration(work))
 	} else {
@@ -364,9 +364,9 @@ func deadlineSummaryMessage(tasks []*models.Task, hoursBefore int, now time.Time
 
 	parts := make([]string, 0, 2)
 	for _, task := range tasks[:min(2, len(tasks))] {
-		when := task.DeadLine.In(loc).Format("15:04")
-		if !sameLocalDate(task.DeadLine, now, loc) {
-			when = formatDeadlineLabel(task.DeadLine, now, loc)
+		when := task.Deadline.In(loc).Format("15:04")
+		if !sameLocalDate(task.Deadline, now, loc) {
+			when = formatDeadlineLabel(task.Deadline, now, loc)
 		}
 		parts = append(parts, truncateName(task.Name, reminderNameLimit)+" — "+when)
 	}

@@ -2,7 +2,13 @@ import { request } from './client'
 import type { Task, TaskCreateRequest, TaskFilter, TaskUpdateRequest } from './types'
 
 export function fetchUserTasks(userId: number, filter: TaskFilter = {}): Promise<Task[]> {
-  return request<Task[] | null>(`/tasks/user/${userId}`, { method: 'POST', body: filter }).then((tasks) => tasks ?? [])
+  const query = new URLSearchParams()
+  if (filter.status !== undefined) query.set('status', String(filter.status))
+  if (filter.groupId !== undefined) query.set('groupId', String(filter.groupId))
+  if (filter.date !== undefined) query.set('date', filter.date)
+  const queryString = query.toString()
+  const suffix = queryString ? `?${queryString}` : ''
+  return request<Task[] | null>(`/tasks/user/${userId}${suffix}`).then((tasks) => tasks ?? [])
 }
 
 export function fetchTask(taskId: number): Promise<Task> {
